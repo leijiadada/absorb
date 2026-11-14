@@ -1,0 +1,34 @@
+{
+  "type": "tech-community",
+  "capturedAt": "2026-10-16",
+  "expect": {
+    "nonEmpty": true,
+    "mdChars": 11425,
+    "mustContain": [
+      "作品广场"
+    ]
+  },
+  "queries": [
+    {
+      "keywords": [
+        "Cursor"
+      ],
+      "expectHit": true,
+      "why": "标题/正文主题词（人工复核）"
+    },
+    {
+      "keywords": [
+        "Cursor 转 Codex 大半个月，聊聊我的真实感受Cursor 让我第一次强烈感受到 AI 编程的震撼，Codex"
+      ],
+      "expectHit": true,
+      "why": "标题词"
+    },
+    {
+      "keywords": [
+        "qqx不存在词zqx"
+      ],
+      "expectHit": false,
+      "why": "零命中信号"
+    }
+  ]
+}

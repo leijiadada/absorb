@@ -1,0 +1,49 @@
+# 本地配置（含 API Key，勿提交；配置模板见 assets/default-config.yaml）
+config/config.yaml
+.codebuddy
+.idea
+.trae
+# 运行时数据（会话库 / 记忆库 / 用户画像）
+data/
+# 日志（与 data/ 平级）
+logs/
+# 设计过程草稿默认忽略（定稿文档用 git add -f 入库，已跟踪文件不受影响）；
+# 评测语料 design/eval 是回归资产，白名单入库；评估结果产物不入库
+design/**
+!design/eval/
+!design/eval/**
+design/eval/results/
+design/eval/*/results/
+# 构建产物
+build/bin/
+frontend/dist/
+frontend/node_modules/
+internal/extension/extension_bundle.zip
+
+# 扩展 E2E（Playwright）：依赖与生成物不入库
+e2e/node_modules/
+e2e/extension/test-results/
+e2e/extension/playwright-report/
+frontend/test-results/
+# vitest 覆盖率报告
+frontend/coverage/
+
+# Trae HTML 分享临时包
+.trae-html-share-packages/
+
+# 日志
+*.log
+
+# 个人机器本地覆盖
+Makefile.local
+
+# 冒烟测试：脚本入库，生成产物（报告/字节码）不入库
+smoke/__pycache__/
+smoke/smoke_report_*.txt
+
+# 设计过程草稿（定稿后的设计文档才入库 design/）
+design/spec.md
+design/tasks.md
+
+# 语料资产入库（CI 回归依赖）：仅排除内网后台快照，公开仓库不含内部信息
+docs/page-corpus/spa-modal-noise/

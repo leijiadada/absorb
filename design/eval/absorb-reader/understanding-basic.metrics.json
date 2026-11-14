@@ -1,0 +1,30 @@
+[
+  {
+    "metricName": "final_response_avg_score",
+    "threshold": 0.7,
+    "criterion": {
+      "finalResponse": {
+        "rouge": {
+          "rougeType": "rouge1",
+          "measure": "recall",
+          "threshold": {"precision": 0, "recall": 0.7, "f1": 0},
+          "tokenizerName": "cjk-char"
+        }
+      }
+    }
+  },
+  {
+    "metricName": "tool_trajectory_avg_score",
+    "threshold": 0.8,
+    "criterion": {
+      "toolTrajectory": {
+        "orderSensitive": false,
+        "defaultStrategy": {
+          "name": {"matchStrategy": "exact"},
+          "arguments": {"matchStrategy": "exact"},
+          "result": {"matchStrategy": "exact"}
+        }
+      }
+    }
+  }
+]

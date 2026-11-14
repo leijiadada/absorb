@@ -1,0 +1,34 @@
+{
+  "type": "blog",
+  "capturedAt": "2026-10-16",
+  "expect": {
+    "nonEmpty": true,
+    "mdChars": 17720,
+    "mustContain": [
+      "publish"
+    ]
+  },
+  "queries": [
+    {
+      "keywords": [
+        "publish"
+      ],
+      "expectHit": true,
+      "why": "正文独特词"
+    },
+    {
+      "keywords": [
+        "The Open Journalism Project"
+      ],
+      "expectHit": true,
+      "why": "标题词"
+    },
+    {
+      "keywords": [
+        "qqx不存在词zqx"
+      ],
+      "expectHit": false,
+      "why": "零命中信号"
+    }
+  ]
+}

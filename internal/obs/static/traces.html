@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Absorb Trace 查看器</title>
+<style>
+  :root {
+    --bg: #F7F7F8; --panel: #FFFFFF; --muted: #52525B; --text: #171717;
+    --border: rgba(23,23,23,.12); --brand: #02743B; --brand-soft: #E5FFF2;
+    --series: #85FABF; --blue: #80C1FF; --danger: #E8463A;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.5 -apple-system, "PingFang SC", "Segoe UI", Roboto, sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; padding: 12px 20px;
+    border-bottom: 1px solid var(--border); background: var(--panel); }
+  header h1 { margin: 0; font-size: 15px; font-weight: 600; }
+  header .hint { color: var(--muted); font-size: 12px; }
+  header button { margin-left: auto; padding: 5px 14px; border: 1px solid var(--border);
+    border-radius: 8px; background: var(--panel); cursor: pointer; font-size: 13px; }
+  header button:hover { border-color: var(--brand); color: var(--brand); }
+  main { display: grid; grid-template-columns: minmax(320px, 40%) 1fr;
+    gap: 14px; padding: 14px 20px; align-items: start; }
+  @media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .panel h2 { margin: 0; padding: 10px 14px; font-size: 13px; font-weight: 600;
+    color: var(--muted); border-bottom: 1px solid var(--border); background: #FAFAFB; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { text-align: left; padding: 7px 10px; color: var(--muted); font-weight: 500;
+    border-bottom: 1px solid var(--border); background: #FAFAFB; position: sticky; top: 0; }
+  td { padding: 7px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td.id, td.mono { font-family: var(--mono); font-size: 11.5px; }
+  tr.row { cursor: pointer; }
+  tr.row:hover td { background: var(--brand-soft); }
+  tr.sel td { background: var(--brand-soft); }
+  .listWrap { max-height: 78vh; overflow: auto; }
+  .empty { padding: 24px; color: var(--muted); font-size: 13px; text-align: center; }
+  /* span 树瀑布 */
+  .spans { padding: 8px 0; }
+  .spanRow { display: grid; grid-template-columns: minmax(150px, 260px) 1fr 64px;
+    gap: 10px; align-items: center; padding: 3px 14px; cursor: pointer; }
+  .spanRow:hover { background: var(--brand-soft); }
+  .spanRow.sel { background: var(--brand-soft); }
+  .spanName { font-family: var(--mono); font-size: 11.5px; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap; }
+  .spanName.err { color: var(--danger); }
+  .spanTrack { position: relative; height: 14px; background: #F1F1F3; border-radius: 4px; }
+  .spanBar { position: absolute; top: 2px; bottom: 2px; border-radius: 4px;
+    background: var(--brand); min-width: 3px; }
+  .spanBar.child { background: var(--series); }
+  .spanBar.save { background: var(--blue); }
+  .spanDur { text-align: right; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  /* attributes */
+  .attrs { border-top: 1px solid var(--border); padding: 10px 14px; }
+  .attrs h3 { margin: 0 0 6px; font-size: 12.5px; color: var(--muted); font-weight: 600;
+    font-family: var(--mono); }
+  .attrs table td { padding: 3px 10px 3px 0; border-bottom: 1px dashed var(--border); }
+  .attrs td.k { color: var(--muted); font-family: var(--mono); font-size: 11.5px; width: 170px; }
+  .attrs td.v { font-family: var(--mono); font-size: 11.5px; white-space: pre-wrap;
+    word-break: break-all; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Absorb Trace 查看器</h1>
+  <span class="hint">/debug/traces — 最近 50 条 trace，点选查看 span 树与归因字段</span>
+  <button id="refresh">刷新</button>
+</header>
+<main>
+  <section class="panel">
+    <h2>Traces</h2>
+    <div class="listWrap" id="list"><div class="empty">加载中…</div></div>
+  </section>
+  <section class="panel">
+    <h2 id="detailTitle">Span 树</h2>
+    <div class="spans" id="spans"><div class="empty">左侧选择一条 trace</div></div>
+    <div class="attrs" id="attrsWrap" hidden>
+      <h3 id="attrSpan"></h3>
+      <table><tbody id="attrs"></tbody></table>
+    </div>
+  </section>
+</main>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const fmtDur = (us) => us >= 1e6 ? (us / 1e6).toFixed(2) + 's' : us >= 1e3 ? (us / 1e3).toFixed(1) + 'ms' : us + 'µs';
+  const fmtTime = (us) => new Date(us / 1e3).toLocaleString('zh-CN', { hour12: false });
+  const isErr = (s) => (s.status || '').toLowerCase() === 'error';
+  // attributes 兼容两种形态：API 返回内联 JSON 对象；若后端改为字符串也照常解析
+  const attrsOf = (s) => {
+    const a = s.attributes;
+    if (!a) return {};
+    if (typeof a === 'string') { try { return JSON.parse(a || '{}'); } catch { return {}; } }
+    return a;
+  };
+  const fmtVal = (v) => (v !== null && typeof v === 'object') ? JSON.stringify(v) : String(v);
+  let selTrace = null, selSpan = null, spans = [];
+
+  const renderList = (traces) => {
+    if (!traces.length) { $('list').innerHTML = '<div class="empty">暂无数据：确认 config.yaml 开启 telemetry.enabled + sqlite，并发起一次提问</div>'; return; }
+    const rows = traces.map((t) => `<tr class="row" data-id="${t.traceId}">
+      <td class="mono">${t.rootName}</td>
+      <td>${fmtDur(t.durationUs)}</td>
+      <td>${t.spanCount}</td>
+      <td>${t.requestId ? t.requestId.slice(0, 8) : ''}</td>
+      <td>${fmtTime(t.startUs)}</td></tr>`).join('');
+    $('list').innerHTML = `<table><thead><tr>
+      <th>根 span</th><th>耗时</th><th>spans</th><th>request</th><th>时间</th>
+    </tr></thead><tbody>${rows}</tbody></table>`;
+    $('list').querySelectorAll('tr.row').forEach((tr) => tr.addEventListener('click', () => selectTrace(tr.dataset.id, tr)));
+  };
+
+  const loadList = async () => {
+    try {
+      const r = await fetch('/api/traces');
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const j = await r.json();
+      renderList(j.traces || []);
+    } catch (e) { $('list').innerHTML = '<div class="empty">加载失败：' + e.message + '</div>'; }
+  };
+
+  const buildTree = (list) => {
+    const byParent = new Map();
+    const roots = [];
+    for (const s of list) {
+      if (!s.parentSpanId) { roots.push(s); continue; }
+      if (!byParent.has(s.parentSpanId)) byParent.set(s.parentSpanId, []);
+      byParent.get(s.parentSpanId).push(s);
+    }
+    return { roots, byParent };
+  };
+
+  const renderSpans = () => {
+    if (!spans.length) { $('spans').innerHTML = '<div class="empty">无 span</div>'; return; }
+    const t0 = spans.reduce((m, s) => Math.min(m, s.startUs), Infinity);
+    const t1 = spans.reduce((m, s) => Math.max(m, s.startUs + s.durationUs), 0);
+    const total = Math.max(t1 - t0, 1);
+    const { roots, byParent } = buildTree(spans);
+    const html = [];
+    const walk = (nodes, depth) => {
+      for (const s of nodes) {
+        const left = ((s.startUs - t0) / total) * 100;
+        const width = Math.max((s.durationUs / total) * 100, 0.4);
+        const cls = !s.parentSpanId ? (s.name === 'knowledge.save' ? 'save' : '') : 'child';
+        html.push(`<div class="spanRow${selSpan === s.spanId ? ' sel' : ''}" data-id="${s.spanId}">
+          <div class="spanName${isErr(s) ? ' err' : ''}" style="padding-left:${depth * 16}px">${s.name}</div>
+          <div class="spanTrack"><div class="spanBar ${cls}" style="left:${left}%;width:${width}%"></div></div>
+          <div class="spanDur">${fmtDur(s.durationUs)}</div></div>`);
+        walk(byParent.get(s.spanId) || [], depth + 1);
+      }
+    };
+    walk(roots, 0);
+    $('spans').innerHTML = html.join('');
+    $('spans').querySelectorAll('.spanRow').forEach((el) => el.addEventListener('click', () => selectSpan(el.dataset.id)));
+  };
+
+  const selectSpan = (id) => {
+    selSpan = id;
+    const s = spans.find((x) => x.spanId === id);
+    if (!s) return;
+    renderSpans();
+    const attrs = attrsOf(s);
+    $('attrSpan').textContent = s.name + ' · ' + fmtDur(s.durationUs) + (isErr(s) ? ' · error' : '');
+    $('attrs').innerHTML = Object.keys(attrs).length
+      ? Object.entries(attrs).map(([k, v]) => `<tr><td class="k">${k}</td><td class="v">${fmtVal(v)}</td></tr>`).join('')
+      : '<tr><td class="v" style="color:var(--muted)">（无属性）</td></tr>';
+    $('attrsWrap').hidden = false;
+  };
+
+  const selectTrace = async (id, trEl) => {
+    selTrace = id; selSpan = null;
+    $('list').querySelectorAll('tr.sel').forEach((x) => x.classList.remove('sel'));
+    if (trEl) trEl.classList.add('sel');
+    $('attrsWrap').hidden = true;
+    try {
+      const r = await fetch('/api/traces/' + encodeURIComponent(id));
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const j = await r.json();
+      spans = j.spans || [];
+      $('detailTitle').textContent = 'Span 树（' + spans.length + ' 个 span）';
+      renderSpans();
+    } catch (e) { $('spans').innerHTML = '<div class="empty">加载失败：' + e.message + '</div>'; }
+  };
+
+  $('refresh').addEventListener('click', loadList);
+  loadList();
+})();
+</script>
+</body>
+</html>

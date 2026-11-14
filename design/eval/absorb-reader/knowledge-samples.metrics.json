@@ -1,0 +1,17 @@
+[
+  {
+    "metricName": "tool_trajectory_avg_score",
+    "threshold": 0.7,
+    "criterion": {
+      "toolTrajectory": {
+        "orderSensitive": false,
+        "subsetMatching": true,
+        "defaultStrategy": {
+          "name": {"matchStrategy": "exact"},
+          "arguments": {"ignore": true},
+          "result": {"ignore": true}
+        }
+      }
+    }
+  }
+]

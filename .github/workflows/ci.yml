@@ -1,0 +1,160 @@
+# Absorb CI —— GitHub Actions 质量门禁
+#
+# - go vet / go test 依赖内嵌资源 frontend/dist 与 internal/extension/extension_bundle.zip，
+#   因此先构建前端、打包扩展，再做 Go 检查（与 Gitee Go、本地 make release 顺序一致）；
+# - Linux 无法运行 Windows 测试二进制（nativehost 依赖 windows/registry），
+#   故 Linux 侧只做交叉编译检查，真正的 go test 交给 windows runner；
+# - 扩展 E2E 在 windows runner 上跑真实 Chromium（live 演示用例自动 skip）；
+# - Windows 安装包由 tag 触发的 release.yml 流水线构建（Inno Setup）。
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    name: 质量门禁（前端构建 + Windows 目标交叉编译）
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27'
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 前端依赖安装、构建与单测
+        working-directory: frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          npx vitest run
+
+      - name: 打包扩展内嵌资源
+        run: |
+          cd extension
+          find . -name '*.md' -delete
+          zip -qr ../internal/extension/extension_bundle.zip .
+        # 文档不随扩展分发，与 scripts/pack-extension.ps1 的规则保持一致
+
+      - name: Go 静态检查（Windows 目标）
+        env:
+          GOOS: windows
+          GOARCH: amd64
+        run: go vet ./...
+
+      - name: golangci-lint（Windows 目标，配置见 .golangci.yml 基线）
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.15.0
+        env:
+          GOOS: windows
+          GOARCH: amd64
+
+      # 漏洞门禁：出现任何未豁免的可达漏洞即失败。
+      # 豁免清单仅收录「官方无修复版本（Fixed in: N/A）且利用路径不适用」的漏洞：
+      #   ollama 客户端库的 8 个服务端漏洞（GO-2025-4251 / 3824 / 3695 / 3689 /
+      #   3582 / 3559 / 3558 / 3557）——本项目仅通过 trpc-agent-go 以客户端身份调
+      #   Ollama API，不运行 Ollama 服务端，漏洞代码不参与部署；上游无修复版本，
+      #   无法通过升级消除。豁免项需附上游出现修复版本时的跟进计划。
+      # 不用 golang/govulncheck-action：其内部 actions/checkout 带 clean:true，会 git clean
+      # 掉 frontend/dist 等未跟踪产物，导致后续 embed 构建失败
+      - name: govulncheck（门禁，豁免清单内联于下）
+        env:
+          GOOS: windows
+          GOARCH: amd64
+        run: |
+          out=$(go run golang.org/x/vuln/cmd/govulncheck@latest ./... 2>&1) && exit 0
+          echo "$out"
+          allow="GO-2025-4251 GO-2025-3824 GO-2025-3695 GO-2025-3689 GO-2025-3582 GO-2025-3559 GO-2025-3558 GO-2025-3557"
+          fail=0
+          for id in $(echo "$out" | grep -oE 'GO-[0-9]{4}-[0-9]+' | sort -u); do
+            case " $allow " in
+              *" $id "*)
+                echo "已豁免: $id（ollama 服务端漏洞，本项目仅作客户端，上游 Fixed in: N/A）";;
+              *)
+                echo "::error::govulncheck 发现未豁免漏洞: $id"; fail=1;;
+            esac
+          done
+          exit $fail
+
+      - name: Windows 目标构建与测试编译
+        env:
+          GOOS: windows
+          GOARCH: amd64
+        run: |
+          mkdir -p /tmp/win_check /tmp/win_tests
+          go build -o /tmp/win_check/ .
+          go test -c -o /tmp/win_tests/ ./...
+
+  test-go:
+    name: Go 单元测试（Windows runner）
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27'
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 前端依赖安装与构建
+        working-directory: frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+
+      - name: 打包扩展内嵌资源
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/pack-extension.ps1
+
+      - name: Go 单元测试
+        run: go test -count=1 -timeout 300s -failfast ./...
+
+  e2e-extension:
+    name: 扩展 E2E（Playwright + 真实 Chromium，Windows runner）
+    runs-on: windows-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: e2e
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: E2E 依赖安装
+        run: npm ci --no-audit --no-fund
+
+      - name: 安装 Playwright Chromium
+        run: npx playwright install chromium
+
+      # 纯源码加载扩展（无构建产物依赖）；webServer 由 playwright.config.ts 自动拉起
+      # （CI 下 reuseExistingServer 自动禁用）；本地语料 spa-modal-noise 不入库，自动 skip
+      - name: 运行扩展 E2E
+        run: npx playwright test -c extension/playwright.config.ts

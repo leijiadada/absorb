@@ -1,0 +1,61 @@
+{
+  "evalSetId": "learning-coach-context",
+  "name": "learning-coach-context",
+  "_note": "上下文契约组（2.md T07、T08）：校验指代不可靠时必须澄清（不得猜测作答）、材料不完整时必须披露（不得伪装读过全文或补全结论）。c07 为两轮用例（官方 HITL：轮 1 经 ask_user 澄清，轮 2 userContent 即回答回执 JSON）。原 disclosure_regex 判据已删（开放表述行为正则追不完，judge 稳定覆盖）。content_status 状态键在 P0-4 落地前被 evalRunner 忽略，G1 阶段用例仅依赖 quote/page_md 本身的缺失形态。",
+  "evalCases": [
+    {
+      "evalId": "lc-c07-ambiguous-selection",
+      "rubrics": [{"metricName": "context_judge", "id": "context-lc-c07", "content": {"text": "评估材料。\n划词：B+ 树是一种把所有索引数据都放在叶子节点、并通过链表串联叶子以支持范围扫描的多叉搜索树；LSM 树是一种把写入先落到内存表、再批量刷成不可变磁盘文件并在后台合并的日志结构存储结构。\n页面完整度：仅有划词，无页面正文（content_status=selected_only）。\n期望流程（两轮，官方 HITL）：第一轮用户问「这个有什么问题」，划词并列陈述 B+ 树和 LSM 树两个中性定义，指代无法唯一确定，模型应通过 ask_user 工具提出恰好一个澄清问题（枚举候选解读即可），正文简短或为空，不得默选一种解读展开作答；第二轮 user message 是 ask_user 的回答回执 JSON（内部回执，禁止原文复述），user_answer 指明 LSM 树，模型应只围绕 LSM 树的局限与代价展开（读放大、写放大、空间放大），不再谈 B+ 树，不再重复提问。"}}],
+      "conversation": [
+        {
+          "invocationId": "lc-c07-1",
+          "userContent": {"role": "user", "content": "这个有什么问题？"},
+          "finalResponse": {"role": "assistant", "content": "先确认一下你想问的是哪一个。"},
+          "tools": [
+            {"id": "call-ask-1", "name": "ask_user", "arguments": {"question": "「这个」指的是哪一个？", "options": ["B+ 树", "LSM 树", "两个都想了解"]}}
+          ]
+        },
+        {
+          "invocationId": "lc-c07-2",
+          "userContent": {"role": "user", "content": "{\"status\":\"answered\",\"user_answer\":\"LSM 树\"}"},
+          "finalResponse": {"role": "assistant", "content": "LSM 树的主要问题集中在三类放大上。读放大：一个键可能散落在内存表和多层磁盘文件里，查一次要从新到旧扫多个层级，通常靠 Bloom filter 兜底减少无效查找。写放大：后台 compaction 会把同一份数据反复重写多遍，实际写盘字节量可能是用户写入量的数倍。空间放大：被覆盖的旧版本数据要等 compaction 才回收，期间占着磁盘。所以 LSM 树本质是用读性能、空间利用率和后台合并开销，换取顺序写带来的高吞吐——它适合写密集、追加型场景（日志、时序），不适合读多写少、要求稳定点查延迟的场景。"},
+          "tools": []
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://db.example.com/notes/storage-engines",
+          "quote": "B+ 树是一种把所有索引数据都放在叶子节点、并通过链表串联叶子以支持范围扫描的多叉搜索树；LSM 树是一种把写入先落到内存表、再批量刷成不可变磁盘文件并在后台合并的日志结构存储结构。",
+          "content_status": "selected_only"
+        }
+      }
+    },
+    {
+      "evalId": "lc-c08-partial-page-conclusion",
+      "rubrics": [{"metricName": "context_judge", "id": "context-lc-c08", "content": {"text": "评估材料。\n划词：SET key value NX PX 30000 是最常用的方案，但单一哨兵架构下主从切换可能导致锁丢失。\n页面缓存全文（截断）：# 分布式锁的三种实现\n\n## 基于 Redis 的实现\n\nSET key value NX PX 30000 是最常用的方案，但单一哨兵架构下主从切换可能导致锁丢失。\n\n## 基于 ZooKeeper 的实现\n（正文到此截断，后续章节未包含）\n页面完整度：partial，仅包含前半部分，结论章节缺失。\n期望行为：回答必须明确披露当前只拿到了文章的部分内容、无法确认完整结论；可以概括已读到的部分（Redis 方案及其锁丢失风险、ZooKeeper 章节刚开始），但不得虚构文章的最终结论，不得假装已经读完全文并给出总结。"}}],
+      "conversation": [
+        {
+          "invocationId": "lc-c08-1",
+          "userContent": {"role": "user", "content": "这篇文章的结论是什么？"},
+          "finalResponse": {"role": "assistant", "content": "不完整|没有读到|未包含|截断|无法确认完整|只看到|只拿到|只获取到|没有获取到全文|看不到|可见材料|无法替你复述|无法复述|并不完整|只是部分|未见(到|过)全文|基于.{0,8}推测"},
+          "tools": []
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://distributed.example.com/articles/distributed-lock",
+          "quote": "SET key value NX PX 30000 是最常用的方案，但单一哨兵架构下主从切换可能导致锁丢失。",
+          "page_md": "# 分布式锁的三种实现\n\n## 基于 Redis 的实现\n\nSET key value NX PX 30000 是最常用的方案，但单一哨兵架构下主从切换可能导致锁丢失。\n\n## 基于 ZooKeeper 的实现\n",
+          "page_url": "https://distributed.example.com/articles/distributed-lock",
+          "page_title": "分布式锁的三种实现",
+          "page_context": "页面标题：分布式锁的三种实现\n所在章节：基于 Redis 的实现",
+          "content_status": "partial"
+        }
+      }
+    }
+  ]
+}

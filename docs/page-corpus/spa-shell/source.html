@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>加载中...</title>
+  <meta name="description" content="SPA 单页应用壳页">
+</head>
+<body>
+  <!-- CSR 单页应用：正文全部由客户端 JS 渲染，静态快照只有壳。
+       本语料验证转换层行为：产出极薄（仅"页面标题"首行，约 12 rune，noscript
+       按 SKIP 清单跳过），入缓存后 expand_context 检索必然零命中（返回零命中
+       信号），主问答不受影响。注：pageMd 非空不会触发 handler 的空串分支，
+       "缓存缺失"仅发生在扩展端 pageMd/pageHtml 均为空的场景（不在本语料范围）。 -->
+  <div id="app"></div>
+  <div id="root"></div>
+  <script src="/assets/app-bundle.js"></script>
+  <noscript>需要启用 JavaScript 才能使用本应用。</noscript>
+</body>
+</html>

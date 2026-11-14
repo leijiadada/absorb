@@ -1,0 +1,2071 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />            
+    <meta http-equiv="Cache-Control" content="no-transform" />
+    <meta http-equiv="Cache-Control" content="no-siteapp" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="referrer" content="origin-when-cross-origin" />
+    <title>Koog(5) —— Strategy 详解：工作流编排、并行执行与状态传递 - SharpCJ - 博客园</title>
+    <meta name="keywords" content="Agent,LLM,Koog,AIGC,Koog Agent" />
+    <meta name="description" content="前面的文章介绍了不同 Agent 实现形式及其构建、配置和运行方式。本文继续讨论 Agent 的行为逻辑如何组织，重点是图式策略的组成、控制流、并行执行与数据传递。" />    
+    <meta property="og:description" content="前面的文章介绍了不同 Agent 实现形式及其构建、配置和运行方式。本文继续讨论 Agent 的行为逻辑如何组织，重点是图式策略的组成、控制流、并行执行与数据传递。" />
+    <meta property="og:image" content="https://img2024.cnblogs.com/blog/758949/202609/758949-20260930145907063-580695220.png" />
+    <meta property="bytedance:published_time" content="2026-10-16T09:40:32+08:00" />
+    
+    <link rel="stylesheet" href="/css/blog-common.min.css?v=6O_Ku8w_jYd3yw2BX9ElmxGv25AYbAQ-F6ZeOeZfxYc" />
+    <link id="MainCss" rel="stylesheet" href="/skins/custom/bundle-custom.min.css?v=URnzNOcYasaxFfc79Balq6aK60x2WaH4sa2e1Ty6OO4" />
+    <link id="highlighter-theme-cnblogs" type="text/css" rel="stylesheet" href="/css/hljs/cnblogs.css?v=5J1NDtbnnIr2Rc2SdhEMlMxD4l9Eydj88B31E7_NhS4" />
+    <link type="text/css" rel="stylesheet" href="https://www.cnblogs.com/joy99/custom.css?v=b&#x2B;ypYmgzVt14JpJfx&#x2B;5tSU&#x2B;sSfE=" />
+    
+    <link id="mobile-style" media="only screen and (max-width: 767px)" type="text/css" rel="stylesheet" href="/skins/custom/bundle-custom-mobile.min.css?v=77i_0xOEI0-i32i2PJ7RNw3H2znZ0Rje0C5CIxA2I_Y" />
+    
+    <link id="favicon" rel="icon" type="image/x-icon" sizes="32x32" href="https://assets.cnblogs.com/favicon_v3_3.ico" />
+    <link id="favicon_svg" rel="icon" type="image/svg+xml" href="https://assets.cnblogs.com/favicon_v3_3.svg" />
+    <link rel="apple-touch-icon" href="https://assets.cnblogs.com/apple-touch-icon.png?v=2" />
+    <link rel="canonical" href="https://www.cnblogs.com/joy99/p/23320228" />
+    <link type="application/rss+xml" rel="alternate" href="https://www.cnblogs.com/joy99/rss" />
+    <link type="application/rsd+xml" rel="EditURI" href="https://www.cnblogs.com/joy99/rsd.xml" />
+    <link type="application/wlwmanifest+xml" rel="wlwmanifest" href="https://www.cnblogs.com/joy99/wlwmanifest.xml" />
+    
+    <script type="application/ld&#x2B;json">
+    {
+      "@context": "https://schema.org",
+      "@type": "BlogPosting",
+      "@id": "https://www.cnblogs.com/joy99/p/23320228",
+      "headline": "Koog(5) —— Strategy 详解：工作流编排、并行执行与状态传递",
+      "description": "前言 前面的文章 Koog(2) —— Koog Agent 的编程模型与类型选择 介绍了不同 Agent 实现形式及其构建、配置和运行方式。本文继续讨论 Agent 的行为逻辑如何组织，重点是图式策略的组成、控制流、并行执行与数据传递。 本文以 Koog 1.3.0 的 Kotlin API 为基",
+      "image": [
+        "https://img2024.cnblogs.com/blog/758949/202609/758949-20260930145907063-580695220.png"
+      ],
+      "author": {
+        "@type": "Person",
+        "@id": "https://www.cnblogs.com/joy99/",
+        "name": "SharpCJ",
+        "url": "https://www.cnblogs.com/joy99/"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "@id": "https://www.cnblogs.com/",
+        "name": "博客园",
+        "url": "https://www.cnblogs.com/"
+      },
+      "datePublished": "2026-10-16T09:41:00.0000000&#x2B;08:00",
+      "dateModified": "2026-10-16T09:41:00.0000000&#x2B;08:00",
+      "wordCount": "51169",
+      "isPartOf": {
+        "@type": "Blog",
+        "@id": "https://www.cnblogs.com/joy99/",
+        "name": "SharpCJ&#x27;s blog",
+        "publisher": {
+          "@type": "Organization",
+          "@id": "https://www.cnblogs.com/",
+          "name": "博客园"
+        }
+      }
+    }
+    </script>
+
+    <script>
+        var currentBlogId = 228233;
+        var currentBlogApp = 'joy99';
+        var isLogined = false;
+        var isBlogOwner = false;
+        window.isCorp = false;
+        window.skinName = 'Custom';
+        var visitorUserId = '';
+        window.hasCustomScript = true;
+        window.cb_enable_mathjax = false;
+        window.mathEngine = 0;
+        window.codeHighlightEngine = 1;
+        window.enableCodeLineNumber = false;
+        window.codeHighlightTheme = 'cnblogs';
+        window.darkModeCodeHighlightTheme = 'vs2015';
+        window.isDarkCodeHighlightTheme = false;
+        window.isDarkModeCodeHighlightThemeDark = true;
+        window.isDisableCodeHighlighter = false;
+        window.enableCodeThemeTypeFollowSystem = false;
+        window.enableMacStyleCodeBlock = false;        
+    </script>
+        <script>
+            window.currentPostId = 23320228;
+            window.currentPostDateAdded = '2026-10-16 09:41';
+        </script>
+    <script src="https://assets.cnblogs.com/scripts/jquery-3.3.1.min.js"></script>
+    <script src="https://cdn-www.cnblogs.com/js/blog-common.min.js?v=7RJYIieylZeeWyO1PBIzBPWaBsYK5gEP-F3cwf2YI-Y"></script>
+        <script>updateCustomBlogReferrer();</script>
+    
+</head>
+<body class="skin-custom no-navbar">
+    <a name="top"></a>
+    <div id="top_nav" class="navbar forpc navbar-custom">
+        <nav id="nav_main" class="navbar-main">
+            <ul id="nav_left" class="navbar-list navbar-left">
+                <li class="navbar-branding">
+                    <a href="https://www.cnblogs.com/" title="开发者的网上家园" role="banner">
+                        <img src="//assets.cnblogs.com/logo.svg" alt="博客园logo" />
+                    </a>
+                </li>
+                <li><a href="https://cnblogs.vip/">会员</a></li>
+                <li><a href="https://cnblogs.vip/store">周边</a></li>
+                <li><a href="https://news.cnblogs.com/" onclick="countClicks('nav', 'skin-navbar-news')">新闻</a></li>
+                <li><a href="https://q.cnblogs.com/" onclick="countClicks('nav', 'skin-navbar-q')">博问</a></li>
+                <li><a href="https://ing.cnblogs.com/" onclick="countClicks('nav', 'skin-navbar-ing')">闪存</a></li>                
+                <li><a href="https://www.cnblogs.com/cmt/p/19316348">赞助商</a></li>
+                <li><a href="https://chat2db-ai.com/" target="_blank">Chat2DB</a></li>
+            </ul>
+            <ul id="nav_right" class="navbar-list navbar-right">
+                <li>
+                    <form id="zzk_search" class="navbar-search dropdown" action="https://zzk.cnblogs.com/s" method="get" role="search">
+                        <input name="w" id="zzk_search_input" placeholder="代码改变世界" type="search" tabindex="3" autocomplete="off" />
+                        <button id="zzk_search_button" onclick="window.navbarSearchManager.triggerActiveOption()">
+                            <img id="search_icon" class="focus-hidden" src="//assets.cnblogs.com/icons/search.svg" alt="搜索" />
+                            <img class="hidden focus-visible" src="//assets.cnblogs.com/icons/enter.svg" alt="搜索" />
+                        </button>
+                        <ul id="navbar_search_options" class="dropdown-menu quick-search-menu">
+                            <li tabindex="0" class="active" onclick="zzkSearch(event, document.getElementById('zzk_search_input').value)">
+                                <div class="keyword-wrapper">
+                                    <img src="//assets.cnblogs.com/icons/search.svg" alt="搜索" />
+                                    <div class="keyword"></div>
+                                </div>
+                                <span class="search-area">所有博客</span>
+                            </li>
+                                    <li tabindex="1" onclick="zzkBlogSearch(event, 'joy99', document.getElementById('zzk_search_input').value)">
+                                        <div class="keyword-wrapper">
+                                            <img src="//assets.cnblogs.com/icons/search.svg" alt="搜索" />
+                                            <div class="keyword"></div>
+                                        </div>
+                                        <span class="search-area">当前博客</span>
+                                    </li>
+                        </ul>
+                    </form>
+                </li>
+                <li id="navbar_login_status" class="navbar-list">
+                    <a class="navbar-user-info navbar-blog" href="https://i.cnblogs.com/EditPosts.aspx?opt=1" alt="写随笔" title="写随笔">
+                        <img id="new_post_icon" class="navbar-icon" src="//assets.cnblogs.com/icons/newpost.svg" alt="写随笔" />
+                    </a>
+                    <a id="navblog-myblog-icon" class="navbar-user-info navbar-blog" href="https://www.cnblogs.com/my" alt="我的博客" title="我的博客">
+                        <img id="myblog_icon" class="navbar-icon" src="//assets.cnblogs.com/icons/myblog.svg" alt="我的博客" />
+                    </a>
+                    <a class="navbar-user-info navbar-message navbar-icon-wrapper" href="https://msg.cnblogs.com/" alt="短消息" title="短消息">
+                        <img id="msg_icon" class="navbar-icon" src="//assets.cnblogs.com/icons/message.svg" alt="短消息" />
+                        <span id="msg_count" style="display: none"></span>
+                    </a>
+                    <a id="navbar_lite_mode_indicator" data-current-page="blog" style="display: none" href="javascript:void(0)" alt="简洁模式" title="简洁模式启用，您在访问他人博客时会使用简洁款皮肤展示">
+                        <img class="navbar-icon" src="//assets.cnblogs.com/icons/lite-mode-on.svg" alt="简洁模式" />
+                    </a>
+                    <div id="user_info" class="navbar-user-info dropdown">
+                        <a class="dropdown-button" href="https://home.cnblogs.com/">
+                            <img id="user_icon" class="navbar-avatar" src="//assets.cnblogs.com/icons/avatar-default.svg" alt="用户头像" />
+                        </a>
+                        <div class="dropdown-menu">
+                            <a id="navblog-myblog-text" href="https://www.cnblogs.com/my">我的博客</a>
+                            <a href="https://home.cnblogs.com/">我的园子</a>
+                            <a href="https://account.cnblogs.com/settings/account">账号设置</a>
+                            <a href="https://vip.cnblogs.com/my">会员中心</a>
+                            <a href="javascript:void(0)" id="navbar_lite_mode_toggle" title="简洁模式会使用简洁款皮肤显示所有博客">
+    简洁模式 <span id="navbar_lite_mode_spinner" class="hide">...</span>
+</a>
+
+                            <a href="javascript:void(0)" onclick="account.logout();">退出登录</a>
+                        </div>
+                    </div>
+                    <a class="navbar-anonymous" href="https://account.cnblogs.com/signup">注册</a>
+                    <a class="navbar-anonymous" href="javascript:void(0);" onclick="account.login()">登录</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+
+    
+
+    <div id="home">
+<div id="header">
+	<div id="blogTitle">
+        <a id="lnkBlogLogo" href="https://www.cnblogs.com/joy99/"><img id="blogLogo" src="/skins/custom/images/logo.gif" alt="返回主页" /></a>		
+		
+
+<h1><a id="Header1_HeaderTitle" class="headermaintitle HeaderMainTitle" href="https://www.cnblogs.com/joy99">SharpCJ's blog</a>
+</h1>
+<h2></h2>
+
+
+
+
+		
+	</div>
+	<div id="navigator">
+		
+<ul id="navList">
+<li><a id="blog_nav_sitehome" class="menu" href="https://www.cnblogs.com/">
+博客园</a>
+</li>
+<li>
+<a id="blog_nav_myhome" class="menu" href="https://www.cnblogs.com/joy99/">
+首页</a>
+</li>
+<li>
+
+<a id="blog_nav_newpost" class="menu" href="https://i.cnblogs.com/EditPosts.aspx?opt=1">
+新随笔</a>
+</li>
+<li>
+<a id="blog_nav_contact" class="menu" href="https://msg.cnblogs.com/send/SharpCJ">
+联系</a></li>
+<li>
+<a id="blog_nav_rss" class="menu" href="javascript:void(0)" data-rss="https://www.cnblogs.com/joy99/rss/">
+订阅</a>
+<!--<partial name="./Shared/_XmlLink.cshtml" model="Model" /></li>--></li>
+<li>
+<a id="blog_nav_admin" class="menu" href="https://i.cnblogs.com/">
+管理</a>
+</li>
+</ul>
+
+
+		<div class="blogStats">
+			<div id="blog_stats_place_holder"><script>loadBlogStats();</script></div>
+		</div>
+	</div>
+</div>
+<div id="main">
+	<div id="mainContent">
+	<div class="forFlow">
+		<div id="post_detail">
+    
+    <div id="topics">
+        <div class="post">
+            <h1 class = "postTitle">
+                <a id="cb_post_title_url" class="postTitle2 vertical-middle" href="https://www.cnblogs.com/joy99/p/23320228" title="发布于 2026-10-16 09:40">
+    
+
+    <span role="heading" aria-level="2">Koog(5) —— Strategy 详解：工作流编排、并行执行与状态传递</span>
+    
+
+</a>
+
+            </h1>
+            <div class="clear"></div>
+            <div class="postBody">
+                    <div id="cnblogs_post_description" style="display: none">
+        <img src="https://img2024.cnblogs.com/blog/758949/202609/758949-20260930145907063-580695220.png" alt="Koog(5) —— Strategy 详解：工作流编排、并行执行与状态传递" class="desc_img" />
+        前面的文章介绍了不同 Agent 实现形式及其构建、配置和运行方式。本文继续讨论 Agent 的行为逻辑如何组织，重点是图式策略的组成、控制流、并行执行与数据传递。
+    </div>
+<div id="cnblogs_post_body" class="blogpost-body cnblogs-markdown">
+<h1 id="前言">前言</h1>
+<p>前面的文章 <a href="https://www.cnblogs.com/joy99/p/23171167" target="_blank">Koog(2) —— Koog Agent 的编程模型与类型选择</a> 介绍了不同 Agent 实现形式及其构建、配置和运行方式。本文继续讨论 Agent 的行为逻辑如何组织，重点是图式策略的组成、控制流、并行执行与数据传递。</p>
+<p>本文以 <strong>Koog 1.3.0 的 Kotlin API</strong> 为基准。这里的“策略图”特指通过 <code>strategy { }</code> 构建的 <code>AIAgentGraphStrategy</code>；<code>functionalStrategy</code> 则用函数组织逻辑，不能把所有 Strategy 都等同于有向图。官方指南与该版本实现不一致的地方，下文会明确说明。除标明完整运行入口的示例外，其余代码是用于解释 API 的局部片段，需要放入相应 DSL 并补齐导入、工具与执行器配置。</p>
+<hr>
+<h1 id="一strategy-graph">一、Strategy graph</h1>
+<h2 id="11-回顾那个拿来就用的-strategy">1.1 回顾：那个"拿来就用"的 strategy()</h2>
+<p>在 Koog(2) 讲 Graph-based agents 时，有这样一段示例代码（略有精简）：</p>
+<pre><code class="language-kotlin">val simpleGraphStrategy = strategy&lt;String, String&gt;("Simple graph-based agent") {
+    val requestFavoritePetTool by nodeLLMRequestOnlyCallingTools("requestFavoritePetTool")
+    val executeTools by nodeExecuteTools("executeTools")
+    val answerWithToolResult by nodeLLMSendToolResultsWithoutTools("answerWithToolResult")
+
+    edge(nodeStart forwardTo requestFavoritePetTool)
+    edge(requestFavoritePetTool forwardTo executeTools onToolCalls { true })
+    edge(executeTools forwardTo answerWithToolResult)
+    edge(answerWithToolResult forwardTo nodeFinish onTextMessage { true })
+}
+
+val agent = AIAgent(
+    promptExecutor = MultiLLMPromptExecutor(deepSeekClient),
+    llmModel = DeepSeekModels.DeepSeekV4Flash,
+    strategy = simpleGraphStrategy,  // 把图交给 Agent
+    // ... 其他配置省略
+)
+</code></pre>
+<p>当时为了把例子跑通，重点放在了"用 graph 强制规定 Agent 的执行路径"这个效果上。但代码里的这一堆概念，并没有展开讲：</p>
+<ul>
+<li><code>strategy&lt;String, String&gt;</code> 的两个泛型是什么意思？</li>
+<li><code>by nodeXXX(...)</code> 这种写法为什么能行？</li>
+<li><code>onToolCalls { true }</code> 到底在检查什么？</li>
+<li>为什么图要从 <code>nodeStart</code> 出发、到 <code>nodeFinish</code> 结束？</li>
+</ul>
+<p>这些问题就是本文要回答的。先把核心结论放在这里：</p>
+<blockquote>
+<p><strong>图式策略用有向图组织执行逻辑：节点（Node）回答“做什么”，边（Edge）回答“接下来去哪”。一次正常完成的图执行从 nodeStart 出发，到 nodeFinish 返回结果。</strong></p>
+</blockquote>
+<h2 id="12-strategy-graph-的架构">1.2 Strategy graph 的架构</h2>
+<p>Strategy graph 是 Koog 框架中智能体工作流的骨干。它们定义了智能体如何处理输入、与工具交互以及生成输出。策略图由通过边连接的节点组成，并通过条件决定执行流程。</p>
+<p>创建策略图能够根据具体需求定制智能体的行为，无论是在构建简单的聊天机器人、复杂的数据处理流水线，还是介于两者之间的任何东西。</p>
+<p>Strategy graph 由以下的组件组成：</p>
+<table>
+<thead>
+<tr>
+<th>概念</th>
+<th>官方定义</th>
+<th>类比</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Strategy</td>
+<td>图的顶层容器，用 <code>strategy</code> 函数创建，泛型参数指定输入和输出类型</td>
+<td>整条流水线的总图纸</td>
+</tr>
+<tr>
+<td>Subgraphs</td>
+<td>图中的局部区域，可以有自己的工具集和上下文</td>
+<td>流水线上的工段</td>
+</tr>
+<tr>
+<td>Nodes</td>
+<td>工作流中的单个操作或转换</td>
+<td>工段上的工位</td>
+</tr>
+<tr>
+<td>Edges</td>
+<td>连接节点，定义流转条件和转换</td>
+<td>工位之间的传送带</td>
+</tr>
+</tbody>
+</table>
+<p>策略图从一个名为 nodeStart 的特殊节点开始，并在 nodeFinish 结束。 这些节点之间的路径由图中指定的边和条件决定。</p>
+<p>把这几个概念标到 1.1 那段代码上：</p>
+<div class="mermaid">flowchart LR
+    subgraph S["strategy&amp;lt;String, String&amp;gt; —— 顶层容器"]
+        nodeStart(["nodeStart"]) --&gt; requestTool["requestFavoritePetTool&lt;br/&gt;（Node）"]
+        requestTool --&gt;|"onToolCalls（Edge 条件）"| executeTools["executeTools&lt;br/&gt;（Node）"]
+        executeTools --&gt; answer["answerWithToolResult&lt;br/&gt;（Node）"]
+        answer --&gt;|"onTextMessage（Edge 条件）"| nodeFinish(["nodeFinish"])
+    end
+</div><p>（这个例子只有一层，没有用到 Subgraph；Subgraph 在第四章单独讲。）</p>
+<p>有几个点值得单独说：</p>
+<p><strong>1. strategy 的泛型 = Agent 的输入输出类型</strong></p>
+<p><code>strategy&lt;String, String&gt;</code> 声明了这个工作流"输入是一个 String，返回也是一个 String"，它直接决定了使用它的 Agent 是 <code>AIAgent&lt;String, String&gt;</code>。</p>
+<p><strong>2. 图必须连通：nodeStart → nodeFinish</strong></p>
+<p>每张策略图都有一条从 <code>nodeStart</code>（内置起始节点，代表用户输入进来）到 <code>nodeFinish</code>（内置结束节点，代表产出最终结果）的路径。如果某个节点没有任何路径能走到 <code>nodeFinish</code>，执行流到那里就断了。（这个坑在第九章排错部分展开。）</p>
+<p><strong>3. <code>by nodeXXX(...)</code> 是 Kotlin 属性委托</strong></p>
+<p><code>val executeTools by nodeExecuteTools("executeTools")</code> 里的 <code>by</code> 是 Kotlin 的属性委托语法：先"登记"一个节点定义，等图真正执行到它时才运行。<strong>声明节点用 <code>by</code>，连接节点用 <code>edge</code></strong>。</p>
+<p><strong>4. 条件挂在边上，不挂在节点上</strong></p>
+<p><code>onToolCalls { true }</code> 是边的流转条件："上一步 LLM 的响应里出现了工具调用，就走这条边"。把条件放在边上而不是节点里，是 Koog 图模型的关键设计——同一个节点的输出，可以按不同条件流向不同的下游，这就是第三章"条件分支"的基础。</p>
+<h2 id="13-strategy-graph-的核心组件">1.3 Strategy graph 的核心组件</h2>
+<h3 id="131-node">1.3.1 Node</h3>
+<p>节点是策略图的构建块。每个节点代表一个特定的操作。Koog 框架提供了预定义节点，同时也允许使用 node 函数创建自定义节点。</p>
+<h3 id="132-edge">1.3.2 Edge</h3>
+<p>边连接节点并定义策略图中的操作流程。边通过 <code>edge</code> 函数和 <code>forwardTo</code> 中缀函数创建：</p>
+<pre><code class="language-kotlin">edge(sourceNode forwardTo targetNode)
+</code></pre>
+<h3 id="133-condition">1.3.3 Condition</h3>
+<p>条件决定了在策略图中何时沿某条特定的边继续执行。条件有多种类型，下面列出一些常见类型：</p>
+<table>
+<thead>
+<tr>
+<th>条件类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>onCondition</td>
+<td>通用条件，接收一个返回布尔值的 lambda 表达式。</td>
+</tr>
+<tr>
+<td>onToolCalls</td>
+<td>当 LLM 调用一个或多个工具时匹配的条件。</td>
+</tr>
+<tr>
+<td>onTextMessage</td>
+<td>当 LLM 以文本消息响应时匹配的条件。</td>
+</tr>
+</tbody>
+</table>
+<p>这里列的是 1.3.0 可用的常见写法。官方指南还出现过 <code>onToolNotCalled</code>，但该版本没有提供同名函数，不能直接照用。<code>onToolCalls</code> 不仅筛选调用，还会把消息转换为 <code>ToolCalls</code>；<code>onTextMessage</code> 会提取文本并转换为 <code>String</code>。它们不是单纯的布尔判断。</p>
+<p>在将输出传递给目标节点之前，还可以使用 <code>transformed</code> 函数先对其进行转换：</p>
+<pre><code class="language-kotlin">edge(sourceNode forwardTo targetNode
+        onCondition { input -&gt; input.length &gt; 10 }
+        transformed { input -&gt; input.uppercase() }
+)
+</code></pre>
+<h3 id="134-subgraph">1.3.4 Subgraph</h3>
+<p>子图是策略图中拥有各自工具集和上下文的独立部分。 一个策略图可以包含多个子图。每个子图都通过 subgraph 函数定义：</p>
+<pre><code class="language-kotlin">val strategy = strategy&lt;Input, Output&gt;("strategy-name") {
+    val firstSubgraph by subgraph&lt;FirstInput, FirstOutput&gt;("first") {
+        // Define nodes and edges for this subgraph
+    }
+    val secondSubgraph by subgraph&lt;SecondInput, SecondOutput&gt;("second") {
+        // Define nodes and edges for this subgraph
+    }
+}
+</code></pre>
+<p>子图可以使用工具注册表中的任意工具。 也可以从该注册表中指定一组仅供子图使用的工具子集，并将其作为参数传给 subgraph 函数：</p>
+<pre><code class="language-kotlin">val strategy = strategy&lt;Input, Output&gt;("strategy-name") {
+    val firstSubgraph by subgraph&lt;FirstInput, FirstOutput&gt;(
+        name = "first",
+        tools = listOf(someTool)
+    ) {
+        // Define nodes and edges for this subgraph
+    }
+   // Define other subgraphs
+}
+</code></pre>
+<h2 id="14-学习路线三层能力--两个专题">1.4 学习路线：三层能力 + 两个专题</h2>
+<p>我把 Koog 中 Strategies 的相关知识点组织成"三层能力 + 两个专题"，也就是本文后续章节的内容，包含：预定义节点、预定义策略、自定义图、并行执行、节点间数据传递等。</p>
+<div class="mermaid">flowchart TD
+    L1["第一层：直接用预定义策略&lt;br/&gt;chatAgentStrategy() / reActStrategy()"] --&gt; L2["第二层：用预定义节点组装自己的图&lt;br/&gt;nodeLLMRequest、nodeExecuteTools、edge ..."]
+    L2 --&gt; L3["第三层：完全自定义&lt;br/&gt;自定义 node、自定义 subgraph"]
+    L2 -.-&gt; T1["专题一：控制进阶&lt;br/&gt;条件分支、并行节点执行"]
+    L2 -.-&gt; T2["专题二：数据传递&lt;br/&gt;transformed、AIAgentStorage"]
+</div><ul>
+<li><strong>第一层</strong>：Koog 把常见模式做成了现成策略，<code>strategy = chatAgentStrategy()</code> 一行搞定。先判断"我的场景够不够典型"，够典型就不用自己画图。</li>
+<li><strong>第二层</strong>：预定义节点是积木，Strategy graph 是图纸。掌握十几个常用节点和边的条件写法，能拼出绝大多数工作流。</li>
+<li><strong>第三层</strong>：积木不够用就自己造——自定义 node、自定义 subgraph。</li>
+<li><strong>专题一</strong>：条件分支和并行执行，决定图的"控制力"上限。</li>
+<li><strong>专题二</strong>：节点之间除了沿着边传数据，还能通过 <code>AIAgentStorage</code> 共享数据。</li>
+</ul>
+<p>总结一下本章的核心：</p>
+<blockquote>
+<p><strong>Agent 类型决定"外壳"（Koog(2) 已讲），Strategy 决定"内核"。本文的图式策略是一张从 nodeStart 到 nodeFinish 的有向图，由策略、子图、节点和边共同组成；学习它可以按"用现成策略 → 攒预定义节点 → 完全自定义"三层递进。</strong></p>
+</blockquote>
+<p>接下来，我们从最小的构建块——Node 开始。</p>
+<hr>
+<h1 id="二node工作流的基本构建块">二、Node：工作流的基本构建块</h1>
+<h2 id="21-node-的本质一个类型化的函数">2.1 Node 的本质：一个类型化的函数</h2>
+<p>节点是 Koog 智能体工作流的基本构建块，每个节点表示工作流中的一个特定操作或转换，可以用边连接起来形成执行流。</p>
+<p>节点可以把复杂逻辑封装为可复用的执行单元，再通过边组合进工作流。</p>
+<p>更进一步说，<strong>每个 Node 本质上就是一个函数：接收一个指定类型的输入，返回一个指定类型的输出。</strong></p>
+<p>自定义一个最简单的节点：</p>
+<pre><code class="language-kotlin">val nodeLength by node&lt;String, Int&gt; { input -&gt;
+    input.length
+}
+</code></pre>
+<p>接收一个 String，返回它的长度 Int。不需要继承任何类、实现任何接口，一个 lambda 就是一个节点。</p>
+<p>Koog(2) 的示例代码中用过的那些 <code>nodeXXX</code> 预定义节点，全部符合这个定义：它们只是框架已经写好的"函数"。</p>
+<h2 id="22-常用预定义节点速查">2.2 常用预定义节点速查</h2>
+<p>下面按 Koog 1.3.0 的实际 Kotlin 签名列出常用节点，不是全部 API 清单。<code>String</code> 输入的 <code>nodeLLMRequest*</code> 与 <code>Message.User</code> 输入的 <code>nodeLLMSendMessage*</code> 是两组不同接口，不能混用。</p>
+<h3 id="221-辅助节点utility-nodes">2.2.1 辅助节点（Utility nodes）</h3>
+<table>
+<thead>
+<tr>
+<th>节点</th>
+<th>输入 → 输出</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nodeDoNothing&lt;T&gt;</code></td>
+<td>T → T</td>
+<td>原样返回输入</td>
+</tr>
+<tr>
+<td><code>nodeAppendPrompt&lt;T&gt;</code></td>
+<td>T → T</td>
+<td>追加提示词，不请求模型</td>
+</tr>
+</tbody>
+</table>
+<pre><code class="language-kotlin">val passthrough by nodeDoNothing&lt;String&gt;("passthrough")
+edge(nodeStart forwardTo passthrough)
+edge(passthrough forwardTo nodeFinish)
+</code></pre>
+<h3 id="222-llm-节点llm-nodes">2.2.2 LLM 节点（LLM nodes）</h3>
+<table>
+<thead>
+<tr>
+<th>节点</th>
+<th>输入 → 输出</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nodeLLMRequest</code></td>
+<td>String → Message.Assistant</td>
+<td>追加用户文本，发起可使用当前工具集的请求</td>
+</tr>
+<tr>
+<td><code>nodeLLMRequestOnlyCallingTools</code></td>
+<td>String → Message.Assistant</td>
+<td>请求模型调用工具</td>
+</tr>
+<tr>
+<td><code>nodeLLMRequestWithoutTools</code></td>
+<td>String → Message.Assistant</td>
+<td>不向模型提供工具</td>
+</tr>
+<tr>
+<td><code>nodeLLMRequestForceOneTool</code></td>
+<td>String → Message.Assistant</td>
+<td>指定一个工具描述，要求模型调用该工具</td>
+</tr>
+<tr>
+<td><code>nodeLLMRequestStructured&lt;T&gt;</code></td>
+<td>String → Result&lt;StructuredResponse<t>&gt;</t></td>
+<td>请求结构化结果，可配置修复解析器</td>
+</tr>
+<tr>
+<td><code>nodeLLMRequestStreaming</code></td>
+<td>String → Flow<streamframe></streamframe></td>
+<td>消费流式响应；另有将流转换为自定义输出的重载</td>
+</tr>
+<tr>
+<td><code>nodeLLMRequestMultipleChoices</code></td>
+<td>String → LLMChoice</td>
+<td>多候选生成，不等同于一次响应内的多个工具调用</td>
+</tr>
+<tr>
+<td><code>nodeLLMSendMessageOnlyCallingTools</code></td>
+<td>Message.User → Message.Assistant</td>
+<td>追加完整用户消息，请求模型调用工具</td>
+</tr>
+<tr>
+<td><code>nodeLLMSendMessageForceOneTool</code></td>
+<td>Message.User → Message.Assistant</td>
+<td>追加完整用户消息，要求调用指定工具</td>
+</tr>
+<tr>
+<td><code>nodeLLMCompressHistory&lt;T&gt;</code></td>
+<td>T → T</td>
+<td>根据压缩策略处理历史，透传节点输入</td>
+</tr>
+</tbody>
+</table>
+<p>“要求调用工具”仍依赖 Provider 与模型对工具选择参数的支持；图中的条件边也应处理异常响应。<code>LLMChoice</code>、<code>StructuredResponse</code>、<code>StreamFrame</code> 等类型需要各自的导入与配置，这里只列出接口关系。</p>
+<h3 id="223-tool-节点tool-nodes">2.2.3 Tool 节点（Tool nodes）</h3>
+<table>
+<thead>
+<tr>
+<th>节点</th>
+<th>输入 → 输出</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nodeExecuteTools</code></td>
+<td>ToolCalls → ReceivedToolResults</td>
+<td>执行一组调用，<code>parallel = true</code> 时并发执行</td>
+</tr>
+<tr>
+<td><code>nodeExecuteSingleTool</code>（调用消息重载）</td>
+<td>MessagePart.Tool.Call → ReceivedToolResult</td>
+<td>执行一个已有工具调用</td>
+</tr>
+<tr>
+<td><code>nodeExecuteSingleTool&lt;Args, Result&gt;</code>（指定工具重载）</td>
+<td>Args → SafeTool.Result<result></result></td>
+<td>不经 LLM 决策，直接调用给定工具</td>
+</tr>
+<tr>
+<td><code>nodeLLMSendToolResults</code></td>
+<td>ReceivedToolResults → Message.Assistant</td>
+<td>将执行结果追加到提示词，再请求模型</td>
+</tr>
+<tr>
+<td><code>nodeLLMSendToolResultsWithoutTools</code></td>
+<td>ReceivedToolResults → Message.Assistant</td>
+<td>回传结果后请求模型，不再提供工具</td>
+</tr>
+<tr>
+<td><code>nodeLLMSendToolResultsOnlyCallingTools</code></td>
+<td>ReceivedToolResults → Message.Assistant</td>
+<td>回传结果后要求继续调用工具</td>
+</tr>
+</tbody>
+</table>
+<p><code>ToolCalls</code>、<code>ReceivedToolResults</code> 是框架的封装类型，不能直接当作 <code>List</code> 使用。<code>SafeTool.Result</code> 区分成功与失败，指定工具重载的调用方应显式处理这两种情况。第八章会给出实际用法。</p>
+<p>这些节点不用背：先按“请求模型”“执行工具”“回传结果”查找，再检查输入输出是否能衔接。</p>
+<h2 id="23-重点-llm-节点详解">2.3 重点 LLM 节点详解</h2>
+<p><strong>nodeLLMRequest：最常用的请求节点</strong></p>
+<p>追加用户文本到 prompt，再发起请求；<code>nodeLLMRequest()</code> 使用当前上下文中的工具集。若明确禁止工具调用，应选择 <code>nodeLLMRequestWithoutTools()</code>：</p>
+<pre><code class="language-kotlin">val requestLLM by nodeLLMRequest("requestLLM")
+edge(getUserQuestion forwardTo requestLLM)
+</code></pre>
+<p>Koog(2) 的示例代码中用过它的变体——"只允许调工具"的版本。</p>
+<p><strong>nodeAppendPrompt：先铺垫，再请求</strong></p>
+<p>它不请求 LLM，只往 prompt 里追加消息，用于在真正的 LLM 请求之前准备上下文，比如插入 system 指令或补充 user 消息：</p>
+<pre><code class="language-kotlin">val setupContext by nodeAppendPrompt&lt;String&gt;("setupContext") {
+    system("You are a helpful assistant specialized in Kotlin programming.")
+    user("I need help with Kotlin coroutines.")
+}
+</code></pre>
+<p><strong>nodeLLMCompressHistory：历史压缩</strong></p>
+<p>把当前 LLM prompt（消息历史）压缩为一条保留关键信息的摘要，适合长对话场景控制 token：</p>
+<pre><code class="language-kotlin">val compressHistory by nodeLLMCompressHistory&lt;String&gt;(
+    "compressHistory",
+    strategy = HistoryCompressionStrategy.FromLastNMessages(10),
+    preserveMemory = true
+)
+</code></pre>
+<p>历史压缩的完整机制（压缩策略、和记忆的关系）会在后面讲记忆与持久化的文章中展开，这里只需要知道：图里有一个现成的压缩节点，挂上去就能用。</p>
+<p><strong>nodeLLMRequestStructured 与 nodeLLMRequestStreaming</strong></p>
+<p>分别对应结构化输出和流式输出。这两个能力值得单独一篇文章，后续会专门讲，此处先记住节点名字和用途即可。</p>
+<h2 id="24-transform转换节点的输出">2.4 transform()：转换节点的输出</h2>
+<p><code>AIAgentNodeDelegate</code> 提供了 <code>transform</code> 成员方法，可以包装一个已有节点，并对它的输出应用转换。比如把 <code>nodeLLMRequest</code> 的响应转换成文本长度：</p>
+<pre><code class="language-kotlin">val lengthNode by nodeLLMRequest("llmRequest").transform&lt;Int&gt; { assistantMessage -&gt;
+    assistantMessage.parts.filterIsInstance&lt;MessagePart.Text&gt;().joinToString("\n") { it.text }.length
+}
+
+edge(nodeStart forwardTo lengthNode)
+edge(lengthNode forwardTo nodeFinish)
+</code></pre>
+<p>理解这段代码：<code>lengthNode</code> 仍然是 String → Int 的节点（输入用户消息，输出文本长度），但内部复用了 <code>nodeLLMRequest</code> 的能力。<code>transform</code> 的价值就是让预定义节点"长成"你需要的形状。</p>
+<h2 id="25-自定义节点从直接定义到封装复用">2.5 自定义节点：从直接定义到封装复用</h2>
+<p>预定义节点不够用时，可以通过 <code>node</code> 定义自己的执行逻辑。下面从最简单的节点开始，再看如何封装为可复用的节点工厂，以及如何为节点增加配置参数和局部状态。</p>
+<p><strong>方式一：直接定义节点</strong></p>
+<p>在 <code>strategy { }</code> 或 <code>subgraph { }</code> 中直接定义节点，适合只在当前流程中使用的逻辑：</p>
+<pre><code class="language-kotlin">val textLength by node&lt;String, Int&gt;("textLength") { input -&gt;
+    input.length
+}
+</code></pre>
+<p>这个节点接收 <code>String</code>，返回 <code>Int</code>。节点的输入输出类型由 <code>node&lt;String, Int&gt;</code> 指定，不要求与整个策略图的输入输出类型一致，只要连接它的上下游类型兼容即可。</p>
+<p><strong>方式二：提取为扩展函数，跨图复用</strong></p>
+<p>如果多个工作流都需要同一段节点逻辑，可以将它提取为返回 <code>AIAgentNodeDelegate</code> 的节点工厂。官方 <a href="https://docs.koog.ai/custom-nodes/" target="_blank" rel="noopener nofollow">Custom nodes</a> 页面采用了在 <code>AIAgentSubgraphBuilderBase</code> 上定义扩展函数的写法。</p>
+<p><code>AIAgentSubgraphBuilderBase&lt;Input, Output&gt;</code> 是策略图构建器与子图构建器的共同抽象基类，提供起止节点、边连接等建图能力：</p>
+<ul>
+<li><code>strategy { }</code> 的接收者是 <code>AIAgentGraphStrategyBuilder</code>，继承自这个基类。</li>
+<li><code>subgraph { }</code> 的接收者是 <code>AIAgentSubgraphBuilder</code>，同样继承自这个基类。</li>
+</ul>
+<p>因此，定义在这个基类上的扩展函数，可以在两种 DSL 块中调用。比如，封装一个记录输入、随后原样返回的日志节点：</p>
+<pre><code class="language-kotlin">import ai.koog.agents.core.dsl.builder.AIAgentNodeDelegate
+import ai.koog.agents.core.dsl.builder.AIAgentSubgraphBuilderBase
+import ai.koog.agents.core.dsl.builder.node
+import ai.koog.agents.core.dsl.builder.strategy
+
+fun AIAgentSubgraphBuilderBase&lt;*, *&gt;.loggingNode(
+    name: String? = null
+): AIAgentNodeDelegate&lt;String, String&gt; = node&lt;String, String&gt;(name) { input -&gt;
+    println("Input: $input")
+    input
+}
+
+val loggingStrategy = strategy&lt;String, String&gt;("logging-example") {
+    val logInput by loggingNode("logInput")
+
+    edge(nodeStart forwardTo logInput)
+    edge(logInput forwardTo nodeFinish)
+}
+</code></pre>
+<p>这里有三个容易混淆的点：</p>
+<ul>
+<li><code>AIAgentSubgraphBuilderBase&lt;*, *&gt;</code> 中的 <code>*</code> 是星投影，表示这个扩展函数不依赖外围图的具体输入输出类型；它不会声明名为 <code>Input</code>、<code>Output</code> 的类型参数。</li>
+<li>返回类型 <code>AIAgentNodeDelegate&lt;String, String&gt;</code> 描述的是<strong>节点自身</strong>的输入输出，而不是外围图的输入输出。每次调用 <code>loggingNode(...)</code> 都会创建一个新的节点委托，供 <code>by</code> 声明节点。</li>
+<li>在 Koog 1.3.0 中，<code>node()</code> 是顶层函数，不是这个基类的成员。普通函数也可以调用它并返回节点委托；使用扩展函数是为了把节点工厂组织到建图 DSL 中，并不是为了获得调用 <code>node()</code> 的权限。</li>
+</ul>
+<p>如果希望日志节点支持任意输入类型，可以将上面的工厂替换为泛型版本：</p>
+<pre><code class="language-kotlin">inline fun &lt;reified T&gt; AIAgentSubgraphBuilderBase&lt;*, *&gt;.loggingNode(
+    name: String? = null
+): AIAgentNodeDelegate&lt;T, T&gt; = node&lt;T, T&gt;(name) { input -&gt;
+    println("Input: $input")
+    input
+}
+
+// 在 strategy { } 或 subgraph { } 中使用
+val logInput by loggingNode&lt;String&gt;("logInput")
+</code></pre>
+<p>这里使用 <code>inline</code> 和 <code>reified</code>，是因为 <code>node&lt;T, T&gt;()</code> 需要获取输入输出的类型信息。这个 <code>T</code> 是节点工厂自己的类型参数，与外围图的类型参数无关。</p>
+<p><strong>方式三：为节点工厂增加配置参数</strong></p>
+<p>配置参数在创建节点时传入，用于定制节点的行为；节点真正执行时，仍然通过 <code>input</code> 接收上游数据。两者的时机不同：</p>
+<pre><code class="language-kotlin">fun AIAgentSubgraphBuilderBase&lt;*, *&gt;.truncateNode(
+    maxLength: Int,
+    name: String? = null
+): AIAgentNodeDelegate&lt;String, String&gt; {
+    require(maxLength &gt;= 0) { "maxLength must be non-negative" }
+
+    return node&lt;String, String&gt;(name) { input -&gt;
+        input.take(maxLength)
+    }
+}
+
+// 在 strategy { } 或 subgraph { } 中使用
+val truncateText by truncateNode(maxLength = 100, name = "truncateText")
+</code></pre>
+<p><code>maxLength</code> 在建图时确定，并由执行 lambda 捕获；<code>input</code> 则是在执行流到达节点时才传入的文本。这样可以复用同一个节点工厂，在不同位置创建具有不同长度限制的节点。</p>
+<p><strong>方式四：通过闭包保存局部状态</strong></p>
+<p>节点工厂还可以创建局部变量，让返回的执行逻辑捕获它。例如，统计这段节点逻辑被执行了多少次：</p>
+<pre><code class="language-kotlin">fun AIAgentSubgraphBuilderBase&lt;*, *&gt;.countingNode(
+    name: String? = null
+): AIAgentNodeDelegate&lt;String, String&gt; {
+    var counter = 0
+
+    return node&lt;String, String&gt;(name) { input -&gt;
+        counter++
+        println("Node executed $counter times")
+        input
+    }
+}
+</code></pre>
+<p><code>counter</code> 在调用 <code>countingNode(...)</code> 时创建，不是在每次执行节点时重新创建。同一闭包被重复执行时会保留计数；再次调用节点工厂，则会创建另一个独立的计数器。</p>
+<p>但这种写法有明确的边界：</p>
+<ul>
+<li><strong>不会自动按运行隔离</strong>：如果同一节点逻辑被多个 Agent 或多次运行复用，它们可能共用这个计数器，不能把它理解为“本次运行的计数”。</li>
+<li><strong>不保证并发安全</strong>：<code>counter++</code> 不是原子操作。上面的示例只用于说明串行执行下的闭包行为，不应直接用于并发计数。</li>
+<li><strong>不会自动持久化</strong>：闭包变量不会因为启用了 Agent Persistence 就自动进入 checkpoint。</li>
+</ul>
+<p>对于需要在工作流中管理、跨节点访问的运行状态，应优先考虑第七章介绍的 <code>AIAgentStorage</code>，并结合其运行生命周期和并行上下文规则设计读写方式；不要依赖闭包变量隐式共享。</p>
+<p>还要区分<strong>构建期接收者</strong>和<strong>运行期接收者</strong>：扩展函数的接收者 <code>AIAgentSubgraphBuilderBase</code> 用于建图；传给 <code>node</code> 的执行 lambda，其接收者是 <code>AIAgentGraphContextBase</code>，执行时访问的 <code>llm</code>、<code>storage</code> 等能力来自后者。下面的 LLM 交互示例用的就是运行期上下文。</p>
+<p><strong>常见模式小结</strong></p>
+<p>官方文档总结了自定义节点的四种常见模式：</p>
+<table>
+<thead>
+<tr>
+<th>模式</th>
+<th>特征</th>
+<th>典型用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pass-through 透传</td>
+<td>做点事，但返回原输入</td>
+<td>日志、埋点</td>
+</tr>
+<tr>
+<td>Transformation 转换</td>
+<td>输入 → 加工 → 新输出</td>
+<td>格式转换、数据清洗</td>
+</tr>
+<tr>
+<td>LLM 交互</td>
+<td>节点内 llm.writeSession 手动控制请求</td>
+<td>精细控制 prompt 和模型</td>
+</tr>
+<tr>
+<td>Tool 执行</td>
+<td>节点内手动构造工具调用并执行</td>
+<td>绕过 LLM 直接执行工具</td>
+</tr>
+</tbody>
+</table>
+<p>其中"LLM 交互"模式后面并行执行和综合实战里都会用到，值得单独看一眼：</p>
+<pre><code class="language-kotlin">val summarizeTextNode by node&lt;String, String&gt;("summarize") { input -&gt;
+    llm.writeSession {
+        appendPrompt {
+            user("Please summarize the following text: $input")
+        }
+        val response = requestLLMWithoutTools()
+        response.parts.filterIsInstance&lt;MessagePart.Text&gt;().joinToString("\n") { it.text }
+    }
+}
+</code></pre>
+<p>在自定义节点里，<code>llm.writeSession</code> 就是第 3 篇讲过的 LLM 写会话：追加 prompt、切换模型、发请求，全都可以手动控制。</p>
+<h2 id="26-类型决定连接">2.6 类型决定连接</h2>
+<p>Strategy graph 最重要的一条规则：</p>
+<blockquote>
+<p>节点的输入和输出类型决定了它在工作流中如何与其它节点连接。只有源节点的输出类型与目标节点的输入类型兼容，节点才能相连。</p>
+</blockquote>
+<p>这就是为什么需要 <code>transformed</code>（边上的转换）和 <code>transform()</code>（节点上的转换）：它们是类型不匹配时的"转接头"。</p>
+<p>一句话总结本章：</p>
+<blockquote>
+<p><strong>Node 是类型化的函数；Koog 提供了覆盖"LLM 请求 / 工具执行 / 历史压缩 / 透传"的预定义节点；不够用时，一个 lambda 就是自定义节点；而节点能不能连上，看类型。</strong></p>
+</blockquote>
+<p>节点解决了"做什么"，那"接下来去哪"呢？这就是 Edge 的事。下一章我们把第一章的基础组件拼成一张真正能跑的图，看看边如何构成完整的控制流。</p>
+<hr>
+<h1 id="三组装从基础图到条件分支">三、组装：从基础图到条件分支</h1>
+<p>第一章中已经认识了 <code>edge</code>、<code>forwardTo</code> 和常见条件写法。这一章关心的问题是：<strong>这些边拼在一起，整体是怎么跑的？怎么表达分支和顺序？</strong></p>
+<h2 id="31-最基本的工具调用图">3.1 最基本的工具调用图</h2>
+<p>下面是一个 Basic Agent 的策略图示例的执行流程：</p>
+<ol>
+<li>将输入发送给 LLM。</li>
+<li>如果 LLM 直接回复了消息，流程结束。</li>
+<li>如果 LLM 调用工具，执行该工具。</li>
+<li>把工具结果发回 LLM。</li>
+<li>如果 LLM 回复了消息，流程结束。</li>
+<li>如果 LLM 又调用工具，执行工具，回到第 4 步。</li>
+</ol>
+<div class="mermaid">---
+title: my-strategy
+---
+stateDiagram
+    state "nodeCallLLM" as nodeCallLLM
+    state "executeToolCall" as executeToolCall
+    state "sendToolResult" as sendToolResult
+
+    [*] --&gt; nodeCallLLM
+    nodeCallLLM --&gt; [*] : transformed
+    nodeCallLLM --&gt; executeToolCall : onCondition
+    executeToolCall --&gt; sendToolResult
+    sendToolResult --&gt; [*] : transformed
+    sendToolResult --&gt; executeToolCall : onCondition
+</div><p>对应代码：</p>
+<pre><code class="language-kotlin">val myStrategy = strategy&lt;String, String&gt;("my-strategy") {
+    val nodeCallLLM by nodeLLMRequest()
+    val executeToolCall by nodeExecuteTools()
+    val sendToolResult by nodeLLMSendToolResults()
+
+    edge(nodeStart forwardTo nodeCallLLM)
+    edge(nodeCallLLM forwardTo nodeFinish onTextMessage { true })
+    edge(nodeCallLLM forwardTo executeToolCall onToolCalls { true })
+    edge(executeToolCall forwardTo sendToolResult)
+    edge(sendToolResult forwardTo nodeFinish onTextMessage { true })
+    edge(sendToolResult forwardTo executeToolCall onToolCalls { true })
+}
+</code></pre>
+<p>理解这张图：</p>
+<ul>
+<li>三个节点构成"请求 → 执行 → 回传"的循环三角。</li>
+<li><code>nodeCallLLM</code> 和 <code>sendToolResult</code> 各有<strong>两条出边</strong>：LLM 回了文本 → 走向结束；LLM 要调工具 → 走向工具执行。这正是"条件挂在边上"的价值——同一个节点的输出，按响应内容分流。</li>
+<li><code>sendToolResult → executeToolCall</code> 这条回边形成了循环：LLM 可以连续调用多次工具，直到它给出最终文本。</li>
+</ul>
+<p>顺便说一句：这张图就是官方 <code>singleRunStrategy</code> 的真身。Basic Agent 之所以"拿来就能用"，就是因为它背后挂的就是这张图。</p>
+<h2 id="32-条件分支">3.2 条件分支</h2>
+<p>当工作流需要根据中间结果走不同路径时，给同一个源节点定义多条带条件的出边：</p>
+<pre><code class="language-kotlin">val branchA by node&lt;String, String&gt; { input -&gt;
+    "Branch A: $input"
+}
+
+val branchB by node&lt;String, String&gt; { input -&gt;
+    "Branch B: $input"
+}
+
+edge(
+    (someNode forwardTo branchA)
+            onCondition { input -&gt; input.contains("A") }
+)
+edge(
+    (someNode forwardTo branchB)
+            onCondition { input -&gt; input.contains("B") }
+)
+</code></pre>
+<p>输出包含 "A" 时可匹配分支 A，包含 "B" 时可匹配分支 B。若同时包含二者，按下文的边顺序规则选择；若二者都不包含，需要另设兜底边，否则会抛出 <code>AIAgentStuckInTheNodeException</code>。</p>
+<blockquote>
+<p>一个关键细节：<strong>边按定义顺序评估</strong>。同一个源节点的多条出边，Koog 按代码中定义的顺序逐条检查条件，第一条满足的生效。所以宽泛的条件不要放在前面，否则会"截胡"后面的具体条件。</p>
+</blockquote>
+<h2 id="33-then顺序流的语法糖">3.3 then：顺序流的语法糖</h2>
+<p>对于没有条件的顺序流，可以用 <code>then</code> 链式连接，比一条条写 <code>edge</code> 简洁：</p>
+<pre><code class="language-kotlin">nodeStart then firstNode then secondNode then nodeFinish
+</code></pre>
+<p>有条件流转时，仍然需要 <code>edge</code> + <code>onXxx</code> 的完整写法。</p>
+<h2 id="34-可视化asmermaiddiagram">3.4 可视化：asMermaidDiagram()</h2>
+<p>"易于可视化"是 Graph-based Agent 的三大优势之一，来源就在这里——JVM 上可以为任何策略图生成 Mermaid 状态图：</p>
+<pre><code class="language-kotlin">val mermaidDiagram: String = myStrategy.asMermaidDiagram()
+println(mermaidDiagram)
+</code></pre>
+<p>对 3.1 创建的图，输出如下：</p>
+<pre><code class="language-text">---
+title: my-strategy
+---
+stateDiagram
+    state "nodeCallLLM" as nodeCallLLM
+    state "executeToolCall" as executeToolCall
+    state "sendToolResult" as sendToolResult
+
+    [*] --&gt; nodeCallLLM
+    nodeCallLLM --&gt; [*] : transformed
+    nodeCallLLM --&gt; executeToolCall : onCondition
+    executeToolCall --&gt; sendToolResult
+    sendToolResult --&gt; [*] : transformed
+    sendToolResult --&gt; executeToolCall : onCondition
+</code></pre>
+<p>把这段输出贴到任何支持 Mermaid 的地方（IDE 插件、GitHub、博客平台）就能直接渲染出图。图反映生成时的代码结构；代码修改后需要重新生成。<code>transformed</code>、<code>onCondition</code> 是生成器提取的内部实现标签，不一定与 DSL 中 <code>onTextMessage</code>、<code>onToolCalls</code> 的名称一致，也不会完整展示条件 lambda 的业务含义。</p>
+<p>一句话总结：</p>
+<blockquote>
+<p><strong>顺序流用 then，分支用多条带条件的出边，循环用回边；边按定义顺序评估条件；一张 asMermaidDiagram() 就能让图"画"出来。</strong></p>
+</blockquote>
+<hr>
+<h1 id="四subgraph封装与复用局部流程">四、Subgraph：封装与复用局部流程</h1>
+<h2 id="41-subgraph-是什么">4.1 Subgraph 是什么</h2>
+<p>Subgraph 定义：子图是策略内自包含的处理单元，用于把复杂工作流拆解成可管理的顺序步骤。每个子图：</p>
+<ul>
+<li>有唯一的名称；</li>
+<li>内部是一张由节点/子图和边构成的图；</li>
+<li>可以使用工具注册表的全部工具，也可以只用其中的一个子集；</li>
+<li>接收上一个子图（或初始用户输入）的输出，产出传递给下一个子图（或最终输出）。</li>
+</ul>
+<p>每个子图在自己的上下文中执行，这个上下文提供：环境、agent 输入、agent 配置、LLM 上下文（包括对话历史）、状态管理器、storage、会话与策略。</p>
+<p>第一章 1.3.4 已经看过 <code>subgraph</code> 的创建语法。补一个理解方式：</p>
+<blockquote>
+<p><strong>subgraph 之于 strategy，就像函数之于程序</strong>——声明输入类型、封装内部逻辑、返回输出类型，可以被组合和复用。</p>
+</blockquote>
+<h2 id="42-子图中的工具配置">4.2 子图中的工具配置</h2>
+<p>让子图"只能用某些工具"有三种方式。</p>
+<p><strong>方式一：定义时直接指定</strong>（第一章已见）</p>
+<pre><code class="language-kotlin">val mySubgraph by subgraph&lt;String, String&gt;(
+    tools = listOf(AskUser)
+) {
+    // 子图定义
+}
+</code></pre>
+<p>也可以用 <code>toolSelectionStrategy</code> 指定选择策略：</p>
+<pre><code class="language-kotlin">val subgraphIdentifier by subgraph&lt;Input, Output&gt;(
+    name = "subgraph-name",
+    toolSelectionStrategy = ToolSelectionStrategy.ALL
+) {
+    // Define nodes and edges for this subgraph
+}
+</code></pre>
+<p><strong>方式二：从工具注册表获取</strong></p>
+<pre><code class="language-kotlin">val mySubgraph by subgraph&lt;String, String&gt;(
+    tools = listOf(toolRegistry.getTool("AskUser"))
+) {
+    // 子图定义
+}
+</code></pre>
+<p><strong>方式三：运行时动态调整</strong></p>
+<p>在子图的节点里，通过 <code>llm.writeSession</code> 动态过滤当前可用的工具：</p>
+<pre><code class="language-kotlin">this.llm.writeSession {
+    tools = tools.filter { it.name in listOf("first_tool_name", "second_tool_name") }
+}
+</code></pre>
+<p>这三种方式的差别：前两种是静态声明，图跑起来之前就定了；第三种是运行时按逻辑调整，同一个子图在不同条件下可以暴露不同的工具集。</p>
+<h2 id="43-multi-part-strategies多子图串联">4.3 Multi-part strategies：多子图串联</h2>
+<p>复杂工作流可以拆成多个子图，各管一段。官方文档给了一个非常典型的 assistant 示例，整体结构是：</p>
+<div class="mermaid">flowchart LR
+    nodeStart([nodeStart]) --&gt; research["researchSubgraph&lt;br/&gt;（联网搜索）"]
+    research --&gt; plan["planSubgraph&lt;br/&gt;（制定计划）"]
+    plan --&gt; execute["executeSubgraph&lt;br/&gt;（执行动作）"]
+    execute --&gt; nodeFinish([nodeFinish])
+</div><p>下面是根据官方示例整理并补齐结束边的策略片段。<code>WebSearchTool</code>、<code>DoAction</code>、<code>DoAnotherAction</code> 是示意的业务工具，需要自行实现并注册到 Agent 的 <code>ToolRegistry</code>；代码本身不是完整应用。每个工具循环都保留“继续调用”和“文本结束”两类出边：</p>
+<pre><code class="language-kotlin">val strategy = strategy&lt;String, String&gt;("assistant") {
+
+    // 子图 1：调研 —— 只能用搜索工具
+    val researchSubgraph by subgraph&lt;String, String&gt;(
+        "research_subgraph",
+        tools = listOf(WebSearchTool())
+    ) {
+        val nodeCallLLM by nodeLLMRequest("call_llm")
+        val nodeExecuteTool by nodeExecuteTools()
+        val nodeSendToolResult by nodeLLMSendToolResults()
+
+        edge(nodeStart forwardTo nodeCallLLM)
+        edge(nodeCallLLM forwardTo nodeExecuteTool onToolCalls { true })
+        edge(nodeExecuteTool forwardTo nodeSendToolResult)
+        edge(nodeSendToolResult forwardTo nodeExecuteTool onToolCalls { true })
+        edge(nodeSendToolResult forwardTo nodeFinish onTextMessage { true })
+        edge(nodeCallLLM forwardTo nodeFinish onTextMessage { true })
+    }
+
+    // 子图 2：规划 —— 不给任何工具，纯推理
+    val planSubgraph by subgraph&lt;String, String&gt;(
+        "plan_subgraph",
+        tools = listOf()
+    ) {
+        val nodeUpdatePrompt by node&lt;String, Unit&gt; { research -&gt;
+            llm.writeSession {
+                rewritePrompt {
+                    prompt("research_prompt") {
+                        system(
+                            "You are given a problem and some research on how it can be solved." +
+                                    "Make step by step a plan on how to solve given task."
+                        )
+                        user("Research: $research")
+                    }
+                }
+            }
+        }
+        val nodeCallLLM by nodeLLMRequest("call_llm")
+
+        edge(nodeStart forwardTo nodeUpdatePrompt)
+        edge(nodeUpdatePrompt forwardTo nodeCallLLM transformed { "Task: $agentInput" })
+        edge(nodeCallLLM forwardTo nodeFinish onTextMessage { true })
+    }
+
+    // 子图 3：执行 —— 只能用动作类工具
+    val executeSubgraph by subgraph&lt;String, String&gt;(
+        "execute_subgraph",
+        tools = listOf(DoAction(), DoAnotherAction()),
+    ) {
+        val nodeUpdatePrompt by node&lt;String, Unit&gt; { plan -&gt;
+            llm.writeSession {
+                rewritePrompt {
+                    prompt("execute_prompt") {
+                        system(
+                            "You are given a task and detailed plan how to execute it." +
+                                    "Perform execution by calling relevant tools."
+                        )
+                        user("Plan: $plan")
+                    }
+                }
+            }
+        }
+        val nodeCallLLM by nodeLLMRequest("call_llm")
+        val nodeExecuteTool by nodeExecuteTools()
+        val nodeSendToolResult by nodeLLMSendToolResults()
+
+        edge(nodeStart forwardTo nodeUpdatePrompt)
+        edge(nodeUpdatePrompt forwardTo nodeCallLLM transformed { "Task: $agentInput" })
+        edge(nodeCallLLM forwardTo nodeExecuteTool onToolCalls { true })
+        edge(nodeExecuteTool forwardTo nodeSendToolResult)
+        edge(nodeSendToolResult forwardTo nodeExecuteTool onToolCalls { true })
+        edge(nodeSendToolResult forwardTo nodeFinish onTextMessage { true })
+        edge(nodeCallLLM forwardTo nodeFinish onTextMessage { true })
+    }
+
+    // 三个子图串联
+    nodeStart then researchSubgraph then planSubgraph then executeSubgraph then nodeFinish
+}
+</code></pre>
+<p>这个例子有三个值得咀嚼的点：</p>
+<ol>
+<li><strong>每个子图有自己的工具集</strong>：research 只能搜索，plan 什么工具都不给（纯推理），execute 只能执行动作。工具隔离让"这一段该干什么"变得非常明确，也防止 LLM 在规划阶段乱调工具。</li>
+<li><strong>rewritePrompt 让每个子图"带着自己的任务说明书"工作</strong>：进入子图先重写 prompt（换 system 指令、塞入上一阶段的结果），相当于每个工段开工前先换一张工单。</li>
+<li><strong>子图之间靠类型衔接</strong>：三个子图都是 String → String，所以能直接串。如果中间需要换类型，用 <code>transformed</code> 在边上转。</li>
+</ol>
+<h2 id="44-预定义子图subgraphwithtask--subgraphwithverification">4.4 预定义子图：subgraphWithTask / subgraphWithVerification</h2>
+<p>如果连子图内部的"请求-执行-回传"循环都懒得写，Koog 提供了两个现成子图。</p>
+<p><strong>subgraphWithTask：任务执行子图</strong></p>
+<p>给它一段任务文本和一组工具，它自动完成"请求 LLM → 执行工具 → 汇总结果"的完整流程：</p>
+<pre><code class="language-kotlin">val processQuery by subgraphWithTask&lt;String, String&gt;(
+    tools = listOf(searchTool, calculatorTool, weatherTool),
+    llmModel = OpenAIModels.Chat.GPT4o,
+    parallelTools = false,
+    assistantResponseRepeatMax = 3,
+) { userQuery -&gt;
+    """
+    You are a helpful assistant that can answer questions about various topics.
+    Please help with the following query:
+    $userQuery
+    """.trimIndent()
+}
+</code></pre>
+<p>两个参数值得注意：</p>
+<ul>
+<li><code>parallelTools</code>：工具是否并行执行，默认顺序执行。</li>
+<li><code>assistantResponseRepeatMax</code>：允许的最大助手响应次数。超过就认为任务无法完成，防止无限循环。</li>
+</ul>
+<p>这类子图也可以通过 <code>llmParams</code> 设置任务专用的模型参数。以上工具名均为示意，需要替换为已注册的工具实例。</p>
+<p><strong>subgraphWithVerification：带验证的任务子图</strong></p>
+<p><code>subgraphWithTask</code> 的加强版：保证 LLM 在流程结束时调用验证工具，检查任务是否真正完成，并返回 <code>CriticResult</code>（成功/失败状态 + 详细反馈）。适合需要质检环节的流程：</p>
+<pre><code class="language-kotlin">val verifyCode by subgraphWithVerification&lt;String&gt;(
+    tools = listOf(runTestsTool, analyzeTool, readFileTool),
+    llmModel = AnthropicModels.Opus_4_6,
+    parallelTools = false,
+    assistantResponseRepeatMax = 3,
+) { codeToVerify -&gt;
+    """
+    You are a code reviewer. Please verify that the following code meets all requirements:
+    1. It compiles without errors
+    2. All tests pass
+    3. It follows the project's coding standards
+
+    Code to verify:
+    $codeToVerify
+    """.trimIndent()
+}
+</code></pre>
+<p>一句话总结本章：</p>
+<blockquote>
+<p><strong>Subgraph 是策略里的"函数"：唯一命名、类型化输入输出、自己的工具集和上下文；复杂工作流拆成多个子图串联，工具隔离 + rewritePrompt 让每段职责清晰；懒得写循环就用 subgraphWithTask，要质检就用 subgraphWithVerification。</strong></p>
+</blockquote>
+<p>至此，图的"局部"讲完了。但如果我们根本不想自己画图呢？Koog 还提供了一批现成的整体策略——预定义策略，下一章见。</p>
+<hr>
+<h1 id="五预定义策略与常见模式">五、预定义策略与常见模式</h1>
+<p>Koog 把两类东西做成了"现成的"：整体策略（这一章）和局部子图（上一章 4.4 节）。整体策略拿到就能当 Agent 的 strategy 用，覆盖两类最典型的 Agent 模式：聊天交互和推理-行动循环。</p>
+<h2 id="51-chatagentstrategy聊天交互策略">5.1 chatAgentStrategy：聊天交互策略</h2>
+<p><code>chatAgentStrategy()</code> 在 1.3.0 中不是普通问答循环，而是带工具使用反馈的策略：</p>
+<ol>
+<li>初始请求若直接返回文本，进入反馈节点，要求模型改为调用可用工具。</li>
+<li>反馈阶段继续返回文本时，会再次反馈，直到出现工具调用或达到运行限制。</li>
+<li>执行工具并回传结果后，文本响应可以正常结束；新的工具调用则继续循环。</li>
+<li>工具结果回传后的响应若包含 <code>__exit__</code> 调用，可走专门的结束路径。</li>
+</ol>
+<p>因此，它适用于希望先使用工具的交互流程，不表示所有阶段都禁止文本输出，也不会自动提供跨 <code>run</code> 的持久会话记忆。多轮历史如何保存，需要另行配置。</p>
+<p>使用方式（需要 <code>ai.koog.agents.ext.agent.chatAgentStrategy</code> 导入）：</p>
+<pre><code class="language-kotlin">val chatAgent = AIAgent(
+    promptExecutor = promptExecutor,
+    llmModel = model,
+    // 使用 chatAgentStrategy 作为 agent 的策略
+    strategy = chatAgentStrategy(),
+    // 注册 agent 可用的工具
+    toolRegistry = ToolRegistry {
+        tool(searchTool)
+        tool(weatherTool)
+    }
+)
+
+suspend fun main() {
+    val result = chatAgent.run("What's the weather like today and should I bring an umbrella?")
+}
+</code></pre>
+<p>适用场景：</p>
+<ul>
+<li>需要使用工具的会话型 agent</li>
+<li>根据用户请求执行动作的助手</li>
+<li>需要访问外部系统或数据的聊天机器人</li>
+<li>希望强制使用工具的场景。</li>
+</ul>
+<h2 id="52-reactstrategy推理与行动交替">5.2 reActStrategy：推理与行动交替</h2>
+<p>ReAct（Reasoning and Acting）策略在推理和执行两个阶段之间交替，动态处理任务。它的循环是：</p>
+<ol>
+<li>推理当前状态，规划下一步。</li>
+<li>基于推理采取行动。</li>
+<li>观察行动结果。</li>
+<li>重复，直到得出最终答案。</li>
+</ol>
+<p><code>reActStrategy</code> 在 1.3.0 中提供以下参数：</p>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>类型</th>
+<th>默认值</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>reasoningInterval</code></td>
+<td>Int</td>
+<td>1</td>
+<td>推理步的间隔，必须大于 0</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td>String</td>
+<td>"re_act"</td>
+<td>策略名称</td>
+</tr>
+<tr>
+<td><code>reasoningPrompt</code></td>
+<td>String</td>
+<td>"Please give your thoughts about the task and plan the next steps."</td>
+<td>推理阶段的提示词</td>
+</tr>
+</tbody>
+</table>
+<p>以下沿用官方银行场景的推理与行动示意，不是本文实测输出。原例的日期跨两个自然月，因此这里将问题表述为“这段时间花了多少钱”，避免把滚动区间当成自然月：</p>
+<p><strong>第 1 步：用户输入</strong>——“2025-05-19 至 2025-06-18 期间我花了多少钱？”</p>
+<p><strong>第 2 步：推理</strong>——agent 先想清楚步骤：</p>
+<pre><code class="language-text">I need to follow these steps:
+1. Get all transactions from 2025-05-19 to 2025-06-18
+2. Filter out deposits (positive amounts)
+3. Calculate total spending
+</code></pre>
+<p><strong>第 3 步：行动（一）</strong>——根据推理调用 <code>get_transactions</code> 工具：</p>
+<pre><code class="language-text">{tool: "get_transactions", args: {startDate: "2025-05-19", endDate: "2025-06-18"}}
+</code></pre>
+<p>工具返回交易记录：</p>
+<pre><code class="language-text">[
+  {date: "2025-05-25", amount: -100.00, description: "Grocery Store"},
+  {date: "2025-05-31", amount: +1000.00, description: "Salary Deposit"},
+  {date: "2025-06-10", amount: -500.00, description: "Rent Payment"},
+  {date: "2025-06-13", amount: -200.00, description: "Utilities"}
+]
+</code></pre>
+<p><strong>第 4 步：再推理</strong>——拿到结果，继续想：</p>
+<pre><code class="language-text">I have the transactions. Now I need to:
+1. Remove the salary deposit of +1000.00
+2. Sum up the remaining transactions
+</code></pre>
+<p><strong>第 5 步：行动（二）</strong>——剔除正数金额，调用 <code>calculate_sum</code>：</p>
+<pre><code class="language-text">{tool: "calculate_sum", args: {amounts: [-100.00, -500.00, -200.00]}}
+</code></pre>
+<p>工具返回 <code>-800.00</code>。</p>
+<p><strong>第 6 步：最终回复</strong>——</p>
+<pre><code class="language-text">You spent $800.00 during the specified period on groceries, rent, and utilities.
+</code></pre>
+<p>对比 chatAgentStrategy 就能看出差别：Chat 策略侧重工具使用反馈；ReAct 显式插入"先想后做"的推理步，把多步推理任务拆成 推理 → 行动 → 观察 的循环。</p>
+<p>使用方式：</p>
+<pre><code class="language-kotlin">val bankingAgent = AIAgent(
+    promptExecutor = promptExecutor,
+    llmModel = model,
+    // 使用 reActStrategy
+    strategy = reActStrategy(
+        reasoningInterval = 1,
+        name = "banking_agent"
+    ),
+    toolRegistry = ToolRegistry {
+        tool(getTransactions)
+        tool(calculateSum)
+    }
+)
+
+suspend fun main() {
+    val result = bankingAgent.run("How much did I spend last month?")
+}
+</code></pre>
+<p>以上为策略使用片段，依赖已配置的执行器和工具；本文没有将它作为真实模型实测输出。</p>
+<h2 id="53-三种常见策略模式">5.3 三种常见策略模式</h2>
+<p>下面整理官方指南中的三类策略模式。其中 <code>singleRunStrategy()</code> 是已有的预定义函数；tool-based 与 streaming data 是组织工作流的模式名称，不代表另有同名 API，也不是三种互斥分类。</p>
+<p><strong>模式一：singleRunStrategy（单次运行）</strong></p>
+<p>非交互场景，处理一次输入，返回结果。3.1 节已经讲过它的代码——就是那张"请求 → 执行 → 回传"的三角循环图。Basic Agent 预定义策略背后就是它。</p>
+<p><strong>模式二：tool-based strategy（工具型）</strong></p>
+<p>以工具为核心的工作流：LLM 决定调用什么工具，执行后把结果回传，循环直到 LLM 给出文本响应。结构上与 singleRun 一致，官方示例的侧重点在于展示如何组织这个循环，可作为业务工具流的模板。</p>
+<p><strong>模式三：streaming data strategy（流式数据）</strong></p>
+<p>下面是流程片段：<code>Book</code>、<code>markdownBookDefinition()</code> 和 <code>parseMarkdownStreamToBooks()</code> 需要业务代码定义，不能只复制本段就运行。它在节点内部发起流式请求，边接收边解析：</p>
+<pre><code class="language-kotlin">val agentStrategy = strategy&lt;String, List&lt;Book&gt;&gt;("library-assistant") {
+    val getMdOutput by node&lt;String, List&lt;Book&gt;&gt; { booksDescription -&gt;
+        val books = mutableListOf&lt;Book&gt;()
+        val mdDefinition = markdownBookDefinition()
+
+        llm.writeSession {
+            appendPrompt { user(booksDescription) }
+            // 以 mdDefinition 定义的形式发起流式响应
+            val markdownStream = requestLLMStreaming(mdDefinition)
+            // 流式解析并处理每一本书
+            parseMarkdownStreamToBooks(markdownStream).collect { book -&gt;
+                books.add(book)
+                println("Parsed Book: ${book.title} by ${book.author}")
+            }
+        }
+
+        books
+    }
+    edge(nodeStart forwardTo getMdOutput)
+    edge(getMdOutput forwardTo nodeFinish)
+}
+</code></pre>
+<p>这个例子也演示了 strategy 的输出类型可以是任意类型：<code>strategy&lt;String, List&lt;Book&gt;&gt;</code>，输入文本、输出书籍列表。</p>
+<h2 id="54-选型什么时候用现成的什么时候自己画">5.4 选型：什么时候用现成的，什么时候自己画</h2>
+<p>把本系列讲过的选项放到一起：</p>
+<table>
+<thead>
+<tr>
+<th>场景</th>
+<th>建议</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>简单问答、单次任务</td>
+<td>Basic Agent（默认预定义策略，即 singleRun 模式）</td>
+</tr>
+<tr>
+<td>希望先使用工具、需要文本反馈纠偏</td>
+<td><code>chatAgentStrategy()</code></td>
+</tr>
+<tr>
+<td>多步推理任务（先想后做）</td>
+<td><code>reActStrategy()</code></td>
+</tr>
+<tr>
+<td>某个"工段"要任务化/带验证</td>
+<td><code>subgraphWithTask</code> / <code>subgraphWithVerification</code></td>
+</tr>
+<tr>
+<td>固定流程、多阶段、需要工具隔离</td>
+<td>自定义图 + subgraph 串联</td>
+</tr>
+<tr>
+<td>多方案竞争、批量并发</td>
+<td>自定义图 + parallel（下一章）</td>
+</tr>
+</tbody>
+</table>
+<p>判断顺序始终是：<strong>先看预定义策略够不够 → 再看预定义节点能不能拼出来 → 最后才自定义节点和子图。</strong></p>
+<p>一句话总结：</p>
+<blockquote>
+<p><strong>chatAgentStrategy 提供工具使用反馈，reActStrategy 管"先想后做"；三种常见模式（单次运行、工具型、流式数据）是自建图的标准起手式；选型永远从预定义往自定义走。</strong></p>
+</blockquote>
+<hr>
+<h1 id="六并行节点执行">六、并行节点执行</h1>
+<p>前面的图虽然包含分支和循环，但一次只沿匹配的路径继续执行。但很多任务天然是并发的，比如以下三类典型情况：</p>
+<ul>
+<li>同一个输入，同时用不同的模型或方法处理；</li>
+<li>多个相互独立的操作并行执行；</li>
+<li>竞争评选模式：生成多个方案，再比较选出最好的。</li>
+</ul>
+<h2 id="61-parallel">6.1 parallel()</h2>
+<p>并行节点执行通过 <code>parallel</code> 方法发起：</p>
+<pre><code class="language-kotlin">val nodeName by parallel&lt;String, String&gt;(
+   firstNode, secondNode, thirdNode /* 更多节点 */
+) {
+   // 合并策略写在这里
+   selectByMax { it.length }
+}
+</code></pre>
+<p>结构上把它读成一句话：<strong>这几个节点并发跑，结果出来后按某种策略合并成一个。</strong></p>
+<p>一个实际例子——三个节点分别统计 token 数、字符数、单词数，并发执行后取最大值：</p>
+<pre><code class="language-kotlin">val calc by parallel&lt;String, Int&gt;(
+   nodeCalcTokens, nodeCalcSymbols, nodeCalcWords,
+) {
+   selectByMax { it }
+}
+</code></pre>
+<p>执行完成后，<code>calc</code> 这个"合成节点"的输出就是三个结果中的最大值，下游节点拿到的就是这一个值——对图的其余部分来说，parallel 就是一个普通节点。</p>
+<h2 id="62-四种合并策略">6.2 四种合并策略</h2>
+<p>并行执行的核心问题是：多个结果出来了，留哪个、怎么合？Koog 提供四种合并策略：</p>
+<table>
+<thead>
+<tr>
+<th>合并策略</th>
+<th>作用</th>
+<th>一句话例子</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>selectBy</code></td>
+<td>按谓词函数选第一个满足的</td>
+<td>选第一个包含 "programmer" 的笑话</td>
+</tr>
+<tr>
+<td><code>selectByMax</code></td>
+<td>按比较函数选最大值</td>
+<td>选最长的笑话</td>
+</tr>
+<tr>
+<td><code>selectByIndex</code></td>
+<td>按选择函数返回的索引选</td>
+<td>让另一个 LLM 当评委，选出最佳</td>
+</tr>
+<tr>
+<td><code>fold</code></td>
+<td>把所有结果折叠成一个值</td>
+<td>把所有笑话拼成一段文字</td>
+</tr>
+</tbody>
+</table>
+<p><strong>selectBy：按条件挑</strong></p>
+<pre><code class="language-kotlin">val nodeSelectJoke by parallel&lt;String, String&gt;(
+   nodeOpenAI, nodeAnthropicSonnet, nodeAnthropicOpus,
+) {
+   selectBy { it.contains("programmer") }
+}
+</code></pre>
+<p>1.3.0 会先等待全部分支完成，再按传给 <code>parallel</code> 的节点顺序查找第一个满足条件的结果，不是“谁先完成就选谁”。如果没有任何匹配，<code>selectBy</code> 会抛出 <code>NoSuchElementException</code>，实际业务需要设计兜底。</p>
+<p><strong>selectByMax：选最大</strong></p>
+<pre><code class="language-kotlin">val nodeLongestJoke by parallel&lt;String, String&gt;(
+   nodeOpenAI, nodeAnthropicSonnet, nodeAnthropicOpus,
+) {
+   selectByMax { it.length }
+}
+</code></pre>
+<p>选最长的那个。</p>
+<p><strong>selectByIndex：让"评委"来选</strong></p>
+<p>这个最有意思——选择函数本身可以是一次 LLM 请求：</p>
+<pre><code class="language-kotlin">val nodeBestJoke by parallel&lt;String, String&gt;(
+   nodeOpenAI, nodeAnthropicSonnet, nodeAnthropicOpus,
+) {
+   selectByIndex { jokes -&gt;
+      // 用另一个 LLM 来判断哪个笑话最好
+      llm.writeSession {
+         model = OpenAIModels.Chat.GPT4o
+         appendPrompt {
+            system("You are a comedy critic. Select the best joke.")
+            user("Here are three jokes: ${jokes.joinToString("\n\n")}")
+         }
+         val response = requestLLMStructured&lt;JokeRating&gt;()
+         response.getOrThrow().data.bestJokeIndex.also { index -&gt;
+             require(index in jokes.indices) { "模型返回的笑话索引越界：$index" }
+         }
+      }
+   }
+}
+</code></pre>
+<p>三个候选笑话全部生成后，再发一次结构化请求让 GPT-4o 当评委，返回最佳笑话的索引。<strong>"多方案并行生成 + LLM 评选"</strong>，这是竞争评选模式的完整形态。</p>
+<p><strong>fold：聚合全部</strong></p>
+<pre><code class="language-kotlin">val nodeAllJokes by parallel&lt;String, String&gt;(
+   nodeOpenAI, nodeAnthropicSonnet, nodeAnthropicOpus,
+) {
+   fold("Jokes:\n") { result, joke -&gt; "$result\n$joke" }
+}
+</code></pre>
+<p>这里聚合的是输出字符串，不是把所有分支的消息历史或 storage 写入自动合并。四种策略的上下文保留规则见第七章。</p>
+<h2 id="63-官方示例改编best-joke-策略">6.3 官方示例改编：Best joke 策略</h2>
+<p>以下根据官方 Best joke 示例整理策略主体，补充输出类型、评分数据类和索引校验。三个不同模型并行生成笑话，再由 GPT-4o 评选最佳。</p>
+<p>这不是独立运行的完整应用：还需要支持 OpenAI 与 Anthropic 的执行器、两家的凭据，以及 Agent 的组装与调用。不要只配置一个 Provider 却在节点里切换到另一个 Provider。模型可用性也取决于账号权限。</p>
+<p>评分数据类（6.2 的 <code>JokeRating</code> 也使用这个定义）：</p>
+<pre><code class="language-kotlin">@kotlinx.serialization.Serializable
+data class JokeRating(val bestJokeIndex: Int)
+</code></pre>
+<pre><code class="language-kotlin">val strategy = strategy&lt;String, String&gt;("best-joke") {
+    // 三个节点分别用三个模型生成笑话
+    val nodeOpenAI by node&lt;String, String&gt; { topic -&gt;
+        llm.writeSession {
+            model = OpenAIModels.Chat.GPT4o
+            appendPrompt {
+                system("You are a comedian. Generate a funny joke about the given topic.")
+                user("Tell me a joke about $topic.")
+            }
+            val response = requestLLMWithoutTools()
+            response.parts.filterIsInstance&lt;MessagePart.Text&gt;().joinToString("\n") { it.text }
+        }
+    }
+
+    val nodeAnthropicSonnet by node&lt;String, String&gt; { topic -&gt;
+        llm.writeSession {
+            model = AnthropicModels.Sonnet_4_5
+            appendPrompt {
+                system("You are a comedian. Generate a funny joke about the given topic.")
+                user("Tell me a joke about $topic.")
+            }
+            val response = requestLLMWithoutTools()
+            response.parts.filterIsInstance&lt;MessagePart.Text&gt;().joinToString("\n") { it.text }
+        }
+    }
+
+    val nodeAnthropicOpus by node&lt;String, String&gt; { topic -&gt;
+        llm.writeSession {
+            model = AnthropicModels.Opus_4_6
+            appendPrompt {
+                system("You are a comedian. Generate a funny joke about the given topic.")
+                user("Tell me a joke about $topic.")
+            }
+            val response = requestLLMWithoutTools()
+            response.parts.filterIsInstance&lt;MessagePart.Text&gt;().joinToString("\n") { it.text }
+        }
+    }
+
+    // 并行生成，然后让 GPT-4o 评选最佳
+    val nodeGenerateBestJoke by parallel(
+        nodeOpenAI, nodeAnthropicSonnet, nodeAnthropicOpus,
+    ) {
+        selectByIndex { jokes -&gt;
+            llm.writeSession {
+                model = OpenAIModels.Chat.GPT4o
+                rewritePrompt {
+                    prompt("best-joke-selector") {
+                        system("You are a comedy critic. Give a critique for the given joke.")
+                        user(
+                            """
+                            Here are three jokes about the same topic:
+
+                            ${jokes.mapIndexed { index, joke -&gt; "Joke $index:\n$joke" }.joinToString("\n\n")}
+
+                            Select the best joke and explain why it's the best.
+                            """.trimIndent()
+                        )
+                    }
+                }
+
+                val response = requestLLMStructured&lt;JokeRating&gt;()
+                val index = response.getOrThrow().data.bestJokeIndex
+                require(index in jokes.indices) { "模型返回的笑话索引越界：$index" }
+                index
+            }
+        }
+    }
+
+    // 连接节点
+    nodeStart then nodeGenerateBestJoke then nodeFinish
+}
+</code></pre>
+<div class="mermaid">flowchart LR
+    nodeStart([nodeStart]) --&gt; p["parallel：三个模型并发生成"]
+    p --&gt; judge["selectByIndex：GPT-4o 评选最佳"]
+    judge --&gt; nodeFinish([nodeFinish])
+</div><p>这个例子有两个值得注意的点：</p>
+<ol>
+<li><strong>并行不只是"同一个调用发三次"</strong>——三个生成节点各自在 <code>llm.writeSession</code> 里指定了不同的 <code>model</code>，并行的是三个不同的模型。这就是官方说的"同一输入同时用不同模型处理"。</li>
+<li><strong>评委逻辑写在合并策略里</strong>——<code>selectByIndex</code> 的 lambda 在所有并行结果就绪后执行，天然适合"汇总后再决策"的场景。</li>
+</ol>
+<p>以上为策略使用片段，依赖已配置的执行器和工具；本文没有将它作为真实模型实测输出。</p>
+<h2 id="64-注意事项">6.4 注意事项</h2>
+<p>并行不是免费的，官方文档明确列了开销和约束：</p>
+<ul>
+<li><strong>资源约束</strong>：每个并行节点都会创建一个新的协程；多个 LLM API 同时调用要考虑速率限制和成本。</li>
+<li><strong>上下文是 fork 出来的</strong>：每次并行执行都会 fork 一个上下文，合并结果时需要决定保留哪个上下文、或如何组合不同执行的上下文。</li>
+<li><strong>性能</strong>：上下文的 fork 与合并有计算成本，并行数太多会发生资源竞争。</li>
+</ul>
+<p>因此官方建议只并行这样的操作：<strong>相互独立、执行时间长、不共享可变状态</strong>。反过来说，如果一个节点只是做个字符串转换，并行化反而得不偿失。</p>
+<p>一句话总结：</p>
+<blockquote>
+<p><strong>parallel() 让多个节点并发执行，四种合并策略决定结果怎么合：selectBy 按条件挑、selectByMax 选最大、selectByIndex 让 LLM 当评委、fold 全要；并行的代价是协程、fork 上下文和资源竞争，只并行独立且耗时的操作。</strong></p>
+</blockquote>
+<hr>
+<h1 id="七节点间数据传递aiagentstorage">七、节点间数据传递：AIAgentStorage</h1>
+<h2 id="71-边传递与-storage">7.1 边传递与 storage</h2>
+<p>节点的返回值沿边传给下游，是最直接的数据流。若较早的结果需要在后面的非相邻节点中读取，可以使用 <code>AIAgentStorage</code>，避免中间节点一直透传与自身逻辑无关的数据。</p>
+<table>
+<thead>
+<tr>
+<th>方式</th>
+<th>机制</th>
+<th>适合</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>边传递</td>
+<td>上游输出成为下游输入，必要时转换</td>
+<td>显式表达主数据流</td>
+</tr>
+<tr>
+<td>AIAgentStorage</td>
+<td>通过节点上下文的 <code>storage.set/get</code> 按 key 存取</td>
+<td>在同一执行上下文中跨节点、跨顺序子图保留辅助状态</td>
+</tr>
+</tbody>
+</table>
+<p>storage 不是外部数据库，也不是所有并行分支共享的实时白板。并行上下文的行为见 7.4。</p>
+<h2 id="72-aiagentstoragekey名称决定键相等性">7.2 AIAgentStorageKey：名称决定键相等性</h2>
+<p>通过 <code>createStorageKey&lt;T&gt;(name)</code> 创建类型化的键：</p>
+<pre><code class="language-kotlin">val userDataKey = createStorageKey&lt;UserData&gt;("profile.user-data")
+</code></pre>
+<p>在 <strong>Koog 1.3.0</strong> 中，<code>AIAgentStorageKey</code> 的 <code>equals</code> 和 <code>hashCode</code> 按 <code>name</code> 判断；不是按对象实例判断。对于相同值类型：</p>
+<pre><code class="language-kotlin">val key1 = createStorageKey&lt;UserData&gt;("profile.user-data")
+val key2 = createStorageKey&lt;UserData&gt;("profile.user-data")
+check(key1 == key2)
+// 在节点执行逻辑中：
+// storage.set(key1, UserData("John", 26))
+// storage.get(key2) 可以取到上面存入的值。
+</code></pre>
+<p>官方指南曾描述“同名 key 的实例互不相等”，但这与 1.3.0 的发布实现不一致。本文按该版本源码及离线运行结果说明。</p>
+<p>类型参数 <code>T</code> 约束单个 key 的存取接口，<strong>不负责阻止名称冲突</strong>。不要创建同名但不同类型的 key；它们仍然可能命中同一个存储项，造成类型错误。复用组件时建议使用业务前缀，如 <code>profile.user-data</code>、<code>travel.weather</code>。</p>
+<h2 id="73-示例明确写入与读取顺序">7.3 示例：明确写入与读取顺序</h2>
+<p>下面根据官方存取示例补齐图连接，并将数据类声明为可序列化，方便后续讨论持久化。只有内存 <code>set/get</code> 时不要求 <code>@Serializable</code>；这里采用 kotlinx.serialization，需要启用对应编译插件。</p>
+<pre><code class="language-kotlin">import ai.koog.agents.core.agent.entity.createStorageKey
+import ai.koog.agents.core.dsl.builder.node
+import ai.koog.agents.core.dsl.builder.strategy
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class UserData(val name: String, val age: Int)
+
+val userDataKey = createStorageKey&lt;UserData&gt;("profile.user-data")
+
+val storageStrategy = strategy&lt;String, String&gt;("storage-example") {
+    val saveData by node&lt;String, String&gt; { message -&gt;
+        storage.set(userDataKey, UserData("John", 26))
+        message
+    }
+    val retrieveData by node&lt;String, String&gt; { message -&gt;
+        val user = storage.getValue(userDataKey)
+        "Hello ${user.name}, here's a message for you: $message"
+    }
+
+    nodeStart then saveData then retrieveData then nodeFinish
+}
+</code></pre>
+<p>存用 <code>set(key, value)</code>；<code>get(key)</code> 在键不存在时返回 <code>null</code>，<code>getValue(key)</code> 则抛出 <code>NoSuchElementException</code>。示例由执行顺序保证先写后读，所以使用 <code>getValue</code>。</p>
+<p>这两个节点<strong>不必直接相连</strong>：可以在中间插入其他节点。但它们仍需接入执行路径，且必须保证读取前已写入。storage 不会调度节点执行。</p>
+<h2 id="74-并行上下文与合并规则">7.4 并行上下文与合并规则</h2>
+<p>1.3.0 的 <code>parallel</code> 会为每条分支 fork 上下文，包含 <code>storage.copy()</code>：</p>
+<ul>
+<li>分支可以读取 fork 前已有的存储项。</li>
+<li>分支里的 <code>storage.set(...)</code> 修改自己的副本，不会自动广播到其他分支。</li>
+<li><code>selectBy</code>、<code>selectByMax</code>、<code>selectByIndex</code> 返回被选中结果及其上下文，下游因此沿用该分支的状态。</li>
+<li><code>fold</code> 聚合输出值，保留基础上下文，不会自动合并各分支的 storage 写入或消息历史。</li>
+</ul>
+<p>例如，基础值为 <code>base</code>，两个分支分别写入 <code>A</code>、<code>B</code> 并返回同名字符串：<code>fold</code> 可以得到输出 <code>AB</code>，但下游读取的基础值仍为 <code>base</code>；若选择第一个分支，下游值则为 <code>A</code>。本文已用离线执行验证这两种情况。</p>
+<p>还要注意：storage 的复制是容器层面的浅复制，不保证任意可变值对象都会深拷贝。不要把共享可变对象塞入 storage 后，依赖分支原地修改它来通信。</p>
+<p>需要汇总多分支数据时，优先让各分支显式返回结果，在合并步骤聚合，再由后续节点写入 storage。不要假定“有 Mutex”就等于“分支共享一个存储”或“读—改—写具有原子性”。</p>
+<h2 id="75-序列化与持久化边界">7.5 序列化与持久化边界</h2>
+<p><code>set/get</code> 直接访问内存对象，不执行 JSON 序列化。序列化相关 API 则有不同要求：</p>
+<table>
+<thead>
+<tr>
+<th>API</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>remove(key)</code> / <code>clear()</code></td>
+<td>删除单项 / 清空存储</td>
+</tr>
+<tr>
+<td><code>putAll(map)</code> / <code>putAll(otherStorage)</code></td>
+<td>导入内存项或另一个 storage 的内容</td>
+</tr>
+<tr>
+<td><code>copy()</code></td>
+<td>复制存储容器</td>
+</tr>
+<tr>
+<td><code>toSerializedMap()</code></td>
+<td>返回以键名为索引的 <code>Map&lt;String, JSONElement&gt;</code></td>
+</tr>
+<tr>
+<td><code>putAllSerialized(map)</code></td>
+<td>导入序列化项，读取时按 key 的类型信息反序列化</td>
+</tr>
+</tbody>
+</table>
+<p>该版本没有本文原稿所列的 <code>toMap()</code>。<code>toSerializedMap()</code> 会忽略无法被当前 <code>JSONSerializer</code> 序列化的值，不能把“能存进 storage”理解为“肯定能保存到 checkpoint”。</p>
+<p>使用 kotlinx.serialization 时，通常为自定义模型加 <code>@Serializable</code>，并确保其字段也受支持；如果配置其他序列化器，则以该序列化器的要求为准。</p>
+<p>Agent Persistence 需要另外安装与配置。只有成功序列化、纳入 checkpoint 且能够在恢复时反序列化的数据，才能被可靠还原。本文离线校验覆盖了 storage 的序列化导出、导入和读取，不等同于完整的进程重启、checkpoint 恢复测试。具体存储后端、恢复一致性和外部副作用将在后续文章展开。</p>
+<blockquote>
+<p><strong>边表达主数据流，storage 保存上下文内的辅助状态；键名需要避免冲突，并行分支状态需要显式合并，持久化则必须满足序列化与 checkpoint 配置要求。</strong></p>
+</blockquote>
+<hr>
+<h1 id="八综合示例确定性查天气再由模型生成建议">八、综合示例：确定性查天气，再由模型生成建议</h1>
+<p>本章是自行设计的教学示例，不是官方天气服务示例。重点是把<strong>必须由程序保证的步骤</strong>与<strong>由模型生成的内容</strong>分开。</p>
+<h2 id="81-需求与流程">8.1 需求与流程</h2>
+<p>输入使用结构化的 <code>TravelRequest(city, intent)</code>，只讨论今天的出行。自然语言提取城市、日期不在本例范围内。</p>
+<ol>
+<li>在子图中直接执行天气工具，不让模型决定是否查询。</li>
+<li>工具返回结构化 <code>Weather</code>，依据 <code>isRainy</code> 做互补分支，不匹配“雨”字。</li>
+<li>程序组装室内或户外的活动限制，两个 LLM 节点并行生成简洁版与详细版。</li>
+<li><code>fold</code> 合并文本，收尾节点从基础 storage 读取先前保存的天气。</li>
+</ol>
+<div class="mermaid">flowchart TD
+    start([nodeStart]) --&gt; research["research 子图：直接执行天气工具"]
+    research --&gt; save["saveWeather：保存结构化结果"]
+    save --&gt;|"isRainy"| indoor["室内活动限制"]
+    save --&gt;|"!isRainy"| outdoor["户外活动限制"]
+    indoor --&gt; polish["parallel：简洁版 + 详细版"]
+    outdoor --&gt; polish
+    polish --&gt; compose["fold 合并；读取基础 storage"]
+    compose --&gt; finish([nodeFinish])
+</div><p>天气工具只返回北京、上海的固定演示数据，未知城市明确失败。没有访问真实天气 API，不能将下列数据当成天气预报。</p>
+<h2 id="82-可编译的-kotlin-示例">8.2 可编译的 Kotlin 示例</h2>
+<p>以下代码可放入一个 Kotlin 文件。校验环境使用 JDK 21、Kotlin 2.4.10、kotlinx.serialization 编译插件，依赖如下：</p>
+<pre><code class="language-kotlin">implementation("ai.koog:koog-agents:1.3.0")
+implementation("ai.koog:koog-agents-additions:1.3.0-beta")
+</code></pre>
+<p>本例的 DeepSeek 客户端来自 additions 依赖中的 <strong>Beta 模块</strong>，版本与 API 稳定性需要单独留意。运行入口读取 <code>DEEPSEEK_API_KEY</code>，会调用真实模型并产生费用；不要把密钥写入源码。</p>
+<pre><code class="language-kotlin">import ai.koog.agents.core.agent.AIAgent
+import ai.koog.agents.core.agent.entity.createStorageKey
+import ai.koog.agents.core.dsl.builder.*
+import ai.koog.agents.core.dsl.extension.*
+import ai.koog.agents.core.environment.SafeTool
+import ai.koog.agents.core.tools.Tool
+import ai.koog.agents.core.tools.ToolRegistry
+import ai.koog.prompt.executor.clients.deepseek.DeepSeekLLMClient
+import ai.koog.prompt.executor.clients.deepseek.DeepSeekModels
+import ai.koog.prompt.executor.llms.MultiLLMPromptExecutor
+import ai.koog.prompt.executor.model.PromptExecutor
+import ai.koog.prompt.message.MessagePart
+import ai.koog.serialization.typeToken
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class TravelRequest(val city: String, val intent: String)
+
+@Serializable
+data class WeatherArgs(val city: String)
+
+@Serializable
+data class Weather(val city: String, val summary: String, val isRainy: Boolean)
+
+// 固定测试数据，不是真实天气服务；未知城市明确失败。
+class WeatherTool : Tool&lt;WeatherArgs, Weather&gt;(
+    argsType = typeToken&lt;WeatherArgs&gt;(),
+    resultType = typeToken&lt;Weather&gt;(),
+    name = "get_weather",
+    description = "查询指定城市今天的天气（演示数据）"
+) {
+    override suspend fun execute(args: WeatherArgs): Weather = when (args.city) {
+        "北京" -&gt; Weather("北京", "小雨，18 度", true)
+        "上海" -&gt; Weather("上海", "晴，26 度", false)
+        else -&gt; error("演示天气数据不支持城市：${args.city}")
+    }
+}
+
+fun travelStrategy(weatherTool: WeatherTool) =
+    strategy&lt;TravelRequest, String&gt;("travel-advisor") {
+        val weatherKey = createStorageKey&lt;Weather&gt;("travel.weather")
+        val requestKey = createStorageKey&lt;TravelRequest&gt;("travel.request")
+
+        // 确定性执行工具，不让 LLM 决定是否查询、查询哪个城市。
+        val research by subgraph&lt;TravelRequest, Weather&gt;(
+            name = "research_weather", tools = listOf(weatherTool)
+        ) {
+            val toArgs by node&lt;TravelRequest, WeatherArgs&gt; { request -&gt;
+                require(request.city.isNotBlank()) { "城市不能为空" }
+                storage.set(requestKey, request)
+                WeatherArgs(request.city)
+            }
+            val queryWeather by nodeExecuteSingleTool&lt;WeatherArgs, Weather&gt;(
+                tool = weatherTool, doAppendPrompt = false
+            )
+            val unwrap by node&lt;SafeTool.Result&lt;Weather&gt;, Weather&gt; { result -&gt;
+                when (result) {
+                    is SafeTool.Result.Success -&gt; result.result
+                    is SafeTool.Result.Failure -&gt; error("天气查询失败：${result.message}")
+                }
+            }
+            nodeStart then toArgs then queryWeather then unwrap then nodeFinish
+        }
+
+        val saveWeather by node&lt;Weather, Weather&gt; { weather -&gt;
+            storage.set(weatherKey, weather)
+            weather
+        }
+        val indoorAdvice by node&lt;Weather, String&gt; { weather -&gt;
+            "城市：${weather.city}；今天：${weather.summary}；" +
+                "出行意图：${storage.getValue(requestKey).intent}。仅建议室内活动，提醒携带雨具。"
+        }
+        val outdoorAdvice by node&lt;Weather, String&gt; { weather -&gt;
+            "城市：${weather.city}；今天：${weather.summary}；" +
+                "出行意图：${storage.getValue(requestKey).intent}。可以考虑户外活动，提醒防晒补水。"
+        }
+
+        val shortVersion by node&lt;String, String&gt; { context -&gt;
+            llm.writeSession {
+                // 每个分支独立设置任务，避免累积互相冲突的 system 指令。
+                rewritePrompt {
+                    ai.koog.prompt.dsl.prompt("travel-short") {
+                        system("根据给定的今天的天气和活动限制，用中文一句话概括建议，不改变活动类型。")
+                        user(context)
+                    }
+                }
+                val response = requestLLMWithoutTools()
+                val text = response.parts.filterIsInstance&lt;MessagePart.Text&gt;()
+                    .joinToString("\n") { it.text }
+                check(text.isNotBlank()) { "模型没有返回简洁版文本" }
+                "【简洁版】$text"
+            }
+        }
+        val detailedVersion by node&lt;String, String&gt; { context -&gt;
+            llm.writeSession {
+                rewritePrompt {
+                    ai.koog.prompt.dsl.prompt("travel-detailed") {
+                        system("根据给定的今天的天气和活动限制，生成中文详细建议与注意事项，不改变活动类型。")
+                        user(context)
+                    }
+                }
+                val response = requestLLMWithoutTools()
+                val text = response.parts.filterIsInstance&lt;MessagePart.Text&gt;()
+                    .joinToString("\n") { it.text }
+                check(text.isNotBlank()) { "模型没有返回详细版文本" }
+                "【详细版】$text"
+            }
+        }
+        val polish by parallel&lt;String, String&gt;(shortVersion, detailedVersion) {
+            fold("出行建议：") { acc, text -&gt; "$acc\n\n$text" }
+        }
+        val composeFinal by node&lt;String, String&gt; { advice -&gt;
+            val weather = storage.getValue(weatherKey)
+            "【今日天气·演示数据】${weather.city}：${weather.summary}\n\n$advice"
+        }
+
+        edge(nodeStart forwardTo research)
+        edge(research forwardTo saveWeather)
+        edge(saveWeather forwardTo indoorAdvice onCondition { it.isRainy })
+        edge(saveWeather forwardTo outdoorAdvice onCondition { !it.isRainy })
+        edge(indoorAdvice forwardTo polish)
+        edge(outdoorAdvice forwardTo polish)
+        edge(polish forwardTo composeFinal)
+        edge(composeFinal forwardTo nodeFinish)
+    }
+
+suspend fun runTravel(
+    executor: PromptExecutor,
+    request: TravelRequest,
+    maxIterations: Int = 30
+): String {
+    val weatherTool = WeatherTool()
+    val agent = AIAgent(
+        promptExecutor = executor,
+        llmModel = DeepSeekModels.DeepSeekV4Flash,
+        strategy = travelStrategy(weatherTool),
+        toolRegistry = ToolRegistry { tool(weatherTool) },
+        maxIterations = maxIterations
+    )
+    return try {
+        withTimeout(60_000) { agent.run(request) }
+    } finally {
+        agent.close()
+    }
+}
+
+fun main() = runBlocking {
+    val apiKey = System.getenv("DEEPSEEK_API_KEY")
+        ?: error("请设置 DEEPSEEK_API_KEY；本示例会调用真实模型并产生费用")
+    val executor = MultiLLMPromptExecutor(DeepSeekLLMClient(apiKey = apiKey))
+    try {
+        println(runTravel(executor, TravelRequest("北京", "今天参观博物馆")))
+    } finally {
+        executor.close()
+    }
+}
+</code></pre>
+<h2 id="83-确定性和预算分别保证什么">8.3 确定性和预算分别保证什么</h2>
+<ul>
+<li><strong>查询由图保证</strong>：<code>nodeExecuteSingleTool(tool = ...)</code> 直接调用已注册工具；结果失败就在 <code>unwrap</code> 中终止，不会悄悄伪造晴天继续生成。</li>
+<li><strong>分支由数据保证</strong>：<code>isRainy</code> 来自工具结果，不经过 LLM 总结，所以“无雨”之类的措辞不会影响分支判断。工具注册表仍负责实际执行，子图工具描述的可见性不等于外部系统的权限控制。</li>
+<li><strong>意图不会丢失</strong>：输入请求保存在 <code>travel.request</code> 中，活动限制同时包含城市、天气和意图。</li>
+<li><strong>模型只负责生成措辞</strong>：正常路径发起两次非流式请求。程序保证先查天气、选择对应分支，但提示词不能保证模型完全遵守活动限制。生产场景仍需输出校验；两次请求也不意味着固定 token 成本。</li>
+<li><strong>并行不写共享状态</strong>：天气在 fork 前保存。<code>fold</code> 保留基础上下文，所以最后能读回天气；代码没有依赖并行分支写入互相可见。</li>
+<li><strong>预算分层设置</strong>：<code>maxIterations = 30</code> 是经过离线成功路径验证的图执行上限，不是“最多调用模型 30 次”。另外用 <code>withTimeout(60_000)</code> 限制本次运行的协程时间；真实服务还应配置 HTTP 超时、重试及 token/费用限额。修改图或增加循环后应重新测试预算。</li>
+<li><strong>资源归属明确</strong>：<code>runTravel</code> 关闭自己创建的 Agent；调用方负责关闭传入的执行器。</li>
+</ul>
+<h2 id="84-已验证范围">8.4 已验证范围</h2>
+<p>本章代码已在 Koog 1.3.0 依赖下编译。离线执行使用明确标记的 <code>PromptExecutor</code> 测试替身，不连接厂商 API，不评估生成质量。校验程序实际打印的结果如下：</p>
+<pre><code class="language-text">PASS travel 北京: branch=仅建议室内 modelCalls=2
+PASS travel 上海: branch=可以考虑户外 modelCalls=2
+PASS unknown city: explicit failure before model calls
+PASS iteration budget: maxIterations=1 rejects execution
+</code></pre>
+<p>其中 <code>modelCalls</code> 是执行器测试替身的调用次数，不是线上模型调用记录。未知城市和过小预算用例预期抛异常；它们验证了失败路径。真实 DeepSeek 联调、网络超时和模型输出质量尚未验证。</p>
+<hr>
+<h1 id="九最佳实践与排错">九、最佳实践与排错</h1>
+<h2 id="91-最佳实践">9.1 最佳实践</h2>
+<p>官方 Custom strategy graphs 页面给出的建图最佳实践，逐条整理如下：</p>
+<ol>
+<li><strong>保持简单</strong>：从简单的图开始，按需增加复杂度。不要一上来就画"蜘蛛网"。</li>
+<li><strong>描述性命名</strong>：给节点和边起有意义的名字，图会好懂得多。</li>
+<li><strong>覆盖所有路径和边界情况</strong>：确保每条路径最终都能到达结束节点。</li>
+<li><strong>用各种输入测试图</strong>：确保图的行为符合预期。</li>
+<li><strong>给图写文档</strong>：记录图的目的和行为，方便将来维护。</li>
+<li><strong>从预定义策略或常见模式起步</strong>：第五章的三种模式就是标准起手式。</li>
+<li><strong>长对话用历史压缩</strong>：减少 token 消耗（挂 <code>nodeLLMCompressHistory</code>）。</li>
+<li><strong>用子图组织图、管理工具访问</strong>：第四章的 multi-part 模式。</li>
+</ol>
+<p>写自定义节点时（Custom nodes 页面），还有几条针对性的建议：每个节点只做一件事（单一职责）、为参数写清楚文档、做好错误处理避免整个工作流失败、尽量设计成可复用、合适时用泛型参数化。</p>
+<h2 id="92-常见问题排查">9.2 常见问题排查</h2>
+<p>官方 Troubleshooting 部分列了五个常见问题，都是实战中真的会撞上的：</p>
+<p><strong>1. 图走不到结束节点</strong></p>
+<ul>
+<li>检查是否所有路径最终都通向 <code>nodeFinish</code>；</li>
+<li>检查条件是不是太严，导致某一步没有任何边能满足；</li>
+<li>检查循环是否有正常出口；缺少结束边时，文本响应会因没有匹配出边而抛异常，持续的工具调用则可能耗尽迭代预算。</li>
+</ul>
+<p>第八章使用 <code>isRainy</code> / <code>!isRainy</code> 两条互补条件，保证布尔状态都有边可走。对更复杂的数据类型，也应覆盖空值、异常状态等边界。</p>
+<p><strong>2. 工具调用不执行</strong></p>
+<ul>
+<li>工具是否正确注册进了 ToolRegistry（第 4 篇讲过的注册流程）；</li>
+<li>LLM 节点到工具执行节点的边，条件是否正确（<code>onToolCalls { true }</code>）；</li>
+<li>如果在子图里，工具是否在该子图的 tools 子集里。</li>
+</ul>
+<p><strong>3. 历史变得太大</strong></p>
+<ul>
+<li>加历史压缩节点 <code>nodeLLMCompressHistory</code>；</li>
+<li>用条件检查历史长度，超阈值才压缩：</li>
+</ul>
+<pre><code class="language-kotlin">edge(
+    (nodeExecuteTool forwardTo nodeCompressHistory)
+        onCondition { _ -&gt; llm.readSession { prompt.messages.size &gt; 100 } }
+)
+</code></pre>
+<ul>
+<li>用更激进的压缩策略，比如 <code>FromLastNMessages</code> 设更小的 N。</li>
+</ul>
+<p><strong>4. 图的行为不符合预期</strong></p>
+<ul>
+<li>条件定义是否正确；</li>
+<li><strong>边条件按定义顺序评估</strong>——这是本章最想强调的坑。同一个源节点的多条出边，按代码中定义的顺序逐条检查，第一条满足的生效。如果一条宽泛的条件排在具体条件前面，具体条件永远轮不到；</li>
+<li>是否不小心用更宽泛的条件覆盖了预期条件。</li>
+</ul>
+<p><strong>5. 性能问题</strong></p>
+<ul>
+<li>精简图：删掉不必要的节点和边；</li>
+<li>相互独立的操作用并行（第六章）；</li>
+<li>压缩历史；</li>
+<li>使用更高效的节点和操作。</li>
+</ul>
+<p>子图相关的两个问题（来自 Custom subgraphs 页面）也顺带列一下：</p>
+<ul>
+<li><strong>子图里工具不可用</strong>：检查工具是否正确注册在工具注册表里。</li>
+<li><strong>子图不按预期顺序执行</strong>：检查子图之间的连接顺序、输出是否正确传给下一个子图、以及子图是否真的连通——特别注意条件边要覆盖所有情况，否则可能在节点上因无匹配出边抛出 <code>AIAgentStuckInTheNodeException</code>。</li>
+</ul>
+<hr>
+<h1 id="十后记">十、后记</h1>
+<p>本文从 Koog(2) 里那张"拿来就用"的图出发，把 Strategy 的内部结构拆开讲了一遍。最后用一张表回顾整个心智模型：</p>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>职责</th>
+<th>一句话</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Node</td>
+<td>做什么</td>
+<td>类型化的函数，预定义节点是积木，一个 lambda 就是自定义节点</td>
+</tr>
+<tr>
+<td>Edge</td>
+<td>接下来去哪</td>
+<td>条件挂在边上：顺序（then）、分支（多条条件出边）、循环（回边）</td>
+</tr>
+<tr>
+<td>Subgraph</td>
+<td>模块化</td>
+<td>策略里的"函数"：唯一命名、自己的工具集和上下文</td>
+</tr>
+<tr>
+<td>parallel</td>
+<td>并发</td>
+<td>多节点竞赛/聚合，selectBy/selectByMax/selectByIndex/fold 四种合并</td>
+</tr>
+<tr>
+<td>AIAgentStorage</td>
+<td>上下文状态</td>
+<td>按键名存取；并行分支 fork 副本，状态保留取决于合并策略</td>
+</tr>
+</tbody>
+</table>
+<p>对于本文讨论的 Graph-based Agent，图式策略描述了输入处理、工具执行、分支、并行与数据流。Functional Agent 可以直接用函数组织行为，不应把本篇的图模型泛化到所有策略实现。而搭图永远从三层递进里选：先预定义策略，再预定义节点组装，最后才完全自定义。</p>
+<p>图跑起来之后，一个新问题随之而来：多轮会话怎么办？历史越来越长怎么办？Agent 执行到一半挂了怎么办？下一篇我们讲 Koog 的记忆、历史压缩与持久化。</p>
+<h2 id="参考资料">参考资料</h2>
+<ul>
+<li>Pre-defined nodes and components: <a href="https://docs.koog.ai/nodes-and-components/" target="_blank" rel="noopener nofollow">https://docs.koog.ai/nodes-and-components/</a></li>
+<li>Predefined strategies: <a href="https://docs.koog.ai/predefined-agent-strategies/" target="_blank" rel="noopener nofollow">https://docs.koog.ai/predefined-agent-strategies/</a></li>
+<li>Custom strategy graphs: <a href="https://docs.koog.ai/custom-strategy-graphs/" target="_blank" rel="noopener nofollow">https://docs.koog.ai/custom-strategy-graphs/</a></li>
+<li>Parallel node execution: <a href="https://docs.koog.ai/parallel-node-execution/" target="_blank" rel="noopener nofollow">https://docs.koog.ai/parallel-node-execution/</a></li>
+<li>Data transfer between nodes: <a href="https://docs.koog.ai/data-transfer-between-nodes/" target="_blank" rel="noopener nofollow">https://docs.koog.ai/data-transfer-between-nodes/</a></li>
+<li>Custom nodes: <a href="https://docs.koog.ai/custom-nodes/" target="_blank" rel="noopener nofollow">https://docs.koog.ai/custom-nodes/</a></li>
+<li>Subgraphs overview: <a href="https://docs.koog.ai/subgraphs-overview/" target="_blank" rel="noopener nofollow">https://docs.koog.ai/subgraphs-overview/</a></li>
+<li>Custom subgraphs: <a href="https://docs.koog.ai/custom-subgraphs/" target="_blank" rel="noopener nofollow">https://docs.koog.ai/custom-subgraphs/</a></li>
+</ul>
+
+
+</div>
+<div id="MySignature" role="contentinfo">
+    <div>作者：<a href="http://joy99.cnblogs.com/" target="_blank">SharpCJ</a></div>
+　　　　<div>作者博客：<a href="http://joy99.cnblogs.com/" target="_blank">http://joy99.cnblogs.com/</a></div>
+        <a href="#">
+　　　　<div>本文版权归作者和博客园共有，欢迎转载，但未经作者同意必须保留此段声明，且在文章页面明显位置给出原文连接。 </div></a>
+</div>
+<div class="clear"></div>
+<div id="blog_post_info_block" role="contentinfo" class="post-meta-container">
+    <div id="blog_post_info"></div>
+    <div class="clear"></div>
+    <div id="post_next_prev"></div>
+</div>
+            </div>
+            <div class="postDesc">posted @ 
+<span id="post-date" data-last-update-days="0" data-date-updated="2026-10-16 09:41">2026-10-16 09:40</span>&nbsp;
+<a href="https://www.cnblogs.com/joy99">SharpCJ</a>&nbsp;
+阅读(<span id="post_view_count">0</span>)&nbsp;
+评论(<span id="post_comment_count">0</span>)&nbsp;
+&nbsp;
+<a href="javascript:void(0)" onclick="AddToWz(23320228);return false;">收藏</a>&nbsp;
+<a href="https://report.cnblogs.com?targetLink=https%3A%2F%2Fwww.cnblogs.com%2Fjoy99%2Fp%2F23320228&targetId=23320228&targetType=0" target="_blank">举报</a>
+</div>
+        </div>
+	    
+	    
+    </div><!--end: topics 文章、评论容器-->
+</div>
+<script>
+    var cb_entryId = 23320228, cb_entryCreatedDate = '2026-10-16 09:40', cb_postType = 1, cb_postTitle = 'Koog(5) —— Strategy 详解：工作流编排、并行执行与状态传递';
+    var allowComments = true, cb_blogId = 228233, cb_blogApp = 'joy99', cb_blogUserGuid = '4e2f40df-3ffd-e411-b908-9dcfd8948a71';
+    mermaidRender.render()
+    markdown_highlight()
+    zoomManager.apply("#cnblogs_post_body img:not(.code_img_closed):not(.code_img_opened)");    
+</script>
+<a id="!comments"></a>
+<div id="blog-comments-placeholder"></div>
+<div id="comment_form" class="commentform">
+    <a name="commentform"></a>
+    <div id="divCommentShow"></div>
+    <div id="comment_nav">
+        <div class="comment-nav-right">
+            <span id="span_refresh_tips"></span><a href="#" onclick="return RefreshPage();">刷新页面</a><a href="#top">返回顶部</a>
+        </div>
+    </div>
+    <div id="comment_form_container"></div>
+    <div class="ad_text_commentbox" id="ad_text_under_commentbox"></div>
+        <div id="cnblogs_ch"></div>
+    <div id="opt_under_post"></div>
+        <div id="blog_c1" class="under-post-card below-post-card">
+            <a href="https://www.volcengine.com/activity/codingplan?utm_campaign=hw&amp;utm_content=hw&amp;utm_medium=devrel_tool_web&amp;utm_source=OWO&amp;utm_term=cnblogs" rel="nofollow" target="_blank" onclick="countCreativeClicks('C1-volcengine-codingplan')">
+                <img src="https://img2024.cnblogs.com/blog/35695/202606/35695-20260609221536870-1777800795.webp" onload="countCreativeImpressions('C1-volcengine-codingplan')" alt="" style="width:300px!important;height:250px!important;min-width:300px!important;max-width:300px!important;" />
+                <span id="c1_impression" style="display:none"></span>
+            </a>
+        </div>
+    <div id="under_post_card1"></div>
+    <div id="related_posts_card"></div>
+    <div id="under_post_card2"></div>
+    <div id="HistoryToday" class="under-post-card below-post-card"></div>
+    <script type="text/javascript">
+        var commentManager = new blogCommentManager();
+        commentManager.renderComments(0);
+        fixPostBody();
+        window.footnoteTipManager.generateFootnoteTips();
+
+            window.tocManager.displayDisableTocTips = false;
+            window.tocManager.generateToc();
+            
+            setTimeout(function() { countViews(cb_blogId, cb_entryId); }, 50);
+            
+            deliverT2();
+            deliverC1C2();
+            loadNewsAndKb();
+            
+            LoadPostCategoriesTags(cb_blogId, cb_entryId);
+            
+            LoadPostInfoBlock(cb_blogId, cb_entryId, cb_blogApp, cb_blogUserGuid);
+            GetPrevNextPost(cb_entryId, cb_blogId, cb_entryCreatedDate, cb_postType);
+            loadOptUnderPost();
+            GetHistoryToday(cb_blogId, cb_blogApp, cb_entryCreatedDate);
+                </script>
+</div>
+
+	</div>
+	</div>
+	<div id="sideBar">
+		<div id="sideBarMain">
+			<div id="sidebar_news" class="newsItem">
+    <h3 class="catListTitle">公告</h3>
+<div id="blog-news" class="sidebar-news">
+    <div id="sidebar_news_container">
+    </div>
+</div>
+<script>loadBlogNews();</script>
+
+
+</div>
+			<div id="blog-calendar" style="display:none"></div><script>loadBlogDefaultCalendar();</script>			
+			<div id="leftcontentcontainer">
+				<div id="blog-sidecolumn"></div>
+					<script>loadBlogSideColumn()</script>
+			</div>			
+		</div>
+	</div>
+	<div class="clear"></div>
+	</div>
+	<div class="clear"></div>
+	<div id="footer">
+		<a href="https://www.cnblogs.com/" id="footer_site_link" class="footer-brand">博客园</a>
+<span class="footer-copyright"> &nbsp;&copy;&nbsp; 2004-2026</span>
+<br /><span class="footer-icp">
+    <a target="_blank" href="http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=33010602011771"><img src="//assets.cnblogs.com/images/ghs.png" />浙公网安备 33010602011771号</a>
+    <a href="https://beian.miit.gov.cn" target="_blank">浙ICP备2021040463号-3</a>
+</span>
+
+
+
+	</div>
+</div>
+
+
+
+    <div id="page_end_html">
+        <script>
+(function () {
+    var qrcodeUrl = "https://img2024.cnblogs.com/blog/758949/202606/758949-20260602214359917-1994098111.jpg";
+
+    function replaceTagsWithQr() {
+        $(".catListTitle").each(function () {
+            if ($(this).text().trim() === "我的标签") {
+                var html = `
+                    <div class="catListTitle">公众号</div>
+                    <div class="wechat-sidebar-box">
+                        <img src="${qrcodeUrl}" alt="公众号二维码" referrerpolicy="no-referrer">
+                        <p>扫码关注公众号</p>
+                    </div>
+                `;
+                $(this).parent().html(html).show();
+            }
+        });
+    }
+
+    $(replaceTagsWithQr);
+
+    var observer = new MutationObserver(replaceTagsWithQr);
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+})();
+</script>
+
+<script>
+(function () {
+    function insertWechatQr() {
+        if ($("#wechat-qrcode-box").length) return;
+
+        var qrcodeUrl = "https://img2024.cnblogs.com/blog/758949/202606/758949-20260602214359917-1994098111.jpg";
+
+        var html = `
+            <div id="wechat-qrcode-box">
+                <div class="qr-title">欢迎关注公众号</div>
+                <img src="${qrcodeUrl}" alt="公众号二维码" referrerpolicy="no-referrer">
+                <div class="qr-desc">扫码关注，持续分享技术内容</div>
+            </div>
+        `;
+
+        var $postBody = $("#cnblogs_post_body");
+
+        if ($postBody.length) {
+            $postBody.append(html);
+        }
+    }
+
+    $(insertWechatQr);
+    setTimeout(insertWechatQr, 1000);
+    setTimeout(insertWechatQr, 3000);
+})();
+</script>
+    </div>
+
+    <input type="hidden" id="antiforgery_token" value="CfDJ8Pn9bUKjiU5Il6bOWcQWpk3_ixom-6HpU_3mjvcNij9Fzt5ydhbS9ffoQ1ZT9g-KAdA6hMH_2RRTbw_R4uXPq8DA0RYPpVlTe4zNWxqwGBUWu-cizhATEJ6xH0FdSvbGjEy1_3qus_8nKA9ubYTkhVU" />
+    <script defer src="https://hm.baidu.com/hm.js?866c9be12d4a814454792b1fd0fed295"></script>
+<script defer src="https://lf1-cdn-tos.bytegoofy.com/goofy/ttzz/push.js?32d945448dd797af605da9156763de3dc11c9886368d0f917d6388e4fcf5542030632485602430134f60bc55ca391050b680e2741bf7233a8f1da9902314a3fa" id="ttzz"></script>
+</body>
+</html>

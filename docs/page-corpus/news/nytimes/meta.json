@@ -1,0 +1,34 @@
+{
+  "type": "news",
+  "capturedAt": "2026-10-16",
+  "expect": {
+    "nonEmpty": true,
+    "mdChars": 22468,
+    "mustContain": [
+      "NYTimes"
+    ]
+  },
+  "queries": [
+    {
+      "keywords": [
+        "Sudan"
+      ],
+      "expectHit": true,
+      "why": "标题/正文主题词（人工复核）"
+    },
+    {
+      "keywords": [
+        "United States to Lift Sudan Sanctions"
+      ],
+      "expectHit": true,
+      "why": "标题词"
+    },
+    {
+      "keywords": [
+        "qqx不存在词zqx"
+      ],
+      "expectHit": false,
+      "why": "零命中信号"
+    }
+  ]
+}

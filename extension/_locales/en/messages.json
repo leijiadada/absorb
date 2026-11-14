@@ -1,0 +1,14 @@
+{
+  "extName": {
+    "message": "Absorb Reading Assistant"
+  },
+  "extDesc": {
+    "message": "Reading assistant: ask AI about selected text or the whole page. Multi-turn follow-ups. Read docs, long articles and papers faster"
+  },
+  "actionTitle": {
+    "message": "Open the Absorb side panel"
+  },
+  "menuOpenPanel": {
+    "message": "Ask Absorb"
+  }
+}

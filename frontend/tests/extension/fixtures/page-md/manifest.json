@@ -1,0 +1,32 @@
+[
+  {
+    "name": "github",
+    "htmlChars": 18262,
+    "mdChars": 12977,
+    "headings": 36
+  },
+  {
+    "name": "wikipedia",
+    "htmlChars": 36274,
+    "mdChars": 10781,
+    "headings": 20
+  },
+  {
+    "name": "mdn",
+    "htmlChars": 10772,
+    "mdChars": 2748,
+    "headings": 6
+  },
+  {
+    "name": "blog",
+    "htmlChars": 10552,
+    "mdChars": 5821,
+    "headings": 25
+  },
+  {
+    "name": "hackernews",
+    "htmlChars": 2173,
+    "mdChars": 640,
+    "headings": 0
+  }
+]

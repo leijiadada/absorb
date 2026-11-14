@@ -1,0 +1,34 @@
+{
+  "type": "table-heavy",
+  "capturedAt": "2026-10-16",
+  "expect": {
+    "nonEmpty": true,
+    "mdChars": 17156,
+    "mustContain": [
+      "Starter"
+    ]
+  },
+  "queries": [
+    {
+      "keywords": [
+        "Starter"
+      ],
+      "expectHit": true,
+      "why": "正文独特词"
+    },
+    {
+      "keywords": [
+        "Friday Facts #282"
+      ],
+      "expectHit": true,
+      "why": "标题词"
+    },
+    {
+      "keywords": [
+        "qqx不存在词zqx"
+      ],
+      "expectHit": false,
+      "why": "零命中信号"
+    }
+  ]
+}

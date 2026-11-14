@@ -1,0 +1,247 @@
+@import "tailwindcss";
+
+/* 三层 token（primitive → semantic → component）——值来自 docs/desktop-ui-design.md §3。
+   组件样式只允许引用语义层（--color-*），禁止裸 hex。 */
+:root {
+  /* primitive：亮色面板（对齐 Docker Desktop 参照取色，冷灰中性 + 品牌蓝 #1D63ED） */
+  --p-bg: #ffffff;
+  --p-surface: #ffffff;
+  --p-border: #e5e7eb;
+  --p-text: #172b4d;
+  --p-text-2: #4a5872;
+  --p-muted: #6b7280;
+  --p-primary: #1d63ed;
+  --p-primary-hover: #1856c9;
+  --p-primary-soft: #eaf2ff;
+  --p-success: #3aa065;
+  --p-warning: #d9903f;
+  --p-danger: #d9544f;
+  --p-hover: #ececee;
+  --p-nav-active: #d6e1f8;
+  --p-sidebar: #f9f9fa;
+
+  /* semantic：亮色（应用仅提供亮色主题） */
+  --color-app-bg: var(--p-bg);
+  --color-surface: var(--p-surface);
+  --color-brd: var(--p-border);
+  --color-txt: var(--p-text);
+  --color-txt-2: var(--p-text-2);
+  --color-muted: var(--p-muted);
+  --color-primary: var(--p-primary);
+  --color-primary-hover: var(--p-primary-hover);
+  --color-primary-soft: var(--p-primary-soft);
+  --color-success: var(--p-success);
+  --color-warning: var(--p-warning);
+  --color-danger: var(--p-danger);
+  --color-hover: var(--p-hover);
+  --color-nav-active: var(--p-nav-active);
+  --color-sidebar: var(--p-sidebar);
+}
+
+/* component：把语义层接入 Tailwind v4（utility 运行时引用变量） */
+@theme inline {
+  --color-appbg: var(--color-app-bg);
+  --color-surface: var(--color-surface);
+  --color-brd: var(--color-brd);
+  --color-txt: var(--color-txt);
+  --color-txt2: var(--color-txt-2);
+  --color-muted: var(--color-muted);
+  --color-primary: var(--color-primary);
+  --color-primaryhover: var(--color-primary-hover);
+  --color-primarysoft: var(--color-primary-soft);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-danger: var(--color-danger);
+  --font-sans: "Inter", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+/* 动效曲线 token：ease-out 家族（emil-design-eng skill：enter 用 ease-out，慎用内置 ease） */
+:root {
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+html, body, #app { height: 100%; }
+/* 桌面应用禁止 html/body 级滚动与触摸板 overscroll 回弹（内容推过边界松手弹回），
+   见 Wails 官方 Overscroll 指南；frameless 下 webview 尺寸微差会让该现象更容易触发 */
+html, body { overflow: hidden; }
+body {
+  margin: 0;
+  background: var(--color-app-bg);
+  color: var(--color-txt);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+/* component：通用组件样式（只引用语义层 token） */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 2px;
+  color: var(--color-txt-2);
+  font-size: 14px;
+  transition:
+    background 0.12s var(--ease-out),
+    color 0.12s var(--ease-out),
+    transform 0.12s var(--ease-out);
+}
+/* hover 门控：指针设备才给 hover 反馈（触屏无 hover 语义，避免粘滞态） */
+@media (hover: hover) and (pointer: fine) {
+  /* hover 是中性反馈（灰），选中才是品牌反馈（蓝）——色彩语义区分两态（Docker 同款） */
+  .nav-item:hover { background: var(--color-hover); color: var(--color-txt); }
+}
+/* 点击按压反馈：轻微收缩后回弹（emil：按钮必须感觉在回应你） */
+.nav-item:active { transform: scale(0.98); }
+.nav-item.router-link-active {
+  background: var(--color-nav-active);
+  color: var(--color-txt);
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  color: var(--color-muted);
+  transition: background 0.12s var(--ease-out), color 0.12s var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .icon-btn:hover { background: var(--color-primary-soft); color: var(--color-txt); }
+}
+
+/* win-btn：无边框窗口控制按钮（顶栏右端全高热区，Docker Desktop 样式）。
+   白值同 .btn-primary 的 color:#fff：绑定品牌填充而非主题表面。 */
+.win-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 100%;
+  color: rgba(255, 255, 255, 0.9);
+  transition: background 0.12s var(--ease-out), color 0.12s var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .win-btn:hover { background: rgba(255, 255, 255, 0.16); color: #fff; }
+  .win-btn.close:hover { background: var(--color-danger); color: #fff; }
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.12s var(--ease-out), border-color 0.12s var(--ease-out),
+    color 0.12s var(--ease-out), transform 0.12s var(--ease-out);
+}
+/* 按压反馈：按下瞬间微缩，界面像在回应手指（emil: 0.97 + ease-out） */
+.btn:active:not(:disabled) { transform: scale(0.97); }
+.btn:disabled { opacity: 0.55; cursor: default; }
+.btn-primary { background: var(--color-primary); color: #fff; }
+@media (hover: hover) and (pointer: fine) {
+  .btn-primary:hover:not(:disabled) { background: var(--color-primary-hover); }
+  .btn-ghost:hover:not(:disabled) { border-color: var(--color-muted); color: var(--color-txt); }
+}
+.btn-ghost { border-color: var(--color-brd); background: var(--color-surface); color: var(--color-txt-2); }
+.btn-danger { background: var(--color-danger); color: #fff; }
+@media (hover: hover) and (pointer: fine) {
+  .btn-danger:hover:not(:disabled) { filter: brightness(0.95); }
+}
+
+.input {
+  width: 100%;
+  border: 1px solid var(--color-brd);
+  border-radius: 8px;
+  background: var(--color-surface);
+  padding: 7px 10px;
+  font-size: 14px;
+  color: var(--color-txt);
+  outline: none;
+  transition: border-color 0.12s var(--ease-out), box-shadow 0.12s var(--ease-out);
+}
+/* focus ring：半透明光圈比单纯变色更有「被激活」的层次（Docker/Linear 同款） */
+.input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+
+.card {
+  border: 1px solid var(--color-brd);
+  border-radius: 12px;
+  background: var(--color-surface);
+  padding: 18px 20px;
+  /* 白底内容区里保住卡片浮起感（Docker 同款极轻阴影） */
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+}
+
+/* ---------- 动效组件类（review-animations 清单落地） ---------- */
+
+/* 状态点：颜色切换让眼睛可追踪 */
+.status-dot {
+  transition: background 0.15s var(--ease-out), border-color 0.15s var(--ease-out);
+}
+/* 边框淡入（服务商卡片等 hover 场景复用） */
+.brd-fade { transition: border-color 0.12s var(--ease-out); }
+/* 表格行 hover 底色 */
+.table-row { transition: background 0.12s var(--ease-out); }
+/* 弹窗卡片：浮层需要「浮」的证据（半透明阴影比 solid border 更有层级） */
+.modal-card { box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); }
+/* 下载进度条：scaleX 合成属性 + 线性追赶，避免每帧 layout */
+.progress-bar {
+  width: 100%;
+  transform-origin: left;
+  transition: transform 0.2s linear;
+  will-change: transform;
+}
+
+/* 弹层进出不对称：进入 160ms，退出 100ms（系统响应要快，emil 标准 9） */
+.modal-enter-active { transition: opacity 0.16s var(--ease-out); }
+.modal-leave-active { transition: opacity 0.1s var(--ease-out); }
+.modal-enter-active .card,
+.modal-leave-active .card {
+  transition: transform 0.16s var(--ease-out), opacity 0.16s var(--ease-out);
+}
+.modal-enter-active .card { transition-duration: 0.16s; }
+.modal-leave-active .card { transition-duration: 0.1s; }
+.modal-enter-from,
+.modal-enter-from .card { opacity: 0; }
+.modal-enter-from .card { transform: scale(0.97); }
+.modal-leave-to,
+.modal-leave-to .card { opacity: 0; }
+.modal-leave-to .card { transform: scale(0.97); }
+
+/* 更新横幅：滑入淡入；退出即时（Transition 无 leave 类 = 瞬移除） */
+.banner-enter-active {
+  transition: opacity 0.16s var(--ease-out), transform 0.16s var(--ease-out);
+}
+.banner-enter-from { opacity: 0; transform: translateY(-8px); }
+
+/* reduced-motion：动作降级但保留颜色/透明度反馈（标准 8：gentler, not zero） */
+@media (prefers-reduced-motion: reduce) {
+  .modal-enter-active,
+  .modal-leave-active,
+  .banner-enter-active,
+  .progress-bar,
+  .status-dot,
+  .brd-fade,
+  .table-row {
+    transition-duration: 0.01ms;
+  }
+  .modal-enter-from .card,
+  .modal-leave-to .card,
+  .banner-enter-from {
+    transform: none;
+  }
+  .btn:active:not(:disabled) { transform: none; }
+  .nav-item:active { transform: none; }
+}

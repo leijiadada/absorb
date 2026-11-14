@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>tRPC-Agent-Go 使用指南</title>
+  <meta name="description" content="tRPC-Agent-Go 框架使用指南，涵盖安装、核心概念与编排模式">
+</head>
+<body>
+  <h1>快速开始</h1>
+  <h2>1. 安装</h2>
+  <p>使用 go get 安装框架。</p>
+  <h2>2. 第一个 Agent</h2>
+  <p>创建最简单的 Agent 只需要三步。</p>
+
+  <h1>核心概念</h1>
+  <h2>3. 多 Agent Runner</h2>
+  <h3>3.1 Runner 的定义</h3>
+  <p id="runner-def">Runner 是 tRPC-Agent-Go 的执行载体，负责接收请求并驱动 Agent 生命周期，统一管理流式输出与取消机制。</p>
+  <h3>3.2 配置项</h3>
+  <p>Runner 支持并发度、超时等配置。</p>
+  <h3>3.3 与 Executor 的关系</h3>
+  <p>Executor 负责底层任务调度，Runner 在其上提供 Agent 语义封装。</p>
+  <h2>4. 执行模型</h2>
+  <p id="scheduler-para">调度器会在每个 tick 重新计算优先级，保证高优任务先执行。</p>
+
+  <h1>进阶</h1>
+  <h2>5. 编排模式</h2>
+  <h3>5.1 链式编排示例</h3>
+  <pre><code id="chain-code">const r = runner.NewRunner(cfg)</code></pre>
+  <h2>6. 可观测性</h2>
+  <p id="obs-para">调度器指标可通过 OpenTelemetry 导出，观测延迟与队列长度。</p>
+</body>
+</html>

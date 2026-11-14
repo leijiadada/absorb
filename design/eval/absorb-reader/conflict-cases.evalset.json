@@ -1,0 +1,51 @@
+{
+  "evalSetId": "conflict-cases",
+  "name": "conflict-cases",
+  "_note": "冲突检测组（骨架，待补全至 5-8 例）：cf-01 材料内冲突（承诺与实测基线矛盾，期望检索后指出）；cf-02 材料外冲突（与公认事实矛盾，期望凭自身知识指出、无需工具）。finalResponse 期望内容是 regex 模式（text.matchStrategy=regex 下 expected.content 即匹配模式，命中任一分支即通过）。",
+  "evalCases": [
+    {
+      "evalId": "cf-01-intra-doc-conflict",
+      "rubrics": [{"metricName": "material_grounding_judge", "id": "material-cf-01", "content": {"text": "评估材料。\n划词：我们的网关服务承诺端到端延迟低于 5 毫秒。\n页面缓存全文：# 网关服务 SLO\n\n## 对外承诺\n\n网关服务端到端延迟低于 5 毫秒。\n\n## 实测基线\n\n2026 年 Q3 实测端到端 P50 延迟约 20 毫秒，未能达到 5 毫秒的对外承诺，已登记风险清单。"}}],
+      "conversation": [
+        {
+          "invocationId": "cf-01-1",
+          "userContent": {"role": "user", "content": "这句话的承诺和这份文档里的其他信息一致吗？"},
+          "finalResponse": {"role": "assistant", "content": "矛盾|冲突|不一致"},
+          "tools": [
+            {"id": "kt-c1", "name": "expand_context", "arguments": {"reason": "需要检索页面其他章节核对承诺与实测数据是否一致", "keywords": ["延迟", "SLO", "实测"]}}
+          ]
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://docs.example.com/slo/gateway-latency",
+          "quote": "我们的网关服务承诺端到端延迟低于 5 毫秒。",
+          "page_md": "# 网关服务 SLO\n\n## 对外承诺\n\n网关服务端到端延迟低于 5 毫秒。\n\n## 实测基线\n\n2026 年 Q3 实测端到端 P50 延迟约 20 毫秒，未能达到 5 毫秒的对外承诺，已登记风险清单。"
+        }
+      }
+    },
+    {
+      "evalId": "cf-02-external-fact-conflict",
+      "rubrics": [{"metricName": "material_grounding_judge", "id": "material-cf-02", "content": {"text": "评估材料。\n划词：光在真空中的传播速度约为每秒 30 万公里，因此太阳光照射到地球大约只需要 8 秒钟。"}}],
+      "_note": "工具期望零调用，但本组 tool 判据为 subsetMatching（对照组逻辑失效）——本例的实际约束来自 finalResponse regex，工具轨迹不设门。",
+      "conversation": [
+        {
+          "invocationId": "cf-02-1",
+          "userContent": {"role": "user", "content": "这句话的说法准确吗？"},
+          "finalResponse": {"role": "assistant", "content": "矛盾|冲突|有误|不正确|不准确|8 ?分钟"},
+          "tools": []
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://science.example.com/reading/light-speed",
+          "quote": "光在真空中的传播速度约为每秒 30 万公里，因此太阳光照射到地球大约只需要 8 秒钟。"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,227 @@
+# Absorb Release —— GitHub Actions 发布流水线（Windows 安装包 + 扩展 zip + 升级 feed）
+#
+# 触发：push v* tag（如 v0.2.0），tag 须打在 master 上（流水线会把 feed 提交快进到该 tag 提交之上）。
+# 产出：
+# - absorb-agent-setup-<ver>-x64.exe（Inno Setup 安装包）→ GitHub Release 资产
+# - absorb-extension-<ver>.zip（手动加载/商店上传用）→ GitHub Release 资产
+# - releases/latest.json（升级 feed，genfeed 生成后自动提交回 master，客户端默认源即该文件 raw 地址）
+#
+# 与本地 make installer 同链路：sync-version → 前端构建 → 扩展 bundle → wails 桌面端 → CLI → ISCC → genfeed。
+# 质量门禁不在此流水线（tag 从过 ci.yml 门禁的 master 切出；genfeed 自检兜底 feed 合法性）。
+# Gitee 侧 .workflow/release.yml 仍产出便携版 zip；master 与 tag 由本流水线末步自动镜像过去，
+# 安装包与扩展 zip 亦由末步经 Gitee OpenAPI 上传到对应 tag 的发行版（git 镜像带不走 Release 资产）。
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    name: 发版前门禁（Go 单测 + 前端单测）
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27'
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 前端依赖安装、构建与单测
+        working-directory: frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          npx vitest run
+
+      - name: 打包扩展内嵌资源
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/pack-extension.ps1
+
+      - name: Go 单元测试
+        run: go test -count=1 -timeout 300s -failfast ./...
+
+  release:
+    name: 构建、发版、更新升级 feed
+    needs: gate
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27'
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 解析版本号（v0.2.0 -> 0.2.0，非三段 semver 直接失败）
+        id: ver
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::tag ${TAG} 不是 vMAJOR.MINOR.PATCH 形式"
+            exit 1
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: 版本元数据同步（wails.json / package.json / 扩展 manifest，先于扩展打包）
+        run: go run ./cmd/syncversion -version ${{ steps.ver.outputs.version }} -root .
+
+      - name: 前端构建（供 go:embed 嵌入桌面端）
+        working-directory: frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+
+      - name: 打包扩展内嵌资源（文档不随扩展分发）
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/pack-extension.ps1
+
+      - name: 安装 wails CLI（桌面端官方构建管线）
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: 构建桌面端 exe（wails 管线，含图标/PE 版本资源）
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/build-desktop.ps1 -App absorb-agent-desktop -Version ${{ steps.ver.outputs.version }} -StopNames absorb-agent-desktop -Gui -UseWails -WailsTool "$(go env GOPATH)\bin\wails.exe"
+
+      - name: 构建 CLI exe（控制台子系统，随安装包分发）
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/build-desktop.ps1 -App absorb-agent-cli -Version ${{ steps.ver.outputs.version }} -StopNames absorb-agent-cli,absorb-agent-desktop
+
+      - name: 确保 Inno Setup 环境（runner 未预装则静默安装，含中文语言包）
+        run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/ensure-iscc.ps1 -Ensure
+
+      - name: 生成安装程序（build/bin/absorb-agent-setup-<ver>-x64.exe）
+        run: |
+          $iscc = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/ensure-iscc.ps1 -Resolve
+          if (-not $iscc) { throw 'ISCC.exe not found after ensure step' }
+          & $iscc /DMyAppVersion=${{ steps.ver.outputs.version }} /DMyAppArch=x64 installer/setup.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
+
+      - name: 产出扩展 zip（Release 资产，规则与 pack-extension 一致：剔除 .md）
+        run: |
+          $stage = Join-Path $env:TEMP 'absorb-ext-rel'
+          Remove-Item $stage -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory $stage | Out-Null
+          Copy-Item 'extension\*' $stage -Recurse -Force
+          Get-ChildItem $stage -Recurse -Filter '*.md' -File | Remove-Item -Force
+          New-Item -ItemType Directory -Force -Path build | Out-Null
+          Compress-Archive -Path (Join-Path $stage '*') -DestinationPath "build\absorb-extension-${{ steps.ver.outputs.version }}.zip" -Force
+          Remove-Item $stage -Recurse -Force
+
+      - name: 生成升级 feed（genfeed：sha256/size 实算 + 客户端同款自检 + 防降级闸）
+        run: go run ./cmd/genfeed -version ${{ steps.ver.outputs.version }} -root . -exe "build/bin/absorb-agent-setup-${{ steps.ver.outputs.version }}-x64.exe"
+
+      - name: 创建 GitHub Release（安装包 + 扩展 zip 上传为资产）
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        run: |
+          gh release create "v$env:VERSION" --verify-tag --generate-notes --title "v$env:VERSION" `
+            "build\bin\absorb-agent-setup-$env:VERSION-x64.exe" `
+            "build\absorb-extension-$env:VERSION.zip"
+
+      - name: 提交升级 feed 回 master（客户端检测新版本的数据源）
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+        shell: bash
+        run: |
+          git config user.name "absorb-release-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add releases/latest.json
+          if git diff --cached --quiet; then
+            echo "feed 无变化，跳过提交"
+          else
+            git commit -m "chore(release): bump upgrade feed to v${VERSION} [skip ci]"
+            git push origin HEAD:master
+          fi
+
+      # 双远程镜像收尾：把含 feed 提交的 master 与 tag 一起推 Gitee。
+      # Gitee 侧 .workflow/release.yml 由 tag 触发出便携版 zip，故 tag 必须先于/同步到达。
+      # 凭据走 secrets.GITEE_USERNAME / GITEE_TOKEN（Gitee 私人令牌，需 projects 权限）；
+      # 未配置时仅告警不失败——Actions 日志会自动遮蔽 secret 值。
+      - name: 同步 master 与 tag 到 Gitee
+        env:
+          GITEE_USERNAME: ${{ secrets.GITEE_USERNAME }}
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+        shell: bash
+        run: |
+          if [ -z "$GITEE_TOKEN" ] || [ -z "$GITEE_USERNAME" ]; then
+            echo "::warning::未配置 secrets.GITEE_USERNAME / GITEE_TOKEN，跳过 Gitee 同步"
+            exit 0
+          fi
+          git push "https://${GITEE_USERNAME}:${GITEE_TOKEN}@gitee.com/leij1/absorb.git" \
+            "HEAD:master" "${GITHUB_REF_NAME}"
+
+      # Gitee 发行版资产上传：安装器与扩展 zip 经 Gitee OpenAPI attach_files 挂到对应
+      # tag 的发行版（git 镜像带不走 Release 资产；Gitee Go 只有 Linux runner，产不了
+      # Inno 安装包）。tag 此时已随上一步到达 Gitee；发行版不存在（Gitee push tag 不
+      # 自动建发行版）时先创建。未配置凭据或上传失败仅告警不失败——GitHub 发版主体
+      # 已完成，Gitee 侧是同步面；Actions 日志会自动遮蔽 token。
+      - name: 上传资产到 Gitee 发行版
+        env:
+          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
+          VERSION: ${{ steps.ver.outputs.version }}
+        shell: pwsh
+        run: |
+          if (-not $env:GITEE_TOKEN) {
+            Write-Host "::warning::未配置 secrets.GITEE_TOKEN，跳过 Gitee 发行版资产上传"
+            exit 0
+          }
+          try {
+            $ErrorActionPreference = 'Stop'
+            $tag = "v$env:VERSION"
+            $base = "https://gitee.com/api/v5/repos/leij1/absorb/releases"
+            try {
+              $rel = Invoke-RestMethod -Method Get `
+                -Uri "$base/tags/$tag?access_token=$($env:GITEE_TOKEN)"
+              Write-Host "Gitee 已有 $tag 发行版 (id=$($rel.id))"
+            } catch {
+              Write-Host "Gitee 无 $tag 发行版，创建中..."
+              $body = @{
+                access_token = $env:GITEE_TOKEN
+                tag_name     = $tag
+                name         = $tag
+                body         = "Absorb v$env:VERSION（GitHub Actions 自动同步）"
+                prerelease   = $false
+              } | ConvertTo-Json
+              $rel = Invoke-RestMethod -Method Post -Uri $base `
+                -ContentType 'application/json' -Body $body
+            }
+            $assets = @(
+              "build/bin/absorb-agent-setup-$env:VERSION-x64.exe",
+              "build/absorb-extension-$env:VERSION.zip"
+            )
+            foreach ($a in $assets) {
+              Write-Host "上传 $a ..."
+              curl.exe -fsS -X POST "$base/$($rel.id)/attach_files" `
+                -F "access_token=$($env:GITEE_TOKEN)" `
+                -F "file=@$a"
+              if ($LASTEXITCODE -ne 0) { throw "上传失败: $a (curl exit=$LASTEXITCODE)" }
+            }
+            Write-Host "Gitee 发行版资产上传完成: $tag"
+          } catch {
+            Write-Host "::warning::Gitee 发行版资产上传失败: $($_.Exception.Message)"
+          }

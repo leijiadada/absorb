@@ -1,0 +1,45 @@
+# golangci-lint v2 基线（CI 与本地 make lint 共用）
+# 原则：默认 linter 集（errcheck/govet/ineffassign/staticcheck/unused）+ 基线排除。
+# 排除项都是评审后确认的良性模式（Close/Rollback 释放路径、向 writer/buffer 写入、
+# 测试文件里的资源清理），后续收紧时逐条移除。
+version: "2"
+
+linters:
+  default: standard
+  settings:
+    errcheck:
+      # 良性未检查错误：向 HTTP 响应/buffer/writer 写入、确定性清理
+      exclude-functions:
+        - (*encoding/json.Encoder).Encode
+        - (*bytes.Buffer).Write
+        - (*bytes.Buffer).WriteString
+        - (*bytes.Buffer).ReadFrom
+        - encoding/binary.Write
+        - os.Setenv
+        - os.Remove
+        - os.RemoveAll
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+    staticcheck:
+      # -ST1000 包注释 / -ST1016 接收器命名：存量风格债，不拦门禁
+      # -QF*：quickfix 风格建议（De Morgan、嵌入字段选择器等），噪音大于收益
+      checks:
+        - all
+        - -ST1000
+        - -ST1016
+        - -QF*
+  exclusions:
+    rules:
+      # 所有 Close/Rollback/Write 释放与写入路径（含项目自定义类型与第三方），良性统一豁免
+      - linters: [errcheck]
+        text: 'Error return value of `.*\.(Close|Rollback|Write)` is not checked'
+      # 测试文件：资源清理类 errcheck / 风格类 staticcheck / 未使用的测试辅助 不拦门禁
+      - path: _test\.go
+        linters:
+          - errcheck
+          - staticcheck
+          - unused
+
+run:
+  timeout: 5m

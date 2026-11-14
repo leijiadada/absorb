@@ -1,0 +1,207 @@
+# M3.1 检索评测用例：19 例 = 10 正例 + 7 严格负例 + 2 同义缺口观测例。
+#
+# 纪律约定（评审要点）：
+#   1. keywords 必须是 query/page_title/selected_text/user_question 的可切分子串——
+#      保证生产关键词抽取器（纯规则）可推导，评测不被未来实现"作弊"；
+#   2. 正例判定：expected_item_ids 中任一条出现在 top-3 即通过（HitRate@3）；
+#   3. 严格负例（expect_empty: true）：返回非空即误报（FP），门槛 ≤10%；
+#   4. gap: true 的同义缺口例单独统计（gap_found），不计入上述两个门槛——
+#      它们是"规则关键词不足、需要 LLM 关键词源"的观测信号（设计文档 §9）。
+#
+# category 与 M3 总体设计 9 类场景表的对应：
+#   正例：support（新内容支持旧观点）/ extend（补充）/ contradict（反驳）/
+#         quote-only（只有原文无个人观点）/ summary-goal（仅要求总结）/ compare（明确比较）
+#   负例：no-history（无相关历史）/ archived-exact（归档不可召回）/ cross-domain（同词不同域）
+#   观测：synonym-gap（同义改写，规则关键词预期够不着）
+meta:
+  description: M3.1 知识检索评测用例 v1
+  thresholds:
+    hit_at_3: 0.8      # 正例 HitRate@3 ≥ 0.8
+    negative_fp: 0.1   # 严格负例误报率 ≤ 0.1
+
+cases:
+  # ---- 正例（10） ----
+  - id: c01-support-summary
+    category: support
+    kind: summary
+    page_title: 检索质量决定 RAG 效果的实证分析
+    query: 文章通过对比实验说明，检索质量对 RAG 最终回答质量的影响大于更换模型，检索阶段引入重排后准确率显著提升。
+    keywords: [检索质量, RAG, 重排]
+    expected_item_ids: [k01]
+    note: 新文章支持旧观点（k01：检索质量决定 RAG 回答）
+
+  - id: c02-extend-selection
+    category: extend
+    kind: selection
+    page_title: 混合检索实践指南
+    selected_text: 在实际系统中，BM25 与向量检索的混合召回往往优于任一单一通道，再经精排模型重排。
+    user_question: 为什么纯向量检索不够，还要混合召回？
+    keywords: [混合召回, 向量检索, 精排]
+    expected_item_ids: [k02]
+    note: 划词追问，新内容补充旧观点（k02：Reranker 精排分工）
+
+  - id: c03-contradict-compare
+    category: contradict
+    kind: compare
+    page_title: 重新审视检索质量的作用
+    query: 这篇文章认为检索质量被过度高估，端到端微调可以弥补检索缺陷，请和我之前的理解比较。
+    keywords: [检索质量]
+    expected_item_ids: [k01]
+    note: 新文章反驳旧观点（k01），用户明确要求比较
+
+  - id: c04-quote-only
+    category: quote-only
+    kind: selection
+    page_title: LLM 安全入门
+    selected_text: 提示词注入攻击可以通过系统提示隔离与输出过滤缓解。
+    user_question: 这段在讲什么风险？
+    keywords: [提示词注入, 输出过滤]
+    expected_item_ids: [k04]
+    note: 旧知识只有原文无个人观点（k04 无 user_understanding），召回后只能"你保存过"
+
+  - id: c05-summary-goal
+    category: summary-goal
+    kind: summary
+    page_title: 评测驱动的 LLM 应用开发
+    query: 文章主张先构建包含负例的评测集，再迭代提示词与检索策略。
+    keywords: [评测集, 负例]
+    expected_item_ids: [k05]
+    note: 总结全文触发，有直接相关的旧知识
+
+  - id: c06-support-selection
+    category: support
+    kind: selection
+    page_title: Reranker 如何弥补向量召回的语义漂移
+    selected_text: 精排模型对召回结果重排，能显著降低语义漂移带来的噪声。
+    user_question: 为什么有了向量检索还需要精排？
+    keywords: [精排, 召回, 重排]
+    expected_item_ids: [k02]
+    note: 多候选压测——k01 也会被"召回"命中，k02 应排在前面
+
+  - id: c07-extend-selection
+    category: extend
+    kind: selection
+    page_title: 长上下文的隐性代价
+    selected_text: 长上下文的成本随 token 数增长，且存在注意力稀释。
+    user_question: 长上下文有什么代价？
+    keywords: [长上下文, 注意力稀释, 成本]
+    expected_item_ids: [k03]
+    note: 划词追问，补充旧观点（k03）
+
+  - id: c08-compare
+    category: compare
+    kind: compare
+    page_title: 长上下文会被 RAG 淘汰吗
+    query: 这篇文章与我之前对长上下文的理解有什么不同？
+    keywords: [长上下文]
+    expected_item_ids: [k03]
+    note: 用户明确要求比较（单关键词窄查询）
+
+  - id: c09-support-selection
+    category: support
+    kind: selection
+    page_title: GIL 与 Python 多线程性能
+    selected_text: GIL 使同一时刻仅一个线程执行字节码。
+    user_question: 多线程在 Python 里为什么慢？
+    keywords: [GIL, 多线程]
+    expected_item_ids: [k08]
+    note: 划词追问，支持旧观点（k08）
+
+  - id: c10-support-selection
+    category: support
+    kind: selection
+    page_title: 向量索引结构对比
+    selected_text: HNSW 通过分层图结构支持近似最近邻查询，兼顾召回率与延迟。
+    user_question: HNSW 为什么快？
+    keywords: [HNSW, 近似最近邻]
+    expected_item_ids: [k14]
+    note: 划词追问，支持旧观点（k14）
+
+  # ---- 严格负例（7）：返回非空即误报 ----
+  - id: n01-no-history
+    category: no-history
+    kind: selection
+    page_title: 植物生理学基础
+    selected_text: 光合作用利用光能把二氧化碳和水转化为有机物，并释放氧气。
+    user_question: 光合作用释放什么气体？
+    keywords: [光合作用, 二氧化碳]
+    expect_empty: true
+    note: 无相关历史知识——正常回答，不编造
+
+  - id: n02-archived-exact
+    category: archived-exact
+    kind: compare
+    page_title: K8s 调度器深度解析
+    query: 这篇 Kubernetes 调度文章与我之前保存的节点亲和性理解有何不同？
+    keywords: [节点亲和性, K8s]
+    expect_empty: true
+    note: 归档知识（k30 archived）即使关键词精确命中也不得召回
+
+  - id: n03-cross-domain
+    category: cross-domain
+    kind: summary
+    page_title: 浏览器 HTTP 缓存策略与 max-age 取舍
+    query: 文章讨论浏览器端 HTTP 缓存策略，max-age 与协商缓存的取舍。
+    keywords: [浏览器, 缓存策略, max-age]
+    expect_empty: true
+    note: 同词不同域——k06（CPU 缓存）/k13（构建缓存）含"缓存"但不含"缓存策略"，考察精确词切分
+
+  - id: n04-no-history
+    category: no-history
+    kind: summary
+    page_title: 团队周会与季度规划
+    query: 记录本周工作进展与下季度 OKR 对齐安排。
+    keywords: [OKR, 对齐安排]
+    expect_empty: true
+    note: 日常内容与个人知识库无交集
+
+  - id: n05-no-history
+    category: no-history
+    kind: selection
+    page_title: 图书馆开放时间
+    selected_text: 图书馆主馆周一至周五 8:00-22:00 开放。
+    user_question: 图书馆几点开门？
+    keywords: [图书馆, 开放]
+    expect_empty: true
+    note: 生活类划词，无相关历史
+
+  - id: n06-cross-domain
+    category: cross-domain
+    kind: summary
+    page_title: 前端图片懒加载与布局偏移
+    query: 文章介绍懒加载与占位策略如何降低布局偏移。
+    keywords: [懒加载, 占位]
+    expect_empty: true
+    note: 语料中无前端图片主题，验证空结果路径
+
+  - id: n07-cross-domain
+    category: cross-domain
+    kind: selection
+    page_title: 连接池参数调优
+    selected_text: 数据库连接池的最大连接数并非越大越好，过高会加剧上下文切换。
+    user_question: 连接池多大合适？
+    keywords: [连接池, 最大连接数]
+    expect_empty: true
+    note: 语料中无连接池主题，验证空结果路径
+
+  # ---- 同义缺口观测例（2）：不计入门槛，gap_found 单独报告 ----
+  - id: s01-gap-long-context
+    category: synonym-gap
+    kind: summary
+    page_title: Long Context 会取代 RAG 吗
+    query: 文章讨论 long context 在小规模资料场景下可以替代检索流程。
+    keywords: [long context, 小规模资料]
+    expected_item_ids: [k03]
+    gap: true
+    note: 查询用英文"long context"，旧知识写"长上下文"——规则关键词预期够不着；
+
+  - id: s02-gap-tokenizer
+    category: synonym-gap
+    kind: selection
+    page_title: 多语言分词实践
+    selected_text: tokenizer 的子词切分策略影响多语言表现。
+    user_question: tokenizer 有什么讲究？
+    keywords: [tokenizer, 子词切分]
+    expected_item_ids: [k10]
+    gap: true
+    note: 查询用"tokenizer/子词切分"，旧知识写"分词器/子词策略"——预期缺口；k10 仅 source_title 含 tokenizer（权重 1，低于 MinScore），同时考察阈值过滤

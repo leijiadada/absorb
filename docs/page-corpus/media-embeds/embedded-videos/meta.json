@@ -1,0 +1,34 @@
+{
+  "type": "media-embeds",
+  "capturedAt": "2026-10-16",
+  "expect": {
+    "nonEmpty": true,
+    "mdChars": 940,
+    "mustContain": [
+      "consectetur"
+    ]
+  },
+  "queries": [
+    {
+      "keywords": [
+        "consectetur"
+      ],
+      "expectHit": true,
+      "why": "正文独特词"
+    },
+    {
+      "keywords": [
+        "Embedded videos test"
+      ],
+      "expectHit": true,
+      "why": "标题词"
+    },
+    {
+      "keywords": [
+        "qqx不存在词zqx"
+      ],
+      "expectHit": false,
+      "why": "零命中信号"
+    }
+  ]
+}

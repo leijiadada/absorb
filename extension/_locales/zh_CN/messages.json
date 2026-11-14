@@ -1,0 +1,14 @@
+{
+  "extName": {
+    "message": "Absorb 阅读助手"
+  },
+  "extDesc": {
+    "message": "阅读助手：划词提问、整页总结、多轮追问。AI 结合选中句与网页主内容回答，读技术文档、长文章、论文更快"
+  },
+  "actionTitle": {
+    "message": "打开 Absorb 侧边面板"
+  },
+  "menuOpenPanel": {
+    "message": "Absorb 解读"
+  }
+}

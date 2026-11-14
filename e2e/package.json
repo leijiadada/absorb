@@ -1,0 +1,12 @@
+{
+  "name": "absorb-e2e",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test -c extension/playwright.config.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "typescript": "^5.7.2"
+  }
+}

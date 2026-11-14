@@ -1,0 +1,34 @@
+{
+  "type": "news",
+  "capturedAt": "2026-10-16",
+  "expect": {
+    "nonEmpty": true,
+    "mdChars": 7103,
+    "mustContain": [
+      "English"
+    ]
+  },
+  "queries": [
+    {
+      "keywords": [
+        "宇航员"
+      ],
+      "expectHit": true,
+      "why": "标题/正文主题词（人工复核）"
+    },
+    {
+      "keywords": [
+        "宇航员在太空中喝酒会怎么样？后果很严重 _探索者 _光明网"
+      ],
+      "expectHit": true,
+      "why": "标题词"
+    },
+    {
+      "keywords": [
+        "qqx不存在词zqx"
+      ],
+      "expectHit": false,
+      "why": "零命中信号"
+    }
+  ]
+}

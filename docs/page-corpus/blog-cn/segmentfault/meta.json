@@ -1,0 +1,34 @@
+{
+  "type": "blog-cn",
+  "capturedAt": "2026-10-16",
+  "expect": {
+    "nonEmpty": true,
+    "mdChars": 6768,
+    "mustContain": [
+      "注册登录"
+    ]
+  },
+  "queries": [
+    {
+      "keywords": [
+        "人工智能"
+      ],
+      "expectHit": true,
+      "why": "标题/正文主题词（人工复核）"
+    },
+    {
+      "keywords": [
+        "人工智能"
+      ],
+      "expectHit": true,
+      "why": "标题词"
+    },
+    {
+      "keywords": [
+        "qqx不存在词zqx"
+      ],
+      "expectHit": false,
+      "why": "零命中信号"
+    }
+  ]
+}

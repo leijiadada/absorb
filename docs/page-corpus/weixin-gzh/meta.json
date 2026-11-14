@@ -1,0 +1,34 @@
+{
+  "type": "weixin-gzh",
+  "capturedAt": "2026-10-16",
+  "expect": {
+    "nonEmpty": true,
+    "mdChars": 7321,
+    "mustContain": [
+      "武昌工学院"
+    ]
+  },
+  "queries": [
+    {
+      "keywords": [
+        "武昌工学院"
+      ],
+      "expectHit": true,
+      "why": "正文独特词"
+    },
+    {
+      "keywords": [
+        "榜样引领 青春有为"
+      ],
+      "expectHit": true,
+      "why": "标题词"
+    },
+    {
+      "keywords": [
+        "qqx不存在词zqx"
+      ],
+      "expectHit": false,
+      "why": "零命中信号"
+    }
+  ]
+}

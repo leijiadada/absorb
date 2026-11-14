@@ -1,0 +1,109 @@
+# Absorb Release —— Gitee Go 发布流水线（Windows 便携版）
+#
+# 触发：push v* tag（如 v0.2.0）。普通分支推送若被误触发会因 HEAD 无 tag 自动跳过。
+# 说明：
+# - Gitee Go 只有 Linux runner，Inno Setup 无法运行，安装包仍走本地 make installer；
+#   本流水线产出「便携版 zip」：桌面端 exe（GUI）+ CLI exe + 扩展目录 + data/ 便携模式标记。
+# - 桌面端用纯 go build 交叉编译：wails 运行时（/wails/ipc.js 注入 window.go 绑定）由库内
+#   AssetServer 在运行期完成（pkg/assetserver/assetserver.go processIndexHTML），不依赖
+#   wails CLI；相比 wails build 仅缺图标/PE 版本资源（syso），便携版可接受。
+#   与本地 build-desktop.ps1 一致：-tags desktop,production，ldflags 注入 main.desktopVersion。
+# - go vet / 测试不在本流水线（质量门禁见 ci.yml，tag 均从过门禁的 master 切出）。
+# - 便携包放 data/ 空目录标记：embed.go resolveDataRoot 检测到 exe 旁 data\ 即走便携模式
+#   （数据落 exe 旁，不写 %APPDATA%）。
+#
+# 结构注意（同 ci.yml）：stages 列表项直接携带 name/displayName/strategy/steps 字段
+# （不得再包一层 stage: 键），steps[].commands 必须是列表。
+version: '1.0'
+name: absorb-release
+displayName: 'Absorb Release（Windows 便携版 zip）'
+triggers:
+  push:
+    tags:
+      prefix:
+        - v
+stages:
+  - name: release
+    displayName: '交叉编译 Windows 便携版'
+    strategy: naturally
+    steps:
+      - step: build@gcc
+        name: build_portable
+        displayName: '前端构建 + Windows 交叉编译 + 便携包'
+        gccVersion: '10.3'
+        commands:
+          - |
+            set -e
+            ROOT=$(pwd)
+
+            echo '===== 1. 版本号：取 HEAD 上的 v* tag（v0.2.0 -> 0.2.0），非 tag 推送跳过 ====='
+            git fetch --tags --force origin >/dev/null 2>&1 || true
+            TAG=$(git tag --points-at HEAD | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+            if [ -z "$TAG" ]; then
+              echo 'no release tag on HEAD, skip (quality gate is in ci.yml)'
+              exit 0
+            fi
+            VERSION=${TAG#v}
+            BUILT_AT=$(date -u +%Y-%m-%dT%H:%M)
+            echo "version=$VERSION builtAt=$BUILT_AT"
+
+            echo '===== 2. 安装 Go 1.26 ====='
+            cd /tmp
+            wget -q https://mirrors.aliyun.com/golang/go1.26.0.linux-amd64.tar.gz -O go.tgz \
+              || wget -q https://golang.google.cn/dl/go1.26.0.linux-amd64.tar.gz -O go.tgz
+            tar -xzf go.tgz -C /usr/local
+            ln -sf /usr/local/go/bin/go /usr/local/bin/go
+            go version
+
+            echo '===== 3. 安装 Node.js 24（与 ci.yml 相同：20.18 会因 require(ESM) 未启用导致 vitest/jsdom 启动失败） ====='
+            wget -q https://cdn.npmmirror.com/binaries/node/v24.12.0/node-v24.12.0-linux-x64.tar.gz -O node.tgz
+            tar -xzf node.tgz -C /usr/local --strip-components=1
+            node -v && npm -v
+            cd "$ROOT"
+
+            echo '===== 4. 前端构建（供 go:embed 嵌入桌面端） ====='
+            npm config set registry https://registry.npmmirror.com
+            ( cd frontend && npm ci --no-audit --no-fund && npm run build )
+
+            echo '===== 5. 版本元数据同步（wails.json / package.json / 扩展 manifest，先于扩展打包） ====='
+            export GOPROXY=https://goproxy.cn,direct
+            go run ./cmd/syncversion -version "$VERSION" -root .
+
+            echo '===== 6. 打包扩展（先打内嵌 bundle，再出便携包用的扩展目录；文档不随扩展分发） ====='
+            ( cd extension && find . -name '*.md' -delete && zip -qr ../internal/extension/extension_bundle.zip . )
+            rm -rf /tmp/ext-stage && mkdir -p /tmp/ext-stage
+            cp -r extension/. /tmp/ext-stage/
+
+            echo '===== 7. Windows 交叉编译（CGO 无关：wails windows 走 go-webview2 纯 Go） ====='
+            mkdir -p /tmp/portable/absorb-agent-"$VERSION"-windows-portable/data
+            OUT=/tmp/portable/absorb-agent-"$VERSION"-windows-portable
+            LDFLAGS_COMMON="-s -w -X main.desktopVersion=$VERSION -X main.builtAt=$BUILT_AT"
+            CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath \
+              -tags desktop,production -ldflags "-H windowsgui $LDFLAGS_COMMON" \
+              -o "$OUT/absorb-agent-desktop.exe" .
+            CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath \
+              -tags desktop,production -ldflags "$LDFLAGS_COMMON" \
+              -o "$OUT/absorb-agent-cli.exe" .
+
+            echo '===== 8. 组装便携包（data/ 为便携模式标记；扩展目录供浏览器加载） ====='
+            mkdir -p "$OUT/extension"
+            cp -r /tmp/ext-stage/. "$OUT/extension/"
+            cp README.zh-CN.md "$OUT/"
+            cd /tmp/portable
+            zip -qr "absorb-agent-$VERSION-windows-portable.zip" "absorb-agent-$VERSION-windows-portable"
+            ls -lh "absorb-agent-$VERSION-windows-portable.zip"
+            cd "$ROOT"
+
+            echo '===== 9. 产物移入暂存目录（供 artifacts 暂存） ====='
+            mkdir -p release
+            cp "/tmp/portable/absorb-agent-$VERSION-windows-portable.zip" release/
+        artifacts:
+          - name: BUILD_ARTIFACT
+            path:
+              - ./release
+      - step: publish@general_artifacts
+        name: publish_portable
+        displayName: '上传便携版 zip 到制品库'
+        dependArtifact: BUILD_ARTIFACT
+        artifactRepository: default
+        artifactName: absorb-agent-portable

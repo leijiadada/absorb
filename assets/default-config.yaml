@@ -1,0 +1,47 @@
+model:
+  name: ""            # 模型名（如 glm-4.6）；首次配置前为空，状态页会提示
+  variant: "glm"      # 提示词策略：glm
+  api_key: ""         # API Key（首次配置前为空）
+  base_url: "https://open.bigmodel.cn/api/paas/v4"
+  temperature: 0.7
+  # max_tokens 不配置 = 输出上限由模型侧决定
+
+store:
+  sqlite:
+    path: "./data/sessions.db"
+
+memory:
+  enabled: true
+  db_path: "./data/memory.db"
+  profile:
+    enabled: true
+    file_path: "./data/profile.md"
+
+proxy:
+  url: ""             # 全局 HTTP 代理（如 http://127.0.0.1:7897），空=跟随系统代理/环境变量
+
+fetch:
+  timeout_seconds: 30
+
+upgrade:
+  # channel: "stable"          # stable / beta
+  # feed_url: ""               # 升级 feed 地址，空=默认（仓库 releases/latest.json）
+  # check_interval_hours: 6    # 启动后自动检查间隔
+  # auto_check: true           # 启动时后台检查（有新版仅提示，不自动安装）
+
+skills:
+  root: ""            # 空 = 内置技能兜底（exe 旁 skills/ → 工作目录 skills/ → 内嵌解压到用户缓存目录）；配置则只用该目录
+
+logs:
+  dir: "./logs"
+  level: "info"
+
+# 生产链路追踪（默认关）：开启后 span 落盘 logs/traces.jsonl（消息正文已剔除）；
+# 加 sqlite: true 改落会话库 request_traces 表并开放 /debug/traces 查看器；
+# 配置 endpoint 则直发 OTLP（如本机 Jaeger 的 gRPC 端口 4317），不落盘。
+# telemetry:
+#   enabled: true
+#   # sqlite: true
+#   # debug_port: 7789
+#   # endpoint: "localhost:4317"
+#   # service_name: "absorb"

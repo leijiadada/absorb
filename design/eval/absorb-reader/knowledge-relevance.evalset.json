@@ -1,0 +1,238 @@
+{
+  "evalSetId": "knowledge-relevance",
+  "name": "knowledge-relevance",
+  "_note": "M0 关联组：划词材料信息不完整（quote 不含答案），答案只存在于 page_md（整页缓存）。期望模型恰好调用 expand_context 做本地检索（不走网络），事实均为页面专有内容，模型无法凭自身知识作答。finalResponse 参考答案仅作文档，本组评工具轨迹 + 材料溯源 judge（material_grounding_judge，材料经各例 case rubric 注入；judge 模型配置见同名 metrics.json，需设置 ABSORB_EVAL_JUDGE_* 环境变量）。",
+  "evalCases": [
+    {
+      "evalId": "kr-01-ingest-limit",
+      "rubrics": [{"metricName": "material_grounding_judge", "id": "material-kr-01", "content": {"text": "评估材料。\n划词：采集管线在写入前会做一次轻量校验，具体阈值见配置说明。\n页面缓存全文：# 数据采集管线\n\n## 写入校验\n\n轻量校验只检查单条记录的体积上限，阈值为 256 KB。超过 256 KB 的数据包会被直接拒绝，并计入 rejected_packets 指标。\n\n## 重试策略\n\n写入失败后按指数退避重试，最多重试 5 次，单次重试间隔上限 30 秒。"}}],
+      "conversation": [
+        {
+          "invocationId": "kr-01-1",
+          "userContent": {"role": "user", "content": "轻量校验的单条体积上限是多少？超限后会发生什么？"},
+          "finalResponse": {"role": "assistant", "content": "单条体积上限为 256 KB，超限的数据包会被直接拒绝，并计入 rejected_packets 指标。"},
+          "tools": [
+            {"id": "kt-01", "name": "expand_context", "arguments": {"reason": "划词材料未给出阈值数字，需要从页面缓存的配置说明中检索", "keywords": ["轻量校验", "256 KB", "写入校验"]}}
+          ]
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://docs.example.com/data-platform/ingest-pipeline",
+          "page_context": "docs.example.com > 数据平台 > 采集管线",
+          "quote": "采集管线在写入前会做一次轻量校验，具体阈值见配置说明。",
+          "page_md": "# 数据采集管线\n\n## 写入校验\n\n轻量校验只检查单条记录的体积上限，阈值为 256 KB。超过 256 KB 的数据包会被直接拒绝，并计入 rejected_packets 指标。\n\n## 重试策略\n\n写入失败后按指数退避重试，最多重试 5 次，单次重试间隔上限 30 秒。"
+        }
+      }
+    },
+    {
+      "evalId": "kr-02-render-codename",
+      "rubrics": [{"metricName": "material_grounding_judge", "id": "material-kr-02", "content": {"text": "评估材料。\n划词：该渲染引擎的离屏合成路径在本季度做了重构，新架构的内部代号见附录。\n页面缓存全文：# RenderEngine 离屏合成重构设计\n\n## 背景\n\n离屏合成路径在跨图层动画场景下耗时过高，本季度完成重构。\n\n## 性能基线\n\n重构后离屏合成 P50 耗时为 4.2 毫秒，P99 耗时为 11 毫秒。\n\n## 附录：术语表\n\n离屏合成新架构的内部代号为 Heron，取自苍鹭定点捕食的意象，寓意一次合成直达目标图层。"}}],
+      "conversation": [
+        {
+          "invocationId": "kr-02-1",
+          "userContent": {"role": "user", "content": "离屏合成新架构的内部代号是什么？"},
+          "finalResponse": {"role": "assistant", "content": "离屏合成新架构的内部代号是 Heron。"},
+          "tools": [
+            {"id": "kt-02", "name": "expand_context", "arguments": {"reason": "代号只存在于附录术语表，划词材料未提及", "keywords": ["Heron", "代号", "术语表"]}}
+          ]
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://eng.example.com/design/render-engine-offscreen",
+          "quote": "该渲染引擎的离屏合成路径在本季度做了重构，新架构的内部代号见附录。",
+          "page_md": "# RenderEngine 离屏合成重构设计\n\n## 背景\n\n离屏合成路径在跨图层动画场景下耗时过高，本季度完成重构。\n\n## 性能基线\n\n重构后离屏合成 P50 耗时为 4.2 毫秒，P99 耗时为 11 毫秒。\n\n## 附录：术语表\n\n离屏合成新架构的内部代号为 Heron，取自苍鹭定点捕食的意象，寓意一次合成直达目标图层。"
+        }
+      }
+    },
+    {
+      "evalId": "kr-03-oncall-p1",
+      "rubrics": [{"metricName": "material_grounding_judge", "id": "material-kr-03", "content": {"text": "评估材料。\n划词：告警分级规则较为复杂，请以手册中的完整规则为准。\n页面缓存全文：# 告警响应手册\n\n## 分级规则\n\nP0：核心链路完全不可用，要求 5 分钟内响应；P1：核心链路劣化超过 30%，要求 15 分钟内响应；P2：非核心功能异常，工作时间内 2 小时内响应。\n\n## 升级路径\n\nP0 告警 15 分钟未确认自动升级至值班经理，P1 告警 30 分钟未确认自动升级至小组负责人。"}}],
+      "conversation": [
+        {
+          "invocationId": "kr-03-1",
+          "userContent": {"role": "user", "content": "P1 级告警要求多长时间内响应？"},
+          "finalResponse": {"role": "assistant", "content": "P1 级告警要求 15 分钟内响应（核心链路劣化超过 30%）。"},
+          "tools": [
+            {"id": "kt-03", "name": "expand_context", "arguments": {"reason": "划词材料说明分级规则复杂，P1 的响应时限在分级规则一节", "keywords": ["P1", "响应", "分级规则"]}}
+          ]
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://wiki.example.com/ops/alert-response-handbook",
+          "quote": "告警分级规则较为复杂，请以手册中的完整规则为准。",
+          "page_md": "# 告警响应手册\n\n## 分级规则\n\nP0：核心链路完全不可用，要求 5 分钟内响应；P1：核心链路劣化超过 30%，要求 15 分钟内响应；P2：非核心功能异常，工作时间内 2 小时内响应。\n\n## 升级路径\n\nP0 告警 15 分钟未确认自动升级至值班经理，P1 告警 30 分钟未确认自动升级至小组负责人。"
+        }
+      }
+    },
+    {
+      "evalId": "kr-04-batch-quota",
+      "rubrics": [{"metricName": "material_grounding_judge", "id": "material-kr-04", "content": {"text": "评估材料。\n划词：批量接口的限额规则见服务配额一节。\n页面缓存全文：# 批量查询 API\n\n## 接口说明\n\n批量查询接口允许一次请求查询多个键，适合客户端批量拉取配置。\n\n## 服务配额\n\n批量查询接口每个项目每分钟最多发起 60 次调用，单次批量最多携带 200 个查询键，超出配额返回 429 状态码。"}}],
+      "conversation": [
+        {
+          "invocationId": "kr-04-1",
+          "userContent": {"role": "user", "content": "批量接口单次最多携带多少个查询键？"},
+          "finalResponse": {"role": "assistant", "content": "单次批量最多携带 200 个查询键。"},
+          "tools": [
+            {"id": "kt-04", "name": "expand_context", "arguments": {"reason": "限额数字在服务配额一节，划词材料未给出", "keywords": ["查询键", "服务配额", "批量"]}}
+          ]
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://api.example.com/docs/batch-query",
+          "quote": "批量接口的限额规则见服务配额一节。",
+          "page_md": "# 批量查询 API\n\n## 接口说明\n\n批量查询接口允许一次请求查询多个键，适合客户端批量拉取配置。\n\n## 服务配额\n\n批量查询接口每个项目每分钟最多发起 60 次调用，单次批量最多携带 200 个查询键，超出配额返回 429 状态码。"
+        }
+      }
+    },
+    {
+      "evalId": "kr-05-paper-accuracy",
+      "rubrics": [{"metricName": "material_grounding_judge", "id": "material-kr-05", "content": {"text": "评估材料。\n划词：实验部分给出了不同温度设置下的通过率，完整数据见原文表格。\n页面缓存全文：# 采样温度对代码生成的影响\n\n## 实验设置\n\n在三个温度档位下各运行 500 次生成任务，统计单元测试通过率。\n\n## 主结果表\n\n温度 0.0 时通过率 71.4%；温度 0.6 时通过率 76.8%；温度 1.0 时通过率 63.2%。\n\n## 讨论\n\n温度 0.6 的设置在探索性与稳定性之间取得最佳平衡。"}}],
+      "conversation": [
+        {
+          "invocationId": "kr-05-1",
+          "userContent": {"role": "user", "content": "温度 0.6 时的通过率是多少？"},
+          "finalResponse": {"role": "assistant", "content": "温度 0.6 时的通过率是 76.8%。"},
+          "tools": [
+            {"id": "kt-05", "name": "expand_context", "arguments": {"reason": "实验数据在原文表格中，划词材料未包含数字", "keywords": ["0.6", "通过率", "主结果表"]}}
+          ]
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://papers.example.org/abs/sampling-temperature-study",
+          "quote": "实验部分给出了不同温度设置下的通过率，完整数据见原文表格。",
+          "page_md": "# 采样温度对代码生成的影响\n\n## 实验设置\n\n在三个温度档位下各运行 500 次生成任务，统计单元测试通过率。\n\n## 主结果表\n\n温度 0.0 时通过率 71.4%；温度 0.6 时通过率 76.8%；温度 1.0 时通过率 63.2%。\n\n## 讨论\n\n温度 0.6 的设置在探索性与稳定性之间取得最佳平衡。"
+        }
+      }
+    },
+    {
+      "evalId": "kr-06-pricing-quota",
+      "rubrics": [{"metricName": "material_grounding_judge", "id": "material-kr-06", "content": {"text": "评估材料。\n划词：本次计费调整涉及免费额度的变化，具体数字以公告正文为准。\n页面缓存全文：# 计费调整公告\n\n## 免费额度变化\n\n免费额度从每月 1000 次调用调整为每月 500 次调用，2026 年 3 月 1 日生效。\n\n## 超出部分计费\n\n超出免费额度后按每次调用 0.002 元计费，账单按日汇总。"}}],
+      "conversation": [
+        {
+          "invocationId": "kr-06-1",
+          "userContent": {"role": "user", "content": "调整后每月免费额度是多少？何时生效？"},
+          "finalResponse": {"role": "assistant", "content": "调整后每月免费额度为 500 次调用，2026 年 3 月 1 日生效。"},
+          "tools": [
+            {"id": "kt-06", "name": "expand_context", "arguments": {"reason": "额度数字与生效日期在公告正文，划词材料未给出", "keywords": ["免费额度", "500", "生效"]}}
+          ]
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://news.example.com/product/pricing-update-2026",
+          "quote": "本次计费调整涉及免费额度的变化，具体数字以公告正文为准。",
+          "page_md": "# 计费调整公告\n\n## 免费额度变化\n\n免费额度从每月 1000 次调用调整为每月 500 次调用，2026 年 3 月 1 日生效。\n\n## 超出部分计费\n\n超出免费额度后按每次调用 0.002 元计费，账单按日汇总。"
+        }
+      }
+    },
+    {
+      "evalId": "kr-07-snapshot-term",
+      "rubrics": [{"metricName": "material_grounding_judge", "id": "material-kr-07", "content": {"text": "评估材料。\n划词：在这份规范里，「快照」的含义与通用数据库语境不同，请以术语定义一节为准。\n页面缓存全文：# 设备同步规范\n\n## 术语定义\n\n本规范中的「快照」特指某个设备分组在单一时间点的配置集合，与数据库领域的快照隔离机制无关。\n\n## 同步流程\n\n快照每小时生成一次，变更检测窗口为 10 分钟，窗口内的增量变更合并入下一次快照。"}}],
+      "conversation": [
+        {
+          "invocationId": "kr-07-1",
+          "userContent": {"role": "user", "content": "在这份规范里，「快照」指什么？"},
+          "finalResponse": {"role": "assistant", "content": "在这份规范里，快照特指某个设备分组在单一时间点的配置集合，与数据库的快照隔离无关。"},
+          "tools": [
+            {"id": "kt-07", "name": "expand_context", "arguments": {"reason": "该术语在本规范中有特殊定义，需检索术语定义一节", "keywords": ["快照", "术语定义"]}}
+          ]
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://docs.example.com/iot/device-sync-spec",
+          "quote": "在这份规范里，「快照」的含义与通用数据库语境不同，请以术语定义一节为准。",
+          "page_md": "# 设备同步规范\n\n## 术语定义\n\n本规范中的「快照」特指某个设备分组在单一时间点的配置集合，与数据库领域的快照隔离机制无关。\n\n## 同步流程\n\n快照每小时生成一次，变更检测窗口为 10 分钟，窗口内的增量变更合并入下一次快照。"
+        }
+      }
+    },
+    {
+      "evalId": "kr-08-compat-matrix",
+      "rubrics": [{"metricName": "material_grounding_judge", "id": "material-kr-08", "content": {"text": "评估材料。\n划词：客户端升级需要注意兼容性矩阵，详见升级指南。\n页面缓存全文：# 升级指南\n\n## 兼容性矩阵\n\n服务端 2.x 只兼容客户端 1.8 及以上版本；客户端 1.7 及更早版本需要先升级到 1.8，再连接 2.x 服务端。\n\n## 升级步骤\n\n先备份本地配置，再执行升级脚本，最后用 healthcheck 命令验证连接。"}}],
+      "conversation": [
+        {
+          "invocationId": "kr-08-1",
+          "userContent": {"role": "user", "content": "服务端 2.x 最低兼容哪个版本的客户端？"},
+          "finalResponse": {"role": "assistant", "content": "服务端 2.x 最低兼容客户端 1.8。"},
+          "tools": [
+            {"id": "kt-08", "name": "expand_context", "arguments": {"reason": "版本对应关系在兼容性矩阵，划词材料未包含", "keywords": ["兼容性矩阵", "2.x", "1.8"]}}
+          ]
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://docs.example.com/sdk/upgrade-guide",
+          "quote": "客户端升级需要注意兼容性矩阵，详见升级指南。",
+          "page_md": "# 升级指南\n\n## 兼容性矩阵\n\n服务端 2.x 只兼容客户端 1.8 及以上版本；客户端 1.7 及更早版本需要先升级到 1.8，再连接 2.x 服务端。\n\n## 升级步骤\n\n先备份本地配置，再执行升级脚本，最后用 healthcheck 命令验证连接。"
+        }
+      }
+    },
+    {
+      "evalId": "kr-09-board-gpio",
+      "rubrics": [{"metricName": "material_grounding_judge", "id": "material-kr-09", "content": {"text": "评估材料。\n划词：这款开发板的外设接口数量比上一代更多，完整参数见规格表。\n页面缓存全文：# 开发板 V3 规格表\n\n## 接口\n\nGPIO 共 40 个引脚，其中 12 个支持 PWM；UART 4 路；I2C 2 路；SPI 2 路。\n\n## 供电\n\n支持 5V USB 与 3.7V 锂电池两种供电方式，峰值电流 2A。"}}],
+      "conversation": [
+        {
+          "invocationId": "kr-09-1",
+          "userContent": {"role": "user", "content": "这块开发板有多少个 GPIO 引脚，其中多少个支持 PWM？"},
+          "finalResponse": {"role": "assistant", "content": "GPIO 共 40 个引脚，其中 12 个支持 PWM。"},
+          "tools": [
+            {"id": "kt-09", "name": "expand_context", "arguments": {"reason": "引脚数量在规格表，划词材料未给出数字", "keywords": ["GPIO", "PWM", "规格表"]}}
+          ]
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://wiki.example.com/hardware/devboard-v3-spec",
+          "quote": "这款开发板的外设接口数量比上一代更多，完整参数见规格表。",
+          "page_md": "# 开发板 V3 规格表\n\n## 接口\n\nGPIO 共 40 个引脚，其中 12 个支持 PWM；UART 4 路；I2C 2 路；SPI 2 路。\n\n## 供电\n\n支持 5V USB 与 3.7V 锂电池两种供电方式，峰值电流 2A。"
+        }
+      }
+    },
+    {
+      "evalId": "kr-10-release-window",
+      "rubrics": [{"metricName": "material_grounding_judge", "id": "material-kr-10", "content": {"text": "评估材料。\n划词：关于发布窗口的最终决定记录在纪要正文里。\n页面缓存全文：# 架构评审会议纪要（2026-09-12）\n\n## 讨论摘要\n\n与会各方就灰度节奏展开了讨论，主要分歧在放量速度。\n\n## 决议\n\n发布窗口定为 2026 年 10 月 28 日至 11 月 4 日，灰度比例 5% 起步，回滚负责人为王倩。"}}],
+      "conversation": [
+        {
+          "invocationId": "kr-10-1",
+          "userContent": {"role": "user", "content": "最终的发布窗口定在什么时候？"},
+          "finalResponse": {"role": "assistant", "content": "发布窗口定为 2026 年 10 月 28 日至 11 月 4 日。"},
+          "tools": [
+            {"id": "kt-10", "name": "expand_context", "arguments": {"reason": "发布窗口日期记录在纪要正文的决议部分", "keywords": ["发布窗口", "决议", "10 月 28 日"]}}
+          ]
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://wiki.example.com/minutes/arch-review-2026-09-12",
+          "quote": "关于发布窗口的最终决定记录在纪要正文里。",
+          "page_md": "# 架构评审会议纪要（2026-09-12）\n\n## 讨论摘要\n\n与会各方就灰度节奏展开了讨论，主要分歧在放量速度。\n\n## 决议\n\n发布窗口定为 2026 年 10 月 28 日至 11 月 4 日，灰度比例 5% 起步，回滚负责人为王倩。"
+        }
+      }
+    }
+  ]
+}

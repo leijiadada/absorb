@@ -1,0 +1,45 @@
+[
+  {
+    "metricName": "tool_trajectory_avg_score",
+    "threshold": 0.7,
+    "criterion": {
+      "toolTrajectory": {
+        "orderSensitive": false,
+        "subsetMatching": true,
+        "defaultStrategy": {
+          "name": {"matchStrategy": "exact"},
+          "arguments": {"ignore": true},
+          "result": {"ignore": true}
+        }
+      }
+    }
+  },
+  {
+    "metricName": "material_grounding_judge",
+    "evaluatorName": "llm_rubric_response",
+    "threshold": 0.9,
+    "_note": "材料溯源 judge：对照本例「评估材料」（case rubric 注入）判断回答是否把捏造细节当作事实。允许一般知识补充，只罚虚构与未指出的矛盾。judge 模型走环境变量（os.ExpandEnv），仓库不落 key；未设置时本组评估会失败，属预期门禁行为。",
+    "criterion": {
+      "llmJudge": {
+        "judgeModel": {
+          "providerName": "openai",
+          "variant": "deepseek",
+          "modelName": "${ABSORB_EVAL_JUDGE_MODEL}",
+          "baseURL": "${ABSORB_EVAL_JUDGE_BASE_URL}",
+          "apiKey": "${ABSORB_EVAL_JUDGE_API_KEY}",
+          "numSamples": 1,
+          "generationConfig": {"temperature": 0}
+        },
+        "rubrics": [
+          {
+            "id": "grounding-rule",
+            "content": {
+              "text": "评分时以「评估材料」为事实基准。回答可补充来自一般知识的背景、类比或举例；但把凭空捏造的来源、数据、论文或论据当作事实陈述，或作出与评估材料矛盾却未指出的断言，判 0。指出评估材料自身的错误或矛盾不算违约。"
+            }
+          }
+        ]
+      }
+    }
+  }
+]
+

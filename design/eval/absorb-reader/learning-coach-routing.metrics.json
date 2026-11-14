@@ -1,0 +1,45 @@
+[
+  {
+    "metricName": "tool_trajectory_avg_score",
+    "threshold": 0.8,
+    "_note": "ask_user 工具断言：仅 lc-r05 的期望工具列表非空（ask_user），其余用例 tools:[] 在 subsetMatching 下 vacuous pass。args/result 忽略（提问措辞不定形）。",
+    "criterion": {
+      "toolTrajectory": {
+        "orderSensitive": false,
+        "subsetMatching": true,
+        "defaultStrategy": {
+          "name": {"matchStrategy": "exact"},
+          "arguments": {"ignore": true},
+          "result": {"ignore": true}
+        }
+      }
+    }
+  },
+  {
+    "metricName": "mode_conformance_judge",
+    "evaluatorName": "llm_rubric_response",
+    "threshold": 0.9,
+    "_note": "模式符合度 judge：对照 case rubric 注入的「评估材料 + 期望模式」判断回答行为。lc-r05 为两轮用例（官方 HITL：轮 1 经 ask_user 诊断，轮 2 userContent 即回答回执 JSON）。judge 模型走环境变量（os.ExpandEnv），仓库不落 key；未设置时本组评估会失败，属预期门禁行为。",
+    "criterion": {
+      "llmJudge": {
+        "judgeModel": {
+          "providerName": "openai",
+          "variant": "deepseek",
+          "modelName": "${ABSORB_EVAL_JUDGE_MODEL}",
+          "baseURL": "${ABSORB_EVAL_JUDGE_BASE_URL}",
+          "apiKey": "${ABSORB_EVAL_JUDGE_API_KEY}",
+          "numSamples": 1,
+          "generationConfig": {"temperature": 0}
+        },
+        "rubrics": [
+          {
+            "id": "mode-rule",
+            "content": {
+              "text": "对照本例「期望模式」判断回答行为：Quick Explain 要求直接回答、结尾无测验提问、无长篇设计论述；Deep Understand 要求先结论后机制、连接页面材料，页面作者实测数据不得当作普遍事实陈述；Guided Learning 要求先诊断已有理解且一次只问一个问题；「不套用学习教练」要求简短直接，无诊断、无学习路径、无出题，且不编造实时数据。违反期望模式判 0；机制解释存在明显技术错误判 0。"
+            }
+          }
+        ]
+      }
+    }
+  }
+]

@@ -1,0 +1,34 @@
+{
+  "type": "docs",
+  "capturedAt": "2026-10-16",
+  "expect": {
+    "nonEmpty": true,
+    "mdChars": 6525,
+    "mustContain": [
+      "的协程调度器原理"
+    ]
+  },
+  "queries": [
+    {
+      "keywords": [
+        "GMP"
+      ],
+      "expectHit": true,
+      "why": "标题/正文主题词（人工复核）"
+    },
+    {
+      "keywords": [
+        "2、Golang的协程调度器原理及GMP设计思想"
+      ],
+      "expectHit": true,
+      "why": "标题词"
+    },
+    {
+      "keywords": [
+        "qqx不存在词zqx"
+      ],
+      "expectHit": false,
+      "why": "零命中信号"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "type": "community",
+  "capturedAt": "2026-10-16",
+  "expect": {
+    "nonEmpty": true,
+    "mdChars": 8752,
+    "mustContain": [
+      "创作中心"
+    ]
+  },
+  "queries": [
+    {
+      "keywords": [
+        "欠薪"
+      ],
+      "expectHit": true,
+      "why": "标题/正文主题词（人工复核）"
+    },
+    {
+      "keywords": [
+        "qqx不存在词zqx"
+      ],
+      "expectHit": false,
+      "why": "零命中信号"
+    }
+  ]
+}

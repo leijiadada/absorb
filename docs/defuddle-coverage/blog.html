@@ -1,0 +1,1598 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" id="sixapart-standard" lang="zh-CN">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="generator" content="Movable Type  5.2.2" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!--link rel="stylesheet" href="http://www.ruanyifeng.com/blog/styles.css" type="text/css" /-->
+<link rel="start" href="https://www.ruanyifeng.com/blog/" title="Home" />
+<link rel="alternate" type="application/atom+xml" title="Recent Entries" href="https://feeds.feedburner.com/ruanyifeng" />
+<script type="text/javascript" src="https://www.ruanyifeng.com/blog/mt.js"></script>
+<script type="text/javascript" src="/blog/advertisements.js"></script>
+<!--
+<rdf:RDF xmlns="http://web.resource.org/cc/"
+         xmlns:dc="http://purl.org/dc/elements/1.1/"
+         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+<Work rdf:about="http://www.ruanyifeng.com/blog/2011/07/formula_online_generator.html">
+<dc:title>数学公式生成器</dc:title>
+<dc:description>上一篇文章《数学常数e的含义》，有很多数学公式。...</dc:description>
+<dc:creator>阮一峰</dc:creator>
+<dc:date>2011-07-11T22:12:13+08:00</dc:date>
+<license rdf:resource="http://creativecommons.org/licenses/by-nc-nd/3.0/" />
+</Work>
+<License rdf:about="http://creativecommons.org/licenses/by-nc-nd/3.0/">
+</License>
+</rdf:RDF>
+-->
+
+<style>
+body {
+  background-color: #f5f5d5;
+}
+
+#container::before {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background: rgba(0,0,0,0.1);
+  text-align: center;
+  content: "本站显示不正常，可能因为您使用了广告拦截器。";
+}
+
+</style>
+<script>
+function loadjscssfile(filename, filetype){
+    if (filetype=="js"){ //if filename is a external JavaScript file
+        var fileref=document.createElement('script')
+        fileref.setAttribute("type","text/javascript")
+        fileref.setAttribute("src", filename)
+    }
+    else if (filetype=="css"){ //if filename is an external CSS file
+        var fileref=document.createElement("link")
+        fileref.setAttribute("rel", "stylesheet")
+        fileref.setAttribute("type", "text/css")
+        fileref.setAttribute("href", filename)
+    }
+    if (typeof fileref!="undefined")
+        document.getElementsByTagName("head")[0].appendChild(fileref)
+}
+//loadjscssfile("http://www.ruanyifeng.com/blog/styles.css", "css");
+loadjscssfile('/static/themes/theme_scrapbook/theme_scrapbook.min.css', "css");
+
+
+function checker() {
+  if (/mobile|android/i.test(navigator.userAgent)) return; 
+  window.comments && window.comments.setAttribute("style", "!important");
+  // var img = document.querySelector('img[src^="http://www.ruanyifeng.com/blog/images"]');
+  var img = document.querySelector('a > img[src*="wangbase.com/blogimg/asset/"]');
+  var isAdblocker = (typeof adblock === 'undefined');
+  if (
+    /*isAdblocker || */
+    (img && window.getComputedStyle(img).display === 'none') ||
+    (img && window.getComputedStyle(img.parentElement).display === 'none')
+  ){
+    var sponsor = document.querySelector('#main-content');
+    var prompt = document.createElement('div');
+    prompt.style = 'border: 1px solid #c6c6c6;border-radius: 4px;background-color: #f5f2f0;padding: 15px; font-size: 14px;';
+    prompt.innerHTML = '<p>您使用了广告拦截器，导致本站内容无法显示。</p><p>请将 www.ruanyifeng.com 加入白名单，解除广告屏蔽后，刷新页面。谢谢。</p>';
+    sponsor.parentNode.replaceChild(prompt, sponsor);
+    // document.querySelector('#main-content').innerHTML = '';
+  }
+}
+
+setTimeout(checker, 1000);
+</script>
+    
+    <link rel="prev" href="https://www.ruanyifeng.com/blog/2019/09/react-hooks.html" title="React Hooks 入门教程" />
+    <link rel="next" href="https://www.ruanyifeng.com/blog/2019/09/weekly-issue-72.html" title="科技爱好者周刊：第 72 期" />
+    
+    <title>curl 的用法指南 - 阮一峰的网络日志</title>
+</head>
+<body id="scrapbook" class="mt-entry-archive one-column">
+<script>
+if (/mobile/i.test(navigator.userAgent) || /android/i.test(navigator.userAgent)) document.body.classList.add('mobile');
+
+/*
+window.addEventListener('load', function(event) {
+  setTimeout(function () {
+    hab('#sup-post-2');
+    hab('#cre-inner');
+  }, 1000);
+});
+*/
+</script>
+    <div id="container">
+        <div id="container-inner">
+
+            <div id="header">
+    <div id="header-inner">
+        <div id="header-content">
+
+
+            <div id="header-name">阮一峰的网络日志 <span id="site_location"> » <a href="https://www.ruanyifeng.com/blog/" accesskey="1">首页</a></span><span id="site_archive"> » <a href="https://www.ruanyifeng.com/blog/archives.html">档案</a></span>
+</div>
+
+<div id="google_search">
+<!-- SiteSearch Google -->
+<form action="https://www.baidu.com/s" target="_blank" method="get" id="cse-search-box">
+  <div>
+  <input type="text" size="20" name="origin" class="searchbox" id="sbi" value="" />
+  <input type="hidden" name="wd" value="" />
+  <!--input type="image" src="/static/themes/theme_scrapbook/images/top_search_submit.gif" class="searchbox_submit" value="" alt="搜索" name="sa" onclick="this.form.wd.value = this.form.origin.value + ' inurl:www.ruanyifeng.com/blog'" /-->
+  <input type="image" src="/static/themes/theme_scrapbook/images/top_search_submit.gif" class="searchbox_submit" value="" alt="搜索" name="sa" onclick="this.form.wd.value = this.form.origin.value + ' 阮一峰'" />
+</div>
+</form>
+
+<!-- SiteSearch Google -->
+</div>
+<div id="feed_icon">
+<a href="/feed.html?utm_source=" title="订阅Feed">
+<!--img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABGdBTUEAAK/INwWK6QAAABl0RVh0U29mdHdhcmUAQWRvYmUgSW1hZ2VSZWFkeXHJZTwAAAUzSURBVHjavFdbbFRVFF3nPjoz7dTWTittaW0jUDRAUqaNojyqREnEQKgfUj9MqqAmhqRt/OCD4CuY+Kckoh+aiGKC+gMJbdHoRysJ8dkhhmJLNdDKtJU+6GMK87j3Hs85d2Z6HzNtMYWb3Dn3NWftvfba+5xNYDl+e6Fkj6yqb/oDRbWq14vlPBLRKCITkxf0ROLt+hNjp1PPSRK4kA3vF1dXNRcWlyA2OQU9eos9opAkAiKxD+XkKO6t15aRWO7J/MgmAZU8MEgexgZHMX518Dh72sYMmVKShnxWuWHdHtxKIDIYTgMuDzgfmSOIQkYMpdUF8OY92Hytt4/jvkg47czzU16iQovM3QFwmNck+Yyduu7D6NA0Z6JR4THntFs9V4tWQg6Ui3s6MwKDncsFTnXKLJhDSeUK3AgPtyhccDzmVs999buRt/1Vm4i0od+hX7+MRG87jPGB/w1u8FPj9xEw7McVrnYuOCvtpjTth3J/nTg99c8LRhKhr6D3dTB5R24bXFwbMXBsyZzeoXaycEpJ95TB09AGX/NpqLVNtw8urnVzLvHjFNxiFqRy2OOHuqUVnue+ACkoWzo4O6lGzTmuHq6nPvY2m9rVqjrIK2rMEKxqyG5NPAKt+wjo0LklgfNxJkZMA3KJvqRUk3z5UFY3QH14P0h+WUY79HPvgv7VuSg4ZRGY1YgZgqXmORccF17sy2ehnf9AeO085K2HQFbtXBScj0LcpgF2cN+WV+DZ/LJQu6gD4R7oV7pBJwbSgtMvfiPoVp56DySwxm7EtkMs1WdAB7qzggsDJKQYsHucSkOudrkiCPWR/fA2nYCn8SNIK4NptSMyAu3sAdDRkIsJdfth0LzSrODUoPNZ4KI9SxJI5UHk7D4GdQfz2us31c7CoHMjRkKuDPHseCMrONVhNcDJwMJpKFVvg9L4OaTiNWm1x789KCqkrXhVBiEz0WYCT2nAzQAD1/vaETv1GrRfP4Vx5cfMNcDPwvP0h0DhanPym7OIf/+O67vcJ1/PCJ4KgdzaUP6Wz+dU+5yIL6fV+PsHGAOdwlPpvvUOyeeAVGyCdqkDNB6DPjsBSrnndfOGevOh3RhGItxvA+fX1CtbGFhgYUFkFMZPR6F1HnClHq8HyubWtJexX06CRmdt33hrd7nA7SFY4qoGpnYuOKcRykPPgDCBcsHx9Iv+fNL2PueBehCWUfYQIIMGLOCcOmXDXsh1+yCt35tUPfvzGFuSvzvoinXOxqa02qOhM6733nVP2MAdaej2XN11DPKjLZCD+yBvahGCo7JfTKAN9UD7s8Oe9zUNIhz8fWI8DG2k38WCFdxugANcXrvTVd1IEbuv3Jour7Hzn7jLMBNfKs7R3i67gRVrbeCOEDhinmWhAatsqdquM2XzHZINhK2cqTjHr/XZdVJUbgN3MWAVXKbSyg9jesRW2xP9di+lwrL5ojM3m2H/kG9hwcIA37c71W6wJdW2J2S5nrjYbq/t1AHAhJsKQeyfPvf6IMJgghPJhFZ4x0KlfLFvt22du45Au/A1SOlGc0P672XXwhLtOcM0kTTEMMd0qkVmMNXxMd/tsedUjInr4SQDgOfeXMSiN0FCL5WHah4L1qqYXPJOJlttd+a5M+YpcG5poLYKQ5f+6JJ4r8bbJYP47hq4r7QAs9PjYNhHJd4o8l5taiwuOpa7AS4XKqI/5NjJbTnaWK92nLdLuhQAJayRNMiygXPBeQN+Qbvu0zDc3y+aUzhbkGR73sI7ljvUnndx2q3t+X8CDAD66FtrIL864AAAAABJRU5ErkJggg==" alt="" style="border: 0pt none;" /-->
+<img src="https://cdn.beekka.com/blogimg/asset/202107/bg2021072117.png" alt="" style="border: 0pt none;" />
+</a></div>
+
+        </div>
+    </div>
+</div>
+
+
+
+            <div id="content">
+                <div id="content-inner">
+
+
+                    <div id="alpha">
+                        <div id="alpha-inner">
+
+
+                            <div id="entry-2115" class="entry-asset asset hentry">
+                                <div class="asset-header">
+<div class="asset-nav entry-nav">
+
+<div class="entry-location">
+<ul>
+<li>上一篇：<a href="https://www.ruanyifeng.com/blog/2019/09/react-hooks.html" title="React Hooks 入门教程">React&nbsp;Hooks</a></li>
+<li>下一篇：<a href="https://www.ruanyifeng.com/blog/2019/09/weekly-issue-72.html" title="科技爱好者周刊：第 72 期">科技爱好者周刊：第&nbsp;7</a></li>
+</ul>
+</div>
+
+
+    
+                                    <div class="entry-categories">
+                                        <p>分类<span class="delimiter">：</span></p>
+                                        <ul>
+                                            <li><a href="https://www.ruanyifeng.com/blog/developer/" rel="tag">开发者手册</a></li>
+                                        </ul>
+                                    </div>
+    
+
+
+                                            
+<div class="entry-location-mobile" style="float: right;">
+<ul>
+<li><a href="https://www.ruanyifeng.com/blog/2019/09/react-hooks.html" title="React Hooks 入门教程">⇐&nbsp;</a></li>
+<li><a href="https://www.ruanyifeng.com/blog/2019/09/weekly-issue-72.html" title="科技爱好者周刊：第 72 期">&nbsp;⇒</a></li>
+</ul>
+</div>
+
+</div>
+</div>
+
+                          
+<article class="hentry">
+                                    <h1 id="page-title" class="asset-name entry-title">curl 的用法指南</h1>
+
+<div class="asset-meta">
+                                        
+
+                                            <p class="vcard author">作者： <a class="fn url" href="https://www.ruanyifeng.com">阮一峰</a></p>
+                                    <p>日期： <a href="https://www.ruanyifeng.com/blog/2019/09/"><abbr class="published" title="2019-09-05T10:45:21+08:00">2019年9月 5日</abbr></a></p>
+
+
+</div>
+
+
+
+
+
+
+
+
+
+
+                                
+                                <div class="asset-content entry-content" id="main-content">
+
+                                    <!-- div class="asset-body" -->
+                                        <h2>简介</h2>
+
+<p>curl 是常用的命令行工具，用来请求 Web 服务器。它的名字就是客户端（client）的 URL 工具的意思。</p>
+
+                                    <!-- /div -->
+
+
+                                    <!-- div id="more" class="asset-more" -->
+                                        <p>它的功能非常强大，命令行参数多达几十种。如果熟练的话，完全可以取代 Postman 这一类的图形界面工具。</p>
+
+<p><img src="https://cdn.beekka.com/blogimg/asset/201909/bg2019090501.jpg" alt="" title="" /></p>
+
+<p>本文介绍它的主要命令行参数，作为日常的参考，方便查阅。内容主要翻译自<a href="https://catonmat.net/cookbooks/curl">《curl cookbook》</a>。为了节约篇幅，下面的例子不包括运行时的输出，初学者可以先看我以前写的<a href="https://www.ruanyifeng.com/blog/2011/09/curl.html">《curl 初学者教程》</a>。</p>
+
+<p>不带有任何参数时，curl 就是发出 GET 请求。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl https://www.example.com
+</code></pre></blockquote>
+
+<p>上面命令向<code>www.example.com</code>发出 GET 请求，服务器返回的内容会在命令行输出。</p>
+
+<h2><strong>-A</strong></h2>
+
+<p><code>-A</code>参数指定客户端的用户代理标头，即<code>User-Agent</code>。curl 的默认用户代理字符串是<code>curl/[version]</code>。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -A 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/76.0.3809.100 Safari/537.36' https://google.com
+</code></pre></blockquote>
+
+<p>上面命令将<code>User-Agent</code>改成 Chrome 浏览器。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -A '' https://google.com
+</code></pre></blockquote>
+
+<p>上面命令会移除<code>User-Agent</code>标头。</p>
+
+<p>也可以通过<code>-H</code>参数直接指定标头，更改<code>User-Agent</code>。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -H 'User-Agent: php/1.0' https://google.com
+</code></pre></blockquote>
+
+<h2><strong>-b</strong></h2>
+
+<p><code>-b</code>参数用来向服务器发送 Cookie。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -b 'foo=bar' https://google.com
+</code></pre></blockquote>
+
+<p>上面命令会生成一个标头<code>Cookie: foo=bar</code>，向服务器发送一个名为<code>foo</code>、值为<code>bar</code>的 Cookie。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -b 'foo1=bar;foo2=bar2' https://google.com
+</code></pre></blockquote>
+
+<p>上面命令发送两个 Cookie。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -b cookies.txt https://www.google.com
+</code></pre></blockquote>
+
+<p>上面命令读取本地文件<code>cookies.txt</code>，里面是服务器设置的 Cookie（参见<code>-c</code>参数），将其发送到服务器。</p>
+
+<h2><strong>-c</strong></h2>
+
+<p><code>-c</code>参数将服务器设置的 Cookie 写入一个文件。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -c cookies.txt https://www.google.com
+</code></pre></blockquote>
+
+<p>上面命令将服务器的 HTTP 回应所设置 Cookie 写入文本文件<code>cookies.txt</code>。</p>
+
+<h2><strong>-d</strong></h2>
+
+<p><code>-d</code>参数用于发送 POST 请求的数据体。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -d'login=emma＆password=123'-X POST https://google.com/login
+# 或者
+$ curl -d 'login=emma' -d 'password=123' -X POST  https://google.com/login
+</code></pre></blockquote>
+
+<p>使用<code>-d</code>参数以后，HTTP 请求会自动加上标头<code>Content-Type : application/x-www-form-urlencoded</code>。并且会自动将请求转为 POST 方法，因此可以省略<code>-X POST</code>。</p>
+
+<p><code>-d</code>参数可以读取本地文本文件的数据，向服务器发送。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -d '@data.txt' https://google.com/login
+</code></pre></blockquote>
+
+<p>上面命令读取<code>data.txt</code>文件的内容，作为数据体向服务器发送。</p>
+
+<h2><strong>--data-urlencode</strong></h2>
+
+<p><code>--data-urlencode</code>参数等同于<code>-d</code>，发送 POST 请求的数据体，区别在于会自动将发送的数据进行 URL 编码。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl --data-urlencode 'comment=hello world' https://google.com/login
+</code></pre></blockquote>
+
+<p>上面代码中，发送的数据<code>hello world</code>之间有一个空格，需要进行 URL 编码。</p>
+
+<h2><strong>-e</strong></h2>
+
+<p><code>-e</code>参数用来设置 HTTP 的标头<code>Referer</code>，表示请求的来源。</p>
+
+<blockquote><pre><code class="language-bash">
+curl -e 'https://google.com?q=example' https://www.example.com
+</code></pre></blockquote>
+
+<p>上面命令将<code>Referer</code>标头设为<code>https://google.com?q=example</code>。</p>
+
+<p><code>-H</code>参数可以通过直接添加标头<code>Referer</code>，达到同样效果。</p>
+
+<blockquote><pre><code class="language-bash">
+curl -H 'Referer: https://google.com?q=example' https://www.example.com
+</code></pre></blockquote>
+
+<h2><strong>-F</strong></h2>
+
+<p><code>-F</code>参数用来向服务器上传二进制文件。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -F '<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="24424d48411964544c4b504b0a544a43">[email&#160;protected]</a>' https://google.com/profile
+</code></pre></blockquote>
+
+<p>上面命令会给 HTTP 请求加上标头<code>Content-Type: multipart/form-data</code>，然后将文件<code>photo.png</code>作为<code>file</code>字段上传。</p>
+
+<p><code>-F</code>参数可以指定 MIME 类型。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -F '<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="7b1d12171e463b0b13140f14550b151c">[email&#160;protected]</a>;type=image/png' https://google.com/profile
+</code></pre></blockquote>
+
+<p>上面命令指定 MIME 类型为<code>image/png</code>，否则 curl 会把 MIME 类型设为<code>application/octet-stream</code>。</p>
+
+<p><code>-F</code>参数也可以指定文件名。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -F '<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="0a6c63666f374a7a62657e65247a646d">[email&#160;protected]</a>;filename=me.png' https://google.com/profile
+</code></pre></blockquote>
+
+<p>上面命令中，原始文件名为<code>photo.png</code>，但是服务器接收到的文件名为<code>me.png</code>。</p>
+
+<h2><strong>-G</strong></h2>
+
+<p><code>-G</code>参数用来构造 URL 的查询字符串。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -G -d 'q=kitties' -d 'count=20' https://google.com/search
+</code></pre></blockquote>
+
+<p>上面命令会发出一个 GET 请求，实际请求的 URL 为<code>https://google.com/search?q=kitties&amp;count=20</code>。如果省略<code>--G</code>，会发出一个 POST 请求。</p>
+
+<p>如果数据需要 URL 编码，可以结合<code>--data--urlencode</code>参数。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -G --data-urlencode 'comment=hello world' https://www.example.com
+</code></pre></blockquote>
+
+<h2><strong>-H</strong></h2>
+
+<p><code>-H</code>参数添加 HTTP 请求的标头。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -H 'Accept-Language: en-US' https://google.com
+</code></pre></blockquote>
+
+<p>上面命令添加 HTTP 标头<code>Accept-Language: en-US</code>。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -H 'Accept-Language: en-US' -H 'Secret-Message: xyzzy' https://google.com
+</code></pre></blockquote>
+
+<p>上面命令添加两个 HTTP 标头。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -d '{"login": "emma", "pass": "123"}' -H 'Content-Type: application/json' https://google.com/login
+</code></pre></blockquote>
+
+<p>上面命令添加 HTTP 请求的标头是<code>Content-Type: application/json</code>，然后用<code>-d</code>参数发送 JSON 数据。</p>
+
+<h2><strong>-i</strong></h2>
+
+<p><code>-i</code>参数打印出服务器回应的 HTTP 标头。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -i https://www.example.com
+</code></pre></blockquote>
+
+<p>上面命令收到服务器回应后，先输出服务器回应的标头，然后空一行，再输出网页的源码。</p>
+
+<h2><strong>-I</strong></h2>
+
+<p><code>-I</code>参数向服务器发出 HEAD 请求，然会将服务器返回的 HTTP 标头打印出来。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -I https://www.example.com
+</code></pre></blockquote>
+
+<p>上面命令输出服务器对 HEAD 请求的回应。</p>
+
+<p><code>--head</code>参数等同于<code>-I</code>。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl --head https://www.example.com
+</code></pre></blockquote>
+
+<h2><strong>-k</strong></h2>
+
+<p><code>-k</code>参数指定跳过 SSL 检测。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -k https://www.example.com
+</code></pre></blockquote>
+
+<p>上面命令不会检查服务器的 SSL 证书是否正确。</p>
+
+<h2><strong>-L</strong></h2>
+
+<p><code>-L</code>参数会让 HTTP 请求跟随服务器的重定向。curl 默认不跟随重定向。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -L -d 'tweet=hi' https://api.twitter.com/tweet
+</code></pre></blockquote>
+
+<h2><strong>--limit-rate</strong></h2>
+
+<p><code>--limit-rate</code>用来限制 HTTP 请求和回应的带宽，模拟慢网速的环境。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl --limit-rate 200k https://google.com
+</code></pre></blockquote>
+
+<p>上面命令将带宽限制在每秒 200K 字节。</p>
+
+<h2><strong>-o</strong></h2>
+
+<p><code>-o</code>参数将服务器的回应保存成文件，等同于<code>wget</code>命令。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -o example.html https://www.example.com
+</code></pre></blockquote>
+
+<p>上面命令将<code>www.example.com</code>保存成<code>example.html</code>。</p>
+
+<h2><strong>-O</strong></h2>
+
+<p><code>-O</code>参数将服务器回应保存成文件，并将 URL 的最后部分当作文件名。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -O https://www.example.com/foo/bar.html
+</code></pre></blockquote>
+
+<p>上面命令将服务器回应保存成文件，文件名为<code>bar.html</code>。</p>
+
+<h2><strong>-s</strong></h2>
+
+<p><code>-s</code>参数将不输出错误和进度信息。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -s https://www.example.com
+</code></pre></blockquote>
+
+<p>上面命令一旦发生错误，不会显示错误信息。不发生错误的话，会正常显示运行结果。</p>
+
+<p>如果想让 curl 不产生任何输出，可以使用下面的命令。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -s -o /dev/null https://google.com
+</code></pre></blockquote>
+
+<h2><strong>-S</strong></h2>
+
+<p><code>-S</code>参数指定只输出错误信息，通常与<code>-s</code>一起使用。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -s -o /dev/null https://google.com
+</code></pre></blockquote>
+
+<p>上面命令没有任何输出，除非发生错误。</p>
+
+<h2><strong>-u</strong></h2>
+
+<p><code>-u</code>参数用来设置服务器认证的用户名和密码。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -u 'bob:12345' https://google.com/login
+</code></pre></blockquote>
+
+<p>上面命令设置用户名为<code>bob</code>，密码为<code>12345</code>，然后将其转为 HTTP 标头<code>Authorization: Basic Ym9iOjEyMzQ1</code>。</p>
+
+<p>curl 能够识别 URL 里面的用户名和密码。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl https://bob:<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="1e2f2c2d2a2b5e79717179727b307d7173">[email&#160;protected]</a>/login
+</code></pre></blockquote>
+
+<p>上面命令能够识别 URL 里面的用户名和密码，将其转为上个例子里面的 HTTP 标头。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -u 'bob' https://google.com/login
+</code></pre></blockquote>
+
+<p>上面命令只设置了用户名，执行后，curl 会提示用户输入密码。</p>
+
+<h2><strong>-v</strong></h2>
+
+<p><code>-v</code>参数输出通信的整个过程，用于调试。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -v https://www.example.com
+</code></pre></blockquote>
+
+<p><code>--trace</code>参数也可以用于调试，还会输出原始的二进制数据。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl --trace - https://www.example.com
+</code></pre></blockquote>
+
+<h2><strong>-x</strong></h2>
+
+<p><code>-x</code>参数指定 HTTP 请求的代理。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -x socks5://james:<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="157674616655786c65677a6d6c3b767a78">[email&#160;protected]</a>:8080 https://www.example.com
+</code></pre></blockquote>
+
+<p>上面命令指定 HTTP 请求通过<code>myproxy.com:8080</code>的 socks5 代理发出。</p>
+
+<p>如果没有指定代理协议，默认为 HTTP。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -x james:<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="1774766364577a6e6765786f6e3974787a">[email&#160;protected]</a>:8080 https://www.example.com
+</code></pre></blockquote>
+
+<p>上面命令中，请求的代理使用 HTTP 协议。</p>
+
+<h2><strong>-X</strong></h2>
+
+<p><code>-X</code>参数指定 HTTP 请求的方法。</p>
+
+<blockquote><pre><code class="language-bash">
+$ curl -X POST https://www.example.com
+</code></pre></blockquote>
+
+<p>上面命令对<code>https://www.example.com</code>发出 POST 请求。</p>
+
+<h2>参考链接</h2>
+
+<ul>
+<li><a href="https://catonmat.net/cookbooks/curl">Curl Cookbook</a></li>
+</ul>
+
+<p>（完）</p>
+
+                                    <!-- /div -->
+
+                                </div>
+    <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script type="text/javascript" src="/newwindow.js"></script>
+                                <div class="asset-footer">
+
+<h3>文档信息</h3>
+<ul>
+<li>版权声明：自由转载-非商用-非衍生-保持署名（<a href="http://creativecommons.org/licenses/by-nc-nd/3.0/deed.zh">创意共享3.0许可证</a>）</li>
+<li>发表日期： <abbr class="published" title="2019-09-05T10:45:21+08:00">2019年9月 5日</abbr></li>
+
+</ul>
+                                </div>
+</article>
+                            </div>
+
+
+<div id="related_entries">
+<h2>相关文章</h2>
+<ul>
+
+<li><strong>2026.01.22: <a href="https://www.ruanyifeng.com/blog/2026/01/ai-native-workspace.html">AI native Workspace 也许是智能体的下一阶段</a></strong>
+
+                           <div class="entry-body">
+                              一、智能体的形态
+
+我问大家一个问题，什么是 AI 的产品形态？
+
+                           </div>
+
+</li>
+
+ 
+<li><strong>2025.12.23: <a href="https://www.ruanyifeng.com/blog/2025/12/minimax-m2.1.html">我如何用 AI 处理历史遗留代码：MiniMax M2.1 升级体验</a></strong>
+
+                           <div class="entry-body">
+                              一、
+
+最近，我写了好几篇 AI 教程，就收到留言，要我谈谈我自己的 AI 编程。
+
+                           </div>
+
+</li>
+
+ 
+<li><strong>2025.11.26: <a href="https://www.ruanyifeng.com/blog/2025/11/trae-solo.html">终于有人做了 Subagent，TRAE 国内版 SOLO 模式来了</a></strong>
+
+                           <div class="entry-body">
+                              一、
+
+全世界最好的 AI 编程工具，我不知道。
+
+                           </div>
+
+</li>
+
+ 
+<li><strong>2025.11.19: <a href="https://www.ruanyifeng.com/blog/2025/11/vs-code-minimax-m2.html">VS Code 使用国产大模型 MiniMax M2 教程</a></strong>
+
+                           <div class="entry-body">
+                              一、
+
+上周，我写了一篇 Claude Code 接入国产大模型的教程，就有同学问我，为什么不用 VS Code？
+
+                           </div>
+
+</li>
+
+ 
+</ul>
+</div>
+
+
+
+                    
+
+                    <div id="comments" class="comments">
+
+
+    
+    
+        
+    <h2 class="comments-header">留言（23条）</h2>
+
+    <div id="comments-content" class="comments-content" style="clear: left;">
+        
+        <div id="comment-413232" class="comment">
+    <div  class="inner">
+        <div class="comment-header">
+            <div class="asset-meta">
+<p>
+                <span class="byline">
+                    
+
+                    <span class="vcard author">Rouzip</span>
+
+ 说：
+                </span>
+</p>
+            </div>
+        </div>
+        <div class="comment-content" id="comment-quote-413232">
+            <p>-S 代码中打成了s，同时应该和-o配合吧？</p>
+        </div>
+<div class="comment-footer">
+<div class="comment-footer-inner">
+<p>
+                   <abbr class="published" title="September  5, 2019 10:57 AM">2019年9月 5日 10:57</abbr>
+ | <a href="https://www.ruanyifeng.com/blog/2019/09/curl-reference.html#comment-413232">#</a>
+ | <a href="#comment-text" title="引用Rouzip的这条留言" onclick="return CommentQuote('comment-quote-413232','Rouzip');">引用</a>
+</p>
+</div>
+</div>
+    </div>
+</div>
+        
+    
+        
+        <div id="comment-413246" class="comment">
+    <div  class="inner">
+        <div class="comment-header">
+            <div class="asset-meta">
+<p>
+                <span class="byline">
+                    
+
+                    <span class="vcard author">muxueqz</span>
+
+ 说：
+                </span>
+</p>
+            </div>
+        </div>
+        <div class="comment-content" id="comment-quote-413246">
+            <p>熟悉CLI之后curl是真的蛮好用的，而且FireFox/Chrome的Dev Tools可以直接把请求复制成curl的命令，然后可以直接在shell里运行</p>
+        </div>
+<div class="comment-footer">
+<div class="comment-footer-inner">
+<p>
+                   <abbr class="published" title="September  5, 2019  7:53 PM">2019年9月 5日 19:53</abbr>
+ | <a href="https://www.ruanyifeng.com/blog/2019/09/curl-reference.html#comment-413246">#</a>
+ | <a href="#comment-text" title="引用muxueqz的这条留言" onclick="return CommentQuote('comment-quote-413246','muxueqz');">引用</a>
+</p>
+</div>
+</div>
+    </div>
+</div>
+        
+    
+        
+        <div id="comment-413247" class="comment">
+    <div  class="inner">
+        <div class="comment-header">
+            <div class="asset-meta">
+<p>
+                <span class="byline">
+                    
+
+                    <span class="vcard author">能叔</span>
+
+ 说：
+                </span>
+</p>
+            </div>
+        </div>
+        <div class="comment-content" id="comment-quote-413247">
+            <p>阮老大是不是没东西写了哈</p>
+        </div>
+<div class="comment-footer">
+<div class="comment-footer-inner">
+<p>
+                   <abbr class="published" title="September  5, 2019  9:58 PM">2019年9月 5日 21:58</abbr>
+ | <a href="https://www.ruanyifeng.com/blog/2019/09/curl-reference.html#comment-413247">#</a>
+ | <a href="#comment-text" title="引用能叔的这条留言" onclick="return CommentQuote('comment-quote-413247','能叔');">引用</a>
+</p>
+</div>
+</div>
+    </div>
+</div>
+        
+    
+        
+        <div id="comment-413252" class="comment">
+    <div  class="inner">
+        <div class="comment-header">
+            <div class="asset-meta">
+<p>
+                <span class="byline">
+                    
+
+                    <span class="vcard author">鲁班七号</span>
+
+ 说：
+                </span>
+</p>
+            </div>
+        </div>
+        <div class="comment-content" id="comment-quote-413252">
+            <p>百度提交链接每次都用到curl</p>
+        </div>
+<div class="comment-footer">
+<div class="comment-footer-inner">
+<p>
+                   <abbr class="published" title="September  6, 2019  9:17 AM">2019年9月 6日 09:17</abbr>
+ | <a href="https://www.ruanyifeng.com/blog/2019/09/curl-reference.html#comment-413252">#</a>
+ | <a href="#comment-text" title="引用鲁班七号的这条留言" onclick="return CommentQuote('comment-quote-413252','鲁班七号');">引用</a>
+</p>
+</div>
+</div>
+    </div>
+</div>
+        
+    
+        
+        <div id="comment-413257" class="comment">
+    <div  class="inner">
+        <div class="comment-header">
+            <div class="asset-meta">
+<p>
+                <span class="byline">
+                    
+
+                    <span class="vcard author">typebrook</span>
+
+ 说：
+                </span>
+</p>
+            </div>
+        </div>
+        <div class="comment-content" id="comment-quote-413257">
+            <p>感謝阮老師對常用指令的介紹！<br />
+xargs和awk那兩篇我常常回頭翻閱</p>
+
+<p>另外</p>
+
+<p>```<br />
+$ curl -head <a href="https://www.example.com" rel="nofollow">https://www.example.com</a><br />
+```<br />
+少了一個`-`</p>
+        </div>
+<div class="comment-footer">
+<div class="comment-footer-inner">
+<p>
+                   <abbr class="published" title="September  6, 2019  9:55 AM">2019年9月 6日 09:55</abbr>
+ | <a href="https://www.ruanyifeng.com/blog/2019/09/curl-reference.html#comment-413257">#</a>
+ | <a href="#comment-text" title="引用typebrook的这条留言" onclick="return CommentQuote('comment-quote-413257','typebrook');">引用</a>
+</p>
+</div>
+</div>
+    </div>
+</div>
+        
+    
+        
+        <div id="comment-413303" class="comment">
+    <div  class="inner">
+        <div class="comment-header">
+            <div class="asset-meta">
+<p>
+                <span class="byline">
+                    
+
+                    <span class="vcard author">note</span>
+
+ 说：
+                </span>
+</p>
+            </div>
+        </div>
+        <div class="comment-content" id="comment-quote-413303">
+            <p>补一个我经常用的参数：<br />
+-R, --remote-time   Set the remote file's time on the local output</p>
+        </div>
+<div class="comment-footer">
+<div class="comment-footer-inner">
+<p>
+                   <abbr class="published" title="September  6, 2019  6:09 PM">2019年9月 6日 18:09</abbr>
+ | <a href="https://www.ruanyifeng.com/blog/2019/09/curl-reference.html#comment-413303">#</a>
+ | <a href="#comment-text" title="引用note的这条留言" onclick="return CommentQuote('comment-quote-413303','note');">引用</a>
+</p>
+</div>
+</div>
+    </div>
+</div>
+        
+    
+        
+        <div id="comment-413653" class="comment">
+    <div  class="inner">
+        <div class="comment-header">
+            <div class="asset-meta">
+<p>
+                <span class="byline">
+                    
+
+                    <span class="vcard author">Heng Wei</span>
+
+ 说：
+                </span>
+</p>
+            </div>
+        </div>
+        <div class="comment-content" id="comment-quote-413653">
+            <p>很棒，受教了，多谢</p>
+        </div>
+<div class="comment-footer">
+<div class="comment-footer-inner">
+<p>
+                   <abbr class="published" title="September 23, 2019  2:30 PM">2019年9月23日 14:30</abbr>
+ | <a href="https://www.ruanyifeng.com/blog/2019/09/curl-reference.html#comment-413653">#</a>
+ | <a href="#comment-text" title="引用Heng Wei的这条留言" onclick="return CommentQuote('comment-quote-413653','Heng Wei');">引用</a>
+</p>
+</div>
+</div>
+    </div>
+</div>
+        
+    
+        
+        <div id="comment-413660" class="comment">
+    <div  class="inner">
+        <div class="comment-header">
+            <div class="asset-meta">
+<p>
+                <span class="byline">
+                    
+
+                    <span class="vcard author">Tian w</span>
+
+ 说：
+                </span>
+</p>
+            </div>
+        </div>
+        <div class="comment-content" id="comment-quote-413660">
+            <p>curl是真的蛮好用的</p>
+        </div>
+<div class="comment-footer">
+<div class="comment-footer-inner">
+<p>
+                   <abbr class="published" title="September 23, 2019  4:15 PM">2019年9月23日 16:15</abbr>
+ | <a href="https://www.ruanyifeng.com/blog/2019/09/curl-reference.html#comment-413660">#</a>
+ | <a href="#comment-text" title="引用Tian w的这条留言" onclick="return CommentQuote('comment-quote-413660','Tian w');">引用</a>
+</p>
+</div>
+</div>
+    </div>
+</div>
+        
+    
+        
+        <div id="comment-415197" class="comment">
+    <div  class="inner">
+        <div class="comment-header">
+            <div class="asset-meta">
+<p>
+                <span class="byline">
+                    
+
+                    <span class="vcard author">linfeng</span>
+
+ 说：
+                </span>
+</p>
+            </div>
+        </div>
+        <div class="comment-content" id="comment-quote-415197">
+            <p>我也贡献一个<br />
+--resolve HOST:PORT:ADDRESS  将 HOST:PORT 强制解析到 ADDRESS。。</p>
+        </div>
+<div class="comment-footer">
+<div class="comment-footer-inner">
+<p>
+                   <abbr class="published" title="December 17, 2019 11:25 PM">2019年12月17日 23:25</abbr>
+ | <a href="https://www.ruanyifeng.com/blog/2019/09/curl-reference.html#comment-415197">#</a>
+ | <a href="#comment-text" title="引用linfeng的这条留言" onclick="return CommentQuote('comment-quote-415197','linfeng');">引用</a>
+</p>
+</div>
+</div>
+    </div>
+</div>
+        
+    
+        
+        <div id="comment-415981" class="comment">
+    <div  class="inner">
+        <div class="comment-header">
+            <div class="asset-meta">
+<p>
+                <span class="byline">
+                    
+
+                    <span class="vcard author">更风</span>
+
+ 说：
+                </span>
+</p>
+            </div>
+        </div>
+        <div class="comment-content" id="comment-quote-415981">
+            <p>有个疑问，java 调用 curl -F 'file=@/zzz.zip'请求地址，读取返回流字节为空，直接到服务器上执行命令，有正常打印，这是啥情况</p>
+        </div>
+<div class="comment-footer">
+<div class="comment-footer-inner">
+<p>
+                   <abbr class="published" title="January 19, 2020 10:35 AM">2020年1月19日 10:35</abbr>
+ | <a href="https://www.ruanyifeng.com/blog/2019/09/curl-reference.html#comment-415981">#</a>
+ | <a href="#comment-text" title="引用更风的这条留言" onclick="return CommentQuote('comment-quote-415981','更风');">引用</a>
+</p>
+</div>
+</div>
+    </div>
+</div>
+        
+    
+        
+        <div id="comment-416115" class="comment">
+    <div  class="inner">
+        <div class="comment-header">
+            <div class="asset-meta">
+<p>
+                <span class="byline">
+                    
+
+                    <span class="vcard author">Monica</span>
+
+ 说：
+                </span>
+</p>
+            </div>
+        </div>
+        <div class="comment-content" id="comment-quote-416115">
+            <p>您好！请问curl可以用于上传一个视频文件吗？怎样写这个命令？感谢！！</p>
+        </div>
+<div class="comment-footer">
+<div class="comment-footer-inner">
+<p>
+                   <abbr class="published" title="February  6, 2020  6:19 PM">2020年2月 6日 18:19</abbr>
+ | <a href="https://www.ruanyifeng.com/blog/2019/09/curl-reference.html#comment-416115">#</a>
+ | <a href="#comment-text" title="引用Monica的这条留言" onclick="return CommentQuote('comment-quote-416115','Monica');">引用</a>
+</p>
+</div>
+</div>
+    </div>
+</div>
+        
+    
+        
+        <div id="comment-417948" class="comment">
+    <div  class="inner">
+        <div class="comment-header">
+            <div class="asset-meta">
+<p>
+                <span class="byline">
+                    
+
+                    <span class="vcard author">yaoms</span>
+
+ 说：
+                </span>
+</p>
+            </div>
+        </div>
+        <div class="comment-content" id="comment-quote-417948">
+            <blockquote>
+<pre>引用Monica的发言：</pre>
+
+<p>您好！请问curl可以用于上传一个视频文件吗？怎样写这个命令？感谢！！</p>
+
+</blockquote>
+
+<p>就用 -F 选项上传</p>
+        </div>
+<div class="comment-footer">
+<div class="comment-footer-inner">
+<p>
+                   <abbr class="published" title="April 23, 2020  7:28 PM">2020年4月23日 19:28</abbr>
+ | <a href="https://www.ruanyifeng.com/blog/2019/09/curl-reference.html#comment-417948">#</a>
+ | <a href="#comment-text" title="引用yaoms的这条留言" onclick="return CommentQuote('comment-quote-417948','yaoms');">引用</a>
+</p>
+</div>
+</div>
+    </div>
+</div>
+        
+    
+        
+        <div id="comment-419665" class="comment">
+    <div  class="inner">
+        <div class="comment-header">
+            <div class="asset-meta">
+<p>
+                <span class="byline">
+                    
+
+                    <span class="vcard author">陈龙</span>
+
+ 说：
+                </span>
+</p>
+            </div>
+        </div>
+        <div class="comment-content" id="comment-quote-419665">
+            <p>补充一个参数，-T "指定请求体文件"</p>
+        </div>
+<div class="comment-footer">
+<div class="comment-footer-inner">
+<p>
+                   <abbr class="published" title="June 24, 2020 11:14 AM">2020年6月24日 11:14</abbr>
+ | <a href="https://www.ruanyifeng.com/blog/2019/09/curl-reference.html#comment-419665">#</a>
+ | <a href="#comment-text" title="引用陈龙的这条留言" onclick="return CommentQuote('comment-quote-419665','陈龙');">引用</a>
+</p>
+</div>
+</div>
+    </div>
+</div>
+        
+    
+        
+        <div id="comment-421241" class="comment">
+    <div  class="inner">
+        <div class="comment-header">
+            <div class="asset-meta">
+<p>
+                <span class="byline">
+                    
+
+                    <span class="vcard author">小凯</span>
+
+ 说：
+                </span>
+</p>
+            </div>
+        </div>
+        <div class="comment-content" id="comment-quote-421241">
+            <p>如何上传base64文件流呢</p>
+        </div>
+<div class="comment-footer">
+<div class="comment-footer-inner">
+<p>
+                   <abbr class="published" title="August 11, 2020 10:27 AM">2020年8月11日 10:27</abbr>
+ | <a href="https://www.ruanyifeng.com/blog/2019/09/curl-reference.html#comment-421241">#</a>
+ | <a href="#comment-text" title="引用小凯的这条留言" onclick="return CommentQuote('comment-quote-421241','小凯');">引用</a>
+</p>
+</div>
+</div>
+    </div>
+</div>
+        
+    
+        
+        <div id="comment-421553" class="comment">
+    <div  class="inner">
+        <div class="comment-header">
+            <div class="asset-meta">
+<p>
+                <span class="byline">
+                    
+
+                    <span class="vcard author">leo</span>
+
+ 说：
+                </span>
+</p>
+            </div>
+        </div>
+        <div class="comment-content" id="comment-quote-421553">
+            <p>亲测<a>curl参数转义问题</a><br />
+命令行建议双引号和转义。</p>
+        </div>
+<div class="comment-footer">
+<div class="comment-footer-inner">
+<p>
+                   <abbr class="published" title="August 19, 2020  3:18 PM">2020年8月19日 15:18</abbr>
+ | <a href="https://www.ruanyifeng.com/blog/2019/09/curl-reference.html#comment-421553">#</a>
+ | <a href="#comment-text" title="引用leo的这条留言" onclick="return CommentQuote('comment-quote-421553','leo');">引用</a>
+</p>
+</div>
+</div>
+    </div>
+</div>
+        
+    
+        
+        <div id="comment-421695" class="comment">
+    <div  class="inner">
+        <div class="comment-header">
+            <div class="asset-meta">
+<p>
+                <span class="byline">
+                    
+
+                    <span class="vcard author">Jerry</span>
+
+ 说：
+                </span>
+</p>
+            </div>
+        </div>
+        <div class="comment-content" id="comment-quote-421695">
+            <p>大佬 `$ curl -sS -o /dev/null <a href="https://google.com`" rel="nofollow">https://google.com`</a> 看起来少写了一个 S</p>
+
+<p>要不要顺手出一个 `wget` 指南，并做一下对比...</p>
+        </div>
+<div class="comment-footer">
+<div class="comment-footer-inner">
+<p>
+                   <abbr class="published" title="August 24, 2020 11:00 AM">2020年8月24日 11:00</abbr>
+ | <a href="https://www.ruanyifeng.com/blog/2019/09/curl-reference.html#comment-421695">#</a>
+ | <a href="#comment-text" title="引用Jerry的这条留言" onclick="return CommentQuote('comment-quote-421695','Jerry');">引用</a>
+</p>
+</div>
+</div>
+    </div>
+</div>
+        
+    
+        
+        <div id="comment-428692" class="comment">
+    <div  class="inner">
+        <div class="comment-header">
+            <div class="asset-meta">
+<p>
+                <span class="byline">
+                    
+
+                    <span class="vcard author">无名</span>
+
+ 说：
+                </span>
+</p>
+            </div>
+        </div>
+        <div class="comment-content" id="comment-quote-428692">
+            <p>下载github中的项目文件时经常会用 curl -fsSL <a href="https://github.com/xxxxx" rel="nofollow">https://github.com/xxxxx</a> ,请问一下这些参数总共要表达什么？</p>
+        </div>
+<div class="comment-footer">
+<div class="comment-footer-inner">
+<p>
+                   <abbr class="published" title="August 11, 2021 10:56 AM">2021年8月11日 10:56</abbr>
+ | <a href="https://www.ruanyifeng.com/blog/2019/09/curl-reference.html#comment-428692">#</a>
+ | <a href="#comment-text" title="引用无名的这条留言" onclick="return CommentQuote('comment-quote-428692','无名');">引用</a>
+</p>
+</div>
+</div>
+    </div>
+</div>
+        
+    
+        
+        <div id="comment-430220" class="comment">
+    <div  class="inner">
+        <div class="comment-header">
+            <div class="asset-meta">
+<p>
+                <span class="byline">
+                    
+
+                    <span class="vcard author">gb</span>
+
+ 说：
+                </span>
+</p>
+            </div>
+        </div>
+        <div class="comment-content" id="comment-quote-430220">
+            <blockquote>
+<pre>引用无名的发言：</pre>
+
+<p>下载github中的项目文件时经常会用 curl -fsSL <a href="https://github.com/xxxxx" rel="nofollow">https://github.com/xxxxx</a> ,请问一下这些参数总共要表达什么？</p>
+
+</blockquote>
+
+<p>同问，这个小f是啥意思。<br />
+</p>
+        </div>
+<div class="comment-footer">
+<div class="comment-footer-inner">
+<p>
+                   <abbr class="published" title="October 24, 2021 10:11 PM">2021年10月24日 22:11</abbr>
+ | <a href="https://www.ruanyifeng.com/blog/2019/09/curl-reference.html#comment-430220">#</a>
+ | <a href="#comment-text" title="引用gb的这条留言" onclick="return CommentQuote('comment-quote-430220','gb');">引用</a>
+</p>
+</div>
+</div>
+    </div>
+</div>
+        
+    
+        
+        <div id="comment-430647" class="comment">
+    <div  class="inner">
+        <div class="comment-header">
+            <div class="asset-meta">
+<p>
+                <span class="byline">
+                    
+
+                    <span class="vcard author">Zkeq</span>
+
+ 说：
+                </span>
+</p>
+            </div>
+        </div>
+        <div class="comment-content" id="comment-quote-430647">
+            <blockquote>
+<pre>引用gb的发言：</pre>
+
+<p>同问，这个小f是啥意思。</p>
+
+</blockquote>
+
+<p> -f (--fail) 表示在服务器错误时，阻止一个返回的表示错误原因的 html 页面，而由 curl 命令返回一个错误码 22 来提示错误<br />
+-L,--location:如果服务器报告请求的页面已移动到其他位置（用location:header和3xx 响应代码），此选项将使curl在新位置上重新执行请求。<br />
+--show-error：当与-s，--silent一起使用时，它会使curl在失败时显示错误消息。<br />
+-s，--silent：安静模式。不显示进度表或错误信息。使curl静音。它仍然会输出您请求的数据，甚至可能输出到终端stdout，除非您对它进行重定向。<br />
+</p>
+        </div>
+<div class="comment-footer">
+<div class="comment-footer-inner">
+<p>
+                   <abbr class="published" title="November 17, 2021 11:00 AM">2021年11月17日 11:00</abbr>
+ | <a href="https://www.ruanyifeng.com/blog/2019/09/curl-reference.html#comment-430647">#</a>
+ | <a href="#comment-text" title="引用Zkeq的这条留言" onclick="return CommentQuote('comment-quote-430647','Zkeq');">引用</a>
+</p>
+</div>
+</div>
+    </div>
+</div>
+        
+    
+        
+        <div id="comment-435952" class="comment">
+    <div  class="inner">
+        <div class="comment-header">
+            <div class="asset-meta">
+<p>
+                <span class="byline">
+                    
+
+                    <span class="vcard author">自强不息的sun</span>
+
+ 说：
+                </span>
+</p>
+            </div>
+        </div>
+        <div class="comment-content" id="comment-quote-435952">
+            <p>windows底下 无法识别单引号，试了半天最后在别处才看到解释</p>
+        </div>
+<div class="comment-footer">
+<div class="comment-footer-inner">
+<p>
+                   <abbr class="published" title="November 14, 2022  6:03 PM">2022年11月14日 18:03</abbr>
+ | <a href="https://www.ruanyifeng.com/blog/2019/09/curl-reference.html#comment-435952">#</a>
+ | <a href="#comment-text" title="引用自强不息的sun的这条留言" onclick="return CommentQuote('comment-quote-435952','自强不息的sun');">引用</a>
+</p>
+</div>
+</div>
+    </div>
+</div>
+        
+    
+        
+        <div id="comment-436497" class="comment">
+    <div  class="inner">
+        <div class="comment-header">
+            <div class="asset-meta">
+<p>
+                <span class="byline">
+                    
+
+                    <span class="vcard author">lhr</span>
+
+ 说：
+                </span>
+</p>
+            </div>
+        </div>
+        <div class="comment-content" id="comment-quote-436497">
+            <p>c++怎么使用curl啊？</p>
+        </div>
+<div class="comment-footer">
+<div class="comment-footer-inner">
+<p>
+                   <abbr class="published" title="January  5, 2023  1:51 PM">2023年1月 5日 13:51</abbr>
+ | <a href="https://www.ruanyifeng.com/blog/2019/09/curl-reference.html#comment-436497">#</a>
+ | <a href="#comment-text" title="引用lhr的这条留言" onclick="return CommentQuote('comment-quote-436497','lhr');">引用</a>
+</p>
+</div>
+</div>
+    </div>
+</div>
+        
+    
+        
+        <div id="comment-437045" class="comment">
+    <div  class="inner">
+        <div class="comment-header">
+            <div class="asset-meta">
+<p>
+                <span class="byline">
+                    
+
+                    <span class="vcard author">jiakai</span>
+
+ 说：
+                </span>
+</p>
+            </div>
+        </div>
+        <div class="comment-content" id="comment-quote-437045">
+            <p>可以看看chatgpt对于curl -fsSL的参数解释，一定程度上远离了RTFM（Read The Fucking Manual）。<br />
+curl -fsSL 是一个 curl 命令的选项，用于从远程服务器下载文件或数据。该选项由以下几部分组成：</p>
+
+<p>-f（或 --fail）：如果服务器返回错误码（例如 404），则 curl 将停止下载文件并返回错误。</p>
+
+<p>-s（或 --silent）：禁止 curl 输出进度和错误信息，只显示下载结果。</p>
+
+<p>-S（或 --show-error）：即使禁用了 -s 选项，也会显示错误信息。</p>
+
+<p>-L（或 --location）：跟随重定向，如果服务器返回 3xx 错误码，则 curl 会自动跳转到新的 URL。</p>
+
+<p>综合起来，curl -fsSL 表示使用 curl 命令下载文件时，不显示进度和错误信息，如果下载失败则立即停止，并自动跟随重定向。这通常是下载文件的一种安静、安全、稳定的方式。</p>
+
+<p>虽然chatgpt有时也会瞎说，但让它查类似curl、linux命令参数这些，它还是很精确的。<br />
+去年暑假在评论区看过相关大哥的介绍，当时我还去curl的manual上查看了相应的参数，但是英译中的含义还是有些牵强的。</p>
+        </div>
+<div class="comment-footer">
+<div class="comment-footer-inner">
+<p>
+                   <abbr class="published" title="February 19, 2023  8:00 PM">2023年2月19日 20:00</abbr>
+ | <a href="https://www.ruanyifeng.com/blog/2019/09/curl-reference.html#comment-437045">#</a>
+ | <a href="#comment-text" title="引用jiakai的这条留言" onclick="return CommentQuote('comment-quote-437045','jiakai');">引用</a>
+</p>
+</div>
+</div>
+    </div>
+</div>
+        
+    
+        
+        <div id="comment-443312" class="comment">
+    <div id="comment-last" class="inner">
+        <div class="comment-header">
+            <div class="asset-meta">
+<p>
+                <span class="byline">
+                    
+
+                    <span class="vcard author">6</span>
+
+ 说：
+                </span>
+</p>
+            </div>
+        </div>
+        <div class="comment-content" id="comment-quote-443312">
+            <p>curl ascii.live/rick<br />
+ <br />
+可以试试，好玩的哦<br />
+</p>
+        </div>
+<div class="comment-footer">
+<div class="comment-footer-inner">
+<p>
+                   <abbr class="published" title="July 21, 2024  1:49 PM">2024年7月21日 13:49</abbr>
+ | <a href="https://www.ruanyifeng.com/blog/2019/09/curl-reference.html#comment-443312">#</a>
+ | <a href="#comment-text" title="引用6的这条留言" onclick="return CommentQuote('comment-quote-443312','6');">引用</a>
+</p>
+</div>
+</div>
+    </div>
+</div>
+        
+    </div>
+        
+    
+
+
+    
+    
+    <div class="comments-open" id="comments-open">
+        <h2 class="comments-open-header">我要发表看法</h2>
+        <div class="comments-open-content">
+
+        
+            <div id="comment-greeting"></div>
+
+            <form method="post" action="https://www.ruanyifeng.com/cgi-bin/mtos/mt-comments.cgi" name="comments_form" id="comments-form" onsubmit="return pleaseWait();">
+                <input type="hidden" name="static" value="1" />
+                <input type="hidden" name="entry_id" value="2115" />
+                <input type="hidden" name="__lang" value="en" />
+                <input type="hidden" name="parent_id" value="" id="comment-parent-id" />
+                <input type="hidden" name="armor" value="1" />
+                <input type="hidden" name="preview" value="" />
+                <input type="hidden" name="sid" value="" />
+                <div id="comments-open-data">
+            <div id="comments-open-text">
+                    <p><label for="comment-text">您的留言
+                    （HTML标签部分可用）</label></p>
+                    <p><textarea id="comment-text" name="text" rows="10" cols="50"></textarea></p>
+                </div>
+                    <div id="comment-form-name">
+                        <p><label for="comment-author">您的大名：</label></p>
+                        <p><input id="comment-author" name="author" size="30" value="" />  <span class="hint"> &laquo;-必填</span></p>
+                    </div>
+                    <div id="comment-form-email">
+                        <p><label for="comment-email">电子邮件：</label></p>
+                        <p><input id="comment-email" name="email" size="30" value="" />  <span class="hint"> &laquo;-必填，不公开</span></p>
+                    </div>
+                    <div id="comment-form-url">
+                        <p><label for="comment-url">个人网址：</label></p>
+                        <p><input id="comment-url" name="url" size="30" value="" />  <span class="hint"> &laquo;-我信任你，不会填写广告链接</span></p>
+                    </div>
+                    <div id="comment-form-remember-me">
+                        <p>
+                        <label for="comment-bake-cookie">记住个人信息？</label><input type="checkbox" id="comment-bake-cookie" name="bakecookie" onclick="!this.checked?forgetMe(document.comments_form):rememberMe(document.comments_form)" value="1" accesskey="r" /></p>
+                    </div>
+                </div>
+                    <div id="comment-form-reply" style="display:none">
+                    <input type="checkbox" id="comment-reply" name="comment_reply" value="" onclick="mtSetCommentParentID()" />
+                    <label for="comment-reply" id="comment-reply-label"></label>
+                </div>
+                <div id="comments-open-captcha"></div>
+                <div id="comments-open-footer">
+<div id="wait" style="display:none;">
+<p><strong>正在发表您的评论，请稍候</strong></p>
+<p>
+<input type="text" name="percent" size="3" style="font-family:Arial; color:black;text-align:center; border-width:medium; border-style:none;">           
+<input type="text" name="chart" size="46" style="font-family:Arial;font-weight:bolder; color:black; padding:0px; border-style:none;">
+</p>
+</div>
+
+                    <p><input type="submit" accesskey="s" name="post" id="comment-submit" value="发表" />  <span class="hint"> &laquo;- 点击按钮</span></p>
+                </div>
+            </form>
+
+
+        </div>
+    </div>
+
+    
+
+
+</div>
+
+
+
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        <script type="text/javascript" src="https://www.ruanyifeng.com/blog/js/prism.js"></script>
+        <script type="text/javascript" src="/blog/checker.js"></script> 
+            <div id="footer">
+<div id="footer-inner">
+  <div id="footer-content">
+
+      
+<!--
+      <section> 
+     </section>
+  <p><a title="Instagram" target="_blank" href="http://instagram.com/ruanyf">Instagram</a></p>
+       <p><a title="订阅" href="https://app.feedblitz.com/f/f.fbz?Sub=348868" target="_blank">邮件订阅</a></p>
+  
+       <h2>Feed</h2>
+       <p><a title="FeedBurner" href="http://feeds.feedburner.com/ruanyifeng" target="_blank">FeedBurner</a></p>
+       <p><a title="atom.xml" href="http://www.ruanyifeng.com/blog/atom.xml" target="_blank">atom.xml</a></p>
+     
+      <p>支付宝：<a title="支付宝" href="alipays://platformapi/startapp?appId=20000067&url=http%3A%2F%2Fwww.ruanyifeng.com%2Fblog" target="_blank">yifeng.ruan@gmail.com</a></p>
+-->
+
+     <section>
+<!--
+       <h2>授权方式</h2>
+       <p><a title="许可证" href="http://creativecommons.org/licenses/by-nc-nd/3.0/deed.zh" target="_blank">自由转载-非商用-非衍生-保持署名</a></p>
+       <h2>微信公号</h2>
+       <h2>社交帐号</h2>
+       <h2>联系方式</h2>
+     -->
+       <p><img src="https://cdn.beekka.com/blogimg/asset/202001/bg2020013101.jpg" alt="微信扫描"></p>
+       <p>
+         <a title="微博" href="http://weibo.com/ruanyf" target="_blank">Weibo</a> | 
+         <a title="Twitter" target="_blank" href="https://twitter.com/ruanyf">Twitter</a> |
+         <a title="GitHub" target="_blank" href="https://github.com/ruanyf">GitHub</a>
+       </p>
+     
+     <p>Email: <a title="电子邮件" href="/cdn-cgi/l/email-protection#40392926252e276e3235212e00272d21292c6e232f2d" target="_blank"><span class="__cf_email__" data-cfemail="86ffefe0e3e8e1a8f4f3e7e8c6e1ebe7efeaa8e5e9eb">[email&#160;protected]</span></a></p>
+     </section>
+  
+  
+
+
+  </div>
+</div>
+</div>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+function insertLine(e,t){for(var n=0;n<t;n++)e.parentNode.insertBefore(document.createElement("p"),e)}function getImg(){if(!window["main-content"])return!1;for(var e,t=Array.prototype.slice.call(window["main-content"].getElementsByTagName("img")),n=0;n<t.length;n++){if("display: none !important;"===(e=t[n]).getAttribute("style"))return e;if(n===t.length-1)return!1}}function toObjectUrl(e,t){return fetch(e).then(e=>e.blob()).then(e=>{t(URL.createObjectURL(e))})}function toDataURL(e,t){var n=new XMLHttpRequest;n.open("get",e),n.responseType="blob",n.onload=function(){var e=new FileReader;e.onload=function(){t(this.result)},e.readAsDataURL(n.response)},n.send()}setTimeout(function(){var e=getImg();e&&(insertLine(e.parentNode,2),toObjectUrl(e.src,function(t){var n=document.createElement("p"),r=document.createElement("img");r.src=t,n.appendChild(r),e.parentNode.parentNode.insertBefore(n,e.parentNode)}))},3e3);
+</script>                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+
+
+<script type="text/javascript" src="/blog/stats.js"></script>
+<script>
+var supportImg = document.querySelector('#support-img');
+
+if (supportImg && _hmt) {
+  _hmt.push(['_trackEvent', 'banner', 'load']);
+  supportImg.addEventListener('click', function () {
+    _hmt.push(['_trackEvent', 'banner', 'click']);
+  }, false);
+}
+
+var homepageImg = document.querySelector('#homepage_sponsor');
+if (homepageImg && _hmt) {
+  _hmt.push(['_trackEvent', 'homepage-banner', 'load']);
+  homepageImg.addEventListener('click', function () {
+    _hmt.push(['_trackEvent', 'homepage-banner', 'click']);
+  }, false);
+}
+</script>
+
+
+
+        </div>
+    </div>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a45168f03eb8f821',t:'MTc5MTA4Nzc5Mg=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

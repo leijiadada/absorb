@@ -1,0 +1,25 @@
+{
+  "type": "spa-shell",
+  "capturedAt": "2026-10-16",
+  "expect": {
+    "nonEmpty": false,
+    "mdChars": 12,
+    "mustContain": []
+  },
+  "queries": [
+    {
+      "keywords": [
+        "加载中..."
+      ],
+      "expectHit": true,
+      "why": "标题词"
+    },
+    {
+      "keywords": [
+        "qqx不存在词zqx"
+      ],
+      "expectHit": false,
+      "why": "零命中信号"
+    }
+  ]
+}

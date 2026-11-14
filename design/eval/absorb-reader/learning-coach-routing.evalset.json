@@ -1,0 +1,176 @@
+{
+  "evalSetId": "learning-coach-routing",
+  "name": "learning-coach-routing",
+  "_note": "路由组（2.md T01-T06、T10）：校验 Quick/Deep/Guided 模式路由、指代解析与无关问题不套用。本组不校验材料丢失（knowledge-relevance 组已覆盖），页面内容以可判机制正确性为准。G1 阶段 coach 未合入，judge 按「期望模式」评分为对照组基线。工具轨迹仅记录不设门（subsetMatching 对照组逻辑失效，见 conflict-cases cf-02 备注），T10 的零工具约束通过 judge 文本层面校验。",
+  "evalCases": [
+    {
+      "evalId": "lc-r01-bm25-quick",
+      "rubrics": [{"metricName": "mode_conformance_judge", "id": "mode-lc-r01", "content": {"text": "评估材料。\n划词：BM25 是一种基于词频和文档长度饱和度的排序函数，在本系统的检索模块中承担第一阶段召回的打分职责。\n期望模式：Quick Explain。回答应直接给出 BM25 的定义与必要背景，可以举一个具体例子；结尾不得主动出题检验理解，不得展开检索系统设计层面的长篇论述。"}}],
+      "conversation": [
+        {
+          "invocationId": "lc-r01-1",
+          "userContent": {"role": "user", "content": "BM25 是什么？"},
+          "finalResponse": {"role": "assistant", "content": "BM25 是一种基于词频的排序函数：查询词在文档中出现越多、文档本身越短，得分越高，同时对词频做了饱和处理避免堆砌关键词刷分。它常作为检索系统的第一阶段召回打分器，本系统也用它承担召回排序职责。"},
+          "tools": []
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://search.example.com/notes/bm25-scoring",
+          "quote": "BM25 是一种基于词频和文档长度饱和度的排序函数，在本系统的检索模块中承担第一阶段召回的打分职责。"
+        }
+      }
+    },
+    {
+      "evalId": "lc-r02-hybrid-retrieval-deep",
+      "rubrics": [{"metricName": "mode_conformance_judge", "id": "mode-lc-r02", "content": {"text": "评估材料。\n划词：我们将 BM25 作为第一阶段召回（top-50），向量重排作为第二阶段精排，端到端准确率从 61% 提升到 78%。\n页面缓存全文：# 混合检索：为什么 RAG 系统需要 BM25 + 向量\n\n## 纯向量检索的短板\n\n在我们的客服知识库实测中，纯向量检索对缩写词查询的召回率比关键词检索低 37%：「GC 日志」会被向量模型泛化成垃圾回收语义，而岗位编号 GC-2049 这类精确标识符完全无法命中。\n\n## 混合方案\n\n我们将 BM25 作为第一阶段召回（top-50），向量重排作为第二阶段精排，端到端准确率从 61% 提升到 78%。\n期望模式：Deep Understand。回答应先给结论，再解释机制（向量语义泛化 vs 关键词精确匹配的互补），并连接页面材料；页面给出的 37%、61%/78% 是作者实测数据，引用时应作为来源数据而非普遍事实；回答结尾不得主动出题。"}}],
+      "conversation": [
+        {
+          "invocationId": "lc-r02-1",
+          "userContent": {"role": "user", "content": "为什么需要混合检索？"},
+          "finalResponse": {"role": "assistant", "content": "因为纯向量检索和纯关键词检索的失败模式互补：向量模型擅长语义泛化，但会把「GC 日志」这类查询泛化掉，岗位编号 GC-2049 这样的精确标识符更无法命中；关键词检索（BM25）恰好擅长精确匹配。所以文中方案用 BM25 做第一阶段召回、向量做第二阶段精排。需要说明的是，37% 的召回差和 61%→78% 的准确率提升是该文作者在自己客服知识库上的实测数据，不是普遍结论，具体收益取决于语料构成。"},
+          "tools": []
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://search.example.com/articles/hybrid-retrieval",
+          "quote": "我们将 BM25 作为第一阶段召回（top-50），向量重排作为第二阶段精排，端到端准确率从 61% 提升到 78%。",
+          "page_md": "# 混合检索：为什么 RAG 系统需要 BM25 + 向量\n\n## 纯向量检索的短板\n\n在我们的客服知识库实测中，纯向量检索对缩写词查询的召回率比关键词检索低 37%：「GC 日志」会被向量模型泛化成垃圾回收语义，而岗位编号 GC-2049 这类精确标识符完全无法命中。\n\n## 混合方案\n\n我们将 BM25 作为第一阶段召回（top-50），向量重排作为第二阶段精排，端到端准确率从 61% 提升到 78%。",
+          "page_url": "https://search.example.com/articles/hybrid-retrieval",
+          "page_title": "混合检索：为什么 RAG 系统需要 BM25 + 向量",
+          "content_status": "full"
+        }
+      }
+    },
+    {
+      "evalId": "lc-r03-go-context-deep",
+      "rubrics": [{"metricName": "mode_conformance_judge", "id": "mode-lc-r03", "content": {"text": "评估材料。\n划词：Context 通过 Done Channel 传播取消信号。当父 Context 被取消时，cancelCtx 会关闭自己的 done channel，并递归取消所有子 Context，整条请求链路上的阻塞操作随之释放。\n期望模式：Deep Understand。回答应先给结论，再解释机制：Channel 是通信原语，Context 是生命周期控制抽象，二者职责不同——Context 统一表达取消、超时Deadline 和请求范围值的传播，且支持父子树级联取消；直接用裸 Channel 需要每个调用方手工传递和管理 close，容易泄漏。不得把 Channel 的通信职责与 Context 的生命周期控制职责混为一谈；回答结尾不得主动出题。"}}],
+      "conversation": [
+        {
+          "invocationId": "lc-r03-1",
+          "userContent": {"role": "user", "content": "既然取消信号就是靠 Channel 传的，为什么不直接使用 Channel？"},
+          "finalResponse": {"role": "assistant", "content": "结论：Context 不是在替代 Channel，而是在 Channel 之上封装了一层生命周期控制。裸 Channel 只是通信原语：用 Done channel 表达取消时，每个函数都要显式接收、传递和监听这个 channel，超时、请求范围值还得各写一套，嵌套调用一深就容易漏 close 导致 Goroutine 泄漏。Context 把取消、Deadline 和请求范围的值统一成一个接口，并以父子树的方式级联——父 Context 取消时 cancelCtx 关闭自己的 done channel 并递归取消所有子 Context，整条请求链一次生效。也就是说 Channel 负责「信号怎么传」，Context 负责「谁在什么时候该被取消」。"},
+          "tools": []
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://go.example.com/deep/context-cancellation",
+          "quote": "Context 通过 Done Channel 传播取消信号。当父 Context 被取消时，cancelCtx 会关闭自己的 done channel，并递归取消所有子 Context，整条请求链路上的阻塞操作随之释放。",
+          "page_url": "https://go.example.com/deep/context-cancellation",
+          "page_title": "Go Context 源码分析：取消信号如何传播",
+          "content_status": "full"
+        }
+      }
+    },
+    {
+      "evalId": "lc-r04-tcp-handshake-deep",
+      "rubrics": [{"metricName": "mode_conformance_judge", "id": "mode-lc-r04", "content": {"text": "评估材料。\n划词：第二次握手中，服务端返回的报文同时置位 SYN 和 ACK 标志位。\n期望模式：Deep Understand。回答应先给结论，再拆机制：ACK 是对客户端 SYN 序列号的确认，SYN 是服务端把自己的初始序列号发给客户端，两者作用对象不同、互不冲突，因此可以合并在同一个报文里；并应说明为什么第三次握手不再需要携带 SYN。不得编造报文字段或流程细节；回答结尾不得主动出题。"}}],
+      "conversation": [
+        {
+          "invocationId": "lc-r04-1",
+          "userContent": {"role": "user", "content": "第二次握手为什么同时包含 ACK 和 SYN？"},
+          "finalResponse": {"role": "assistant", "content": "因为这两个标志位各司其职、恰好可以搭同一趟车：ACK 位是对客户端初始序列号的确认（你的 SYN 我收到了），SYN 位则是服务端发送自己的初始序列号（这是我的同步信号）。确认对方和通告自己两件事没有依赖关系，服务端又恰好都要做，所以合并成一个 SYN+ACK 报文，省一次往返。到第三次握手时客户端只需确认服务端的序列号，不再需要通告新的初始序列号，所以只有 ACK 没有 SYN。"},
+          "tools": []
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://network.example.com/notes/tcp-handshake",
+          "quote": "第二次握手中，服务端返回的报文同时置位 SYN 和 ACK 标志位。",
+          "page_url": "https://network.example.com/notes/tcp-handshake",
+          "page_title": "TCP 三次握手图解",
+          "content_status": "full"
+        }
+      }
+    },
+    {
+      "evalId": "lc-r05-work-stealing-guided",
+      "rubrics": [{"metricName": "mode_conformance_judge", "id": "mode-lc-r05", "content": {"text": "评估材料。\n划词：当本地运行队列空了，M 会优先从其他 P 的本地队列尾部窃取一半 Goroutine，这就是 Work Stealing。\n期望流程（两轮，官方 HITL）：第一轮用户请求「带我彻底理解 Work Stealing」，模型应通过 ask_user 工具提出恰好一个诊断问题（对 G/M/P 已有理解的探底），正文只允许简短的等待提示或为空，不得一次性灌输 GMP 调度器知识；第二轮 user message 是 ask_user 的回答回执 JSON（内部回执，禁止原文复述），模型应从诊断结果接续讲解——只讲用户不熟悉的部分（M 与运行队列），一次一个概念，不重复诊断已回答内容，不得重新全量灌输。"}}],
+      "conversation": [
+        {
+          "invocationId": "lc-r05-1",
+          "userContent": {"role": "user", "content": "带我彻底理解 Work Stealing。"},
+          "finalResponse": {"role": "assistant", "content": "先确认一下你的起点，我好从合适的地方讲起。"},
+          "tools": [
+            {"id": "call-ask-1", "name": "ask_user", "arguments": {"question": "你对 Go 调度器的 G、M、P 三个概念分别了解到什么程度？", "options": ["都了解", "只了解 G 和 P", "完全没接触过"]}}
+          ]
+        },
+        {
+          "invocationId": "lc-r05-2",
+          "userContent": {"role": "user", "content": "{\"status\":\"answered\",\"user_answer\":\"了解 G 和 P 的概念，不清楚 M 与运行队列的关系\"}"},
+          "finalResponse": {"role": "assistant", "content": "好，那就从不熟悉的 M 和运行队列讲起。M 是真正执行 Goroutine 的操作系统线程，每个 M 对应一个内核线程；它必须绑定到一个 P（调度上下文）才能干活，而 P 本地持有一个 Goroutine 运行队列——Goroutine 排队等待被 M 执行。这一步先记住：M 干活、P 排队，两者的组合决定了 Goroutine 在哪被调度。消化一下，有问题随时说，没问题我们就进入下一步：队列空了之后发生什么（也就是 Work Stealing 本身）。"},
+          "tools": []
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://go.example.com/deep/gmp-scheduler",
+          "quote": "当本地运行队列空了，M 会优先从其他 P 的本地队列尾部窃取一半 Goroutine，这就是 Work Stealing。",
+          "page_url": "https://go.example.com/deep/gmp-scheduler",
+          "page_title": "Go GMP 调度器详解",
+          "content_status": "full"
+        }
+      }
+    },
+    {
+      "evalId": "lc-r06-redis-referent",
+      "rubrics": [{"metricName": "mode_conformance_judge", "id": "mode-lc-r06", "content": {"text": "评估材料。\n划词：我们在会话缓存场景把 Redis 的主动过期时间统一设置为 30 分钟。\n页面标题：Redis 缓存实践指南\n页面缓存全文：# Redis 缓存实践指南\n\n## 为什么选 Redis\n\nRedis 将数据驻留内存并提供毫秒级访问，相比本地缓存它天然支持多实例共享，热点数据的跨服务一致性更容易保证。\n\n## 过期策略实践\n\n我们在会话缓存场景把 Redis 的主动过期时间统一设置为 30 分钟。\n期望模式：上下文判定（Quick Explain）。用户问「它有什么优点」，结合页面标题与全文，「它」应解析为页面主题 Redis 本身，回答应概述 Redis 的优点（内存级访问、多实例共享等），不得把「它」错误解析为划词句中的「主动过期时间」或「会话缓存」等局部概念；回答结尾不得主动出题。"}}],
+      "conversation": [
+        {
+          "invocationId": "lc-r06-1",
+          "userContent": {"role": "user", "content": "它有什么优点？"},
+          "finalResponse": {"role": "assistant", "content": "按这篇文档的语境，你问的应该是 Redis 本身。它的优点主要有：数据驻留内存、访问延迟在毫秒级；相比本地缓存天然支持多实例共享，热点数据跨服务读取时更容易保持一致；再配合文中提到的主动过期策略，适合会话缓存这类有生命周期的数据。"},
+          "tools": []
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://cache.example.com/guides/redis-practice",
+          "quote": "我们在会话缓存场景把 Redis 的主动过期时间统一设置为 30 分钟。",
+          "page_md": "# Redis 缓存实践指南\n\n## 为什么选 Redis\n\nRedis 将数据驻留内存并提供毫秒级访问，相比本地缓存它天然支持多实例共享，热点数据的跨服务一致性更容易保证。\n\n## 过期策略实践\n\n我们在会话缓存场景把 Redis 的主动过期时间统一设置为 30 分钟。",
+          "page_url": "https://cache.example.com/guides/redis-practice",
+          "page_title": "Redis 缓存实践指南",
+          "page_context": "页面标题：Redis 缓存实践指南\n所在章节：为什么选 Redis",
+          "content_status": "full"
+        }
+      }
+    },
+    {
+      "evalId": "lc-r10-offtopic-no-coach",
+      "rubrics": [{"metricName": "mode_conformance_judge", "id": "mode-lc-r10", "content": {"text": "评估材料。\n页面标题：Go GMP 调度器详解\n用户提问：今天美元兑人民币的汇率是多少？\n期望模式：不套用学习教练。与当前页面和划词完全无关的时事事实性问题，回答应简短直接说明当前阅读材料无法提供汇率信息，不得加载学习教练模式（不得诊断已有知识、不得安排学习路径、不得出题），不得编造具体汇率数值，不得声称查询了实时数据，也不得强行把问题关联到 GMP 页面内容。"}}],
+      "conversation": [
+        {
+          "invocationId": "lc-r10-1",
+          "userContent": {"role": "user", "content": "今天美元兑人民币的汇率是多少？"},
+          "finalResponse": {"role": "assistant", "content": "这个问题与我当前能看到的阅读材料无关，汇率是实时变动的外部数据，我这边也没有查询实时行情的能力，建议你查看财经网站或银行牌价获取今日美元兑人民币汇率。"},
+          "tools": []
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://go.example.com/deep/gmp-scheduler",
+          "quote": "当本地运行队列空了，M 会优先从其他 P 的本地队列尾部窃取一半 Goroutine，这就是 Work Stealing。",
+          "page_url": "https://go.example.com/deep/gmp-scheduler",
+          "page_title": "Go GMP 调度器详解",
+          "content_status": "full"
+        }
+      }
+    }
+  ]
+}

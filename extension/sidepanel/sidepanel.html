@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="ui.docTitle">Absorb 阅读助手</title>
+  <link rel="stylesheet" href="sidepanel.css" />
+  <link rel="stylesheet" href="js/visual/visual.css" />
+</head>
+<body>
+  <header class="app-header">
+    <!-- 方案 A：品牌全名由系统标题栏承担，页面侧只留 logo 图形锚点（消除与标题栏的文字重复） -->
+    <img class="logo" src="../icons/icon48.png" alt="" aria-hidden="true" />
+    <div class="header-actions">
+      <button id="toggleHistory" class="icon-btn" data-i18n-title="ui.historyTip" title="查看历史" aria-label="查看历史" data-i18n="ui.history">历史</button>
+      <button id="newSession" class="icon-btn" data-i18n-title="ui.newTip" title="新对话" aria-label="新对话" data-i18n="ui.newShort">＋新</button>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- 文档卡（PDF 解读 PR3）：活动标签页为 PDF 时显示，三态由 doccard.js 渲染 -->
+    <section class="doccard" id="docCard" hidden></section>
+    <!-- 对话消息流 -->
+    <section class="messages" id="messages" aria-live="polite">
+      <div class="empty-tip" id="emptyTip">
+        <div class="empty-illustration" aria-hidden="true">
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h7M9 11h5"/></svg>
+        </div>
+        <p data-i18n="ui.emptyTip1">右键划词后,会以标签插入输入框;可多段划词,针对标签提问即可。</p>
+        <p class="muted" data-i18n="ui.emptyTip2">回答将在此流式显示。</p>
+        <!-- 桌面端未安装引导：宿主注册缺失时由 desktop-guide.js 显示（只读探测，不拉起进程） -->
+        <div class="desktop-guide" id="desktopGuide" hidden>
+          <div class="dg-icon" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          </div>
+          <p class="dg-title" data-i18n="desktopGuide.title">需要 Absorb 桌面端</p>
+          <p class="dg-desc" data-i18n="desktopGuide.desc">未检测到桌面端（可能未安装，或正在升级/更新）。插件负责划词与提问，AI 回答由本机桌面端完成。</p>
+          <div class="dg-actions">
+            <button id="dgDownload" class="primary-btn dg-primary" data-i18n="desktopGuide.download">下载桌面端</button>
+            <button id="dgRecheck" class="ghost-btn" data-i18n="desktopGuide.recheck">我已安装，重新检测</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 重连条：连接失败时显示，固定于对话区与输入区之间（不随消息滚动） -->
+  <div class="reconnect-bar" id="reconnectBar" hidden>
+    <span id="reconnectMsg"></span>
+    <button id="reconnectBtn" class="ghost-btn" data-i18n="buttons.reconnect">重连</button>
+  </div>
+
+  <!-- 输入区 -->
+  <footer class="composer">
+    <!-- 图片附件行：区域/元素/视口截图、上传、粘贴的图片以 chip 缩略图展示（不进输入框、不持久化） -->
+    <div class="attachments" id="attachments" hidden></div>
+    <!-- 可编辑输入框：划词以 chip 标签内嵌，可多段、可删除、光标在标签间移动 -->
+    <div class="input-shell editable" id="questionInput" contenteditable="true"
+         spellcheck="true" data-i18n-placeholder="placeholders.inputNoQuote" data-placeholder="右键划词后,以标签插入;可多段划词并在标签间输入问题"></div>
+    <div class="composer-actions">
+      <button id="imageBtn" class="icon-btn" type="button" aria-haspopup="menu" aria-expanded="false"
+              aria-label="插入图片" title="插入图片" data-i18n-title="ui.imageTip">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.6-3.6a2 2 0 0 0-2.8 0L6 20"/></svg>
+      </button>
+      <button id="askBtn" class="primary-btn" disabled data-i18n="buttons.ask">发送</button>
+    </div>
+    <!-- 隐藏的文件选择：由“上传图片”菜单项触发 -->
+    <input type="file" id="imageFile" accept="image/*" hidden />
+  </footer>
+
+  <!-- 历史抽屉 -->
+  <aside class="history-drawer" id="historyDrawer" hidden>
+    <div class="drawer-header">
+      <span data-i18n="ui.historyTitle">历史对话</span>
+      <div class="drawer-actions">
+        <button id="restoreHistory" class="text-btn" data-i18n="ui.restoreHistory">拉取历史会话</button>
+        <button id="closeHistory" class="icon-btn" aria-label="关闭历史">×</button>
+      </div>
+    </div>
+    <ul class="history-list" id="historyList"></ul>
+  </aside>
+
+  <!-- 软提示 toast -->
+  <div id="toast" class="toast" hidden></div>
+
+  <!-- 第三方库（vendor/，本地打包原因见 vendor/README.md，MV3 CSP 禁止远程脚本） -->
+  <link rel="stylesheet" href="vendor/highlight.github.min.css" />
+  <script src="vendor/marked.min.js"></script>
+  <script src="vendor/purify.min.js"></script>
+  <script src="vendor/highlight.min.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>XSS fixture</title>
+</head>
+<body>
+  <main id="content">
+    <h1>恶意内容测试页</h1>
+    <!-- 恶意构造以「字面文本」形式出现（实体转义显示）：划词采集拿到的是纯文本，
+         面板渲染链必须继续把它当文本，绝不能二次解释为 HTML -->
+    <p id="quote">&lt;img src=x onerror="window.__xssChip=1"&gt; 这是一段带 HTML 字面量的正文，采集与渲染都应按纯文本处理。</p>
+    <p id="more">补充段落：用于保证选区所在段落有充分上下文内容。</p>
+  </main>
+</body>
+</html>

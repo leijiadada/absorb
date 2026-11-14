@@ -1,0 +1,107 @@
+{
+  "evalSetId": "knowledge-relevance-negative",
+  "name": "knowledge-relevance-negative",
+  "_note": "M0 对照组：quote 自包含（答案就在划选文本里），同时提供 page_md 使页面缓存存在——检验模型在「缓存可用」时也不会乱调 expand_context。独立成组的原因：positive 组的 subsetMatching 判据下「期望零工具」恒通过，对照组必须用严格计数匹配才有回归信号。",
+  "evalCases": [
+    {
+      "evalId": "kn-01-idempotent",
+      "conversation": [
+        {
+          "invocationId": "kn-01-1",
+          "userContent": {"role": "user", "content": "什么是幂等接口？"},
+          "finalResponse": {"role": "assistant", "content": "幂等接口保证同一个请求无论被重复提交多少次，服务端的状态都与只提交一次时完全相同。"},
+          "tools": []
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://api.example.com/docs/idempotency-guide",
+          "quote": "幂等接口保证同一个请求无论被重复提交多少次，服务端的状态都与只提交一次时完全相同。",
+          "page_md": "# 团队例会安排\n\n## 时间地点\n\n每周一上午 10 点在 3 号会议室进行，线上会议链接见日历邀请。\n\n## 本周议题\n\n迭代回顾与下季度OKR对齐。"
+        }
+      }
+    },
+    {
+      "evalId": "kn-02-photosynthesis",
+      "conversation": [
+        {
+          "invocationId": "kn-02-1",
+          "userContent": {"role": "user", "content": "光合作用释放什么气体？"},
+          "finalResponse": {"role": "assistant", "content": "光合作用释放出氧气。"},
+          "tools": []
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://bio.example.com/essentials/photosynthesis-gases",
+          "quote": "光合作用利用光能把二氧化碳和水转化为有机物，并释放出氧气。",
+          "page_md": "# 图书馆开放时间\n\n主馆：周一至周五 8:00-22:00；周末 9:00-17:00。\n\n## 借阅规则\n\n每人最多同时借阅 10 册，借期 30 天，可续借 1 次。"
+        }
+      }
+    },
+    {
+      "evalId": "kn-03-cache-hit",
+      "conversation": [
+        {
+          "invocationId": "kn-03-1",
+          "userContent": {"role": "user", "content": "为什么缓存命中率高的程序运行更快？"},
+          "finalResponse": {"role": "assistant", "content": "因为大部分内存访问都能由更靠近 CPU 的缓存层直接满足，不必访问更慢的主存，程序整体运行更快。"},
+          "tools": []
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://cs.example.com/notes/cache-locality",
+          "quote": "缓存命中率高的程序往往运行更快，因为大部分内存访问都能由更靠近 CPU 的缓存层直接满足。",
+          "page_md": "# 食堂本周菜单\n\n周一：红烧排骨、清炒时蔬、番茄蛋汤。\n\n周二：咖喱鸡饭、凉拌黄瓜、紫菜汤。"
+        }
+      }
+    },
+    {
+      "evalId": "kn-04-semver-patch",
+      "conversation": [
+        {
+          "invocationId": "kn-04-1",
+          "userContent": {"role": "user", "content": "修订号在什么时候递增？"},
+          "finalResponse": {"role": "assistant", "content": "向下兼容的问题修复时递增修订号。"},
+          "tools": []
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://dev.example.com/guides/semver-patch",
+          "quote": "语义化版本号由三段数字构成：主版本号在有不兼容的接口变更时递增，次版本号在向下兼容的功能新增时递增，修订号在向下兼容的问题修复时递增。",
+          "page_md": "# 年度体检须知\n\n体检前 8 小时请空腹，避免剧烈运动。\n\n## 报告领取\n\n体检报告将在 3 个工作日内发送至登记邮箱。"
+        }
+      }
+    },
+    {
+      "evalId": "kn-05-compound-interest",
+      "conversation": [
+        {
+          "invocationId": "kn-05-1",
+          "userContent": {"role": "user", "content": "复利为什么能加速增长？"},
+          "finalResponse": {"role": "assistant", "content": "因为每一期产生的收益会并入本金，下一期的收益以更大的基数继续增长，基数滚动变大，增长因此加速。"},
+          "tools": []
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://finance.example.com/learn/compound-growth",
+          "quote": "复利的力量在于把每一期产生的收益并入本金，让下一期的收益以更大的基数继续增长。",
+          "page_md": "# 社区活动中心公告\n\n乒乓球室每周三、周五晚间开放，需提前一天预约。\n\n## 收费标准\n\n散客每小时 20 元，会员半价。"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,347 @@
+/* Absorb Visual Explanation - 可视化页面样式
+   命名空间：.absorb-visual（全部选择器限定其内，不污染消息气泡既有样式）。
+   Token 策略：--av-* 全部映射自 sidepanel.css 既有语义变量（黑白灰主题 + 链接蓝点缀），
+   未来接深色主题时自动跟随，不在组件选择器里写死浅色值（access-color-contrast）。
+   布局纪律：panel-responsive-width——容器与表格一律 max-width:100%，窄面板不横向溢出；
+   panel-non-distracting——无动画、无重阴影、无高饱和色块。 */
+
+.absorb-visual {
+  --av-surface: var(--surface);
+  --av-surface-muted: var(--primary-soft);
+  --av-border: var(--border);
+  --av-border-strong: var(--border-strong);
+  --av-text: var(--text);
+  --av-text-2: var(--text-2);
+  --av-muted: var(--muted);
+  --av-accent: var(--link);
+  --av-accent-soft: rgba(0, 102, 204, .07);   /* --link-blue 的浅底 */
+  --av-tip-soft: rgba(0, 102, 204, .07);
+  --av-warn-soft: var(--red-soft);
+  --av-warn-strong: var(--danger);
+  --av-radius: var(--radius-sm);
+  --av-gap: var(--sp-3);
+
+  margin: var(--sp-2) 0;
+  padding: var(--sp-3);
+  background: var(--av-surface);
+  border: 1px solid var(--av-border);
+  border-radius: var(--radius);
+  max-width: 100%;
+  font-size: 13px;
+}
+
+/* ---------- 头部 / 导语 ---------- */
+
+.absorb-visual .av-head {
+  padding-bottom: var(--sp-2);
+  margin-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--av-border);
+}
+
+.absorb-visual .av-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--av-text);
+}
+
+.absorb-visual .av-subtitle {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--av-muted);
+}
+
+.absorb-visual .av-lead {
+  margin-bottom: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-left: 3px solid var(--av-accent);
+  background: var(--av-accent-soft);
+  border-radius: 0 var(--av-radius) var(--av-radius) 0;
+  color: var(--av-text);
+}
+
+.absorb-visual .av-lead > :first-child { margin-top: 0; }
+.absorb-visual .av-lead > :last-child { margin-bottom: 0; }
+
+/* ---------- 分节布局 ----------
+   sheet：面板卡片纵列（侧边栏窄宽度不并排，panel-responsive-width）；
+   doc  ：连续文档，面板退化为无框分节。 */
+
+.absorb-visual .av-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--av-gap);
+  min-width: 0;
+}
+
+.absorb-visual .av-panel {
+  padding: var(--sp-3);
+  background: var(--av-surface);
+  border: 1px solid var(--av-border);
+  border-radius: var(--av-radius);
+  min-width: 0;
+}
+
+.absorb-visual[data-template="doc"] .av-panel {
+  padding: 0 0 var(--sp-2);
+  border: none;
+  border-bottom: 1px solid var(--av-border);
+  border-radius: 0;
+}
+.absorb-visual[data-template="doc"] .av-panel:last-child { border-bottom: none; padding-bottom: 0; }
+
+.absorb-visual .av-panel-title {
+  margin: 0 0 var(--sp-2);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--av-text);
+}
+
+.absorb-visual .av-panel-body > :first-child,
+.absorb-visual .av-md > :first-child { margin-top: 0; }
+.absorb-visual .av-panel-body > :last-child,
+.absorb-visual .av-md > :last-child { margin-bottom: 0; }
+
+.absorb-visual .av-panel-body > * + * { margin-top: var(--sp-2); }
+
+/* ---------- Markdown 通用（面板内表格=对比组件） ---------- */
+
+.absorb-visual .av-md { color: var(--av-text); min-width: 0; }
+
+.absorb-visual table {
+  width: 100%;
+  max-width: 100%;
+  display: block;          /* 窄面板横向滚动而非撑破（panel-responsive-width） */
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.absorb-visual th,
+.absorb-visual td {
+  padding: 5px 8px;
+  border: 1px solid var(--av-border);
+  text-align: left;
+  vertical-align: top;
+}
+
+.absorb-visual th {
+  background: var(--av-surface-muted);
+  font-weight: 600;
+  color: var(--av-text-2);
+  white-space: nowrap;
+}
+
+/* 面板内代码块瘦身：隐藏复制工具条，保留语法高亮（可视化页以阅读为主） */
+.absorb-visual .code-toolbar { display: none; }
+.absorb-visual pre.code-block { margin: var(--sp-2) 0; }
+
+.absorb-visual .mermaid-figure { margin: var(--sp-2) 0; }
+
+/* ---------- callout ---------- */
+
+.absorb-visual .av-callout {
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--av-radius);
+  background: var(--av-surface-muted);
+  border: 1px solid var(--av-border);
+  font-size: 12.5px;
+}
+
+.absorb-visual .av-callout-tip {
+  background: var(--av-tip-soft);
+  border-color: transparent;
+}
+
+.absorb-visual .av-callout-warn {
+  background: var(--av-warn-soft);
+  border-color: transparent;
+}
+
+/* ---------- kv 键值网格 ---------- */
+
+.absorb-visual .av-kv {
+  margin: var(--sp-2) 0;
+  display: grid;
+  grid-template-columns: minmax(72px, max-content) 1fr;
+  column-gap: var(--sp-3);
+  row-gap: 6px;
+  min-width: 0;
+}
+
+.absorb-visual .av-kv dt {
+  color: var(--av-muted);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.absorb-visual .av-kv dd {
+  margin: 0;
+  color: var(--av-text);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- timeline 有序时间线 ---------- */
+
+.absorb-visual .av-timeline {
+  margin: var(--sp-2) 0;
+  padding: 0;
+  list-style: none;
+  position: relative;
+}
+
+.absorb-visual .av-timeline li {
+  position: relative;
+  padding: 0 0 var(--sp-3) 18px;
+  border-left: 1px solid var(--av-border-strong);
+  margin-left: 5px;
+}
+
+.absorb-visual .av-timeline li:last-child { padding-bottom: 2px; border-left-color: transparent; }
+
+/* 节点圆点（非交互装饰，纯边框实现，无需动画） */
+.absorb-visual .av-timeline li::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--av-surface);
+  border: 1.5px solid var(--av-accent);
+}
+
+.absorb-visual .av-tl-label {
+  display: inline-block;
+  font-weight: 600;
+  color: var(--av-text);
+  margin-right: 6px;
+}
+
+.absorb-visual .av-tl-text { color: var(--av-text-2); }
+
+/* ---------- tree 层级树 ---------- */
+
+.absorb-visual .av-tree {
+  margin: var(--sp-2) 0;
+  padding: 0 0 0 2px;
+  list-style: none;
+  min-width: 0;
+}
+
+/* 连接线：逐层左轨 + 横向短枝（纯边框，reduced-motion 天然安全） */
+.absorb-visual .av-tree ul {
+  margin: 2px 0 0;
+  padding: 0 0 0 16px;
+  list-style: none;
+}
+
+.absorb-visual .av-tree li {
+  position: relative;
+  padding-left: 12px;
+}
+
+.absorb-visual .av-tree li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--av-border-strong);
+}
+
+.absorb-visual .av-tree li:last-child::before {
+  height: 11px;
+  bottom: auto;
+}
+
+.absorb-visual .av-tree li::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 11px;
+  width: 9px;
+  border-top: 1px solid var(--av-border-strong);
+}
+
+.absorb-visual .av-tree-label { color: var(--av-text); }
+
+/* ---------- chart（bar 条形数量对比，纯 CSS 零依赖） ---------- */
+
+.absorb-visual .av-chart {
+  margin: var(--sp-2) 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.absorb-visual .av-chart-title {
+  margin: 0;
+  font-size: 12px;
+  color: var(--av-muted);
+}
+
+.absorb-visual .av-chart-row {
+  display: grid;
+  grid-template-columns: minmax(64px, max-content) 1fr auto;
+  column-gap: var(--sp-2);
+  align-items: center;
+  min-width: 0;
+}
+
+.absorb-visual .av-chart-label {
+  color: var(--av-text-2);
+  overflow-wrap: anywhere;
+}
+
+.absorb-visual .av-chart-track {
+  height: 14px;
+  background: var(--av-surface-muted);
+  border-radius: 999px;
+  overflow: hidden;   /* 条宽最小 2% 由渲染器保证，轨道裁剪防圆角溢出 */
+  min-width: 0;
+}
+
+.absorb-visual .av-chart-bar {
+  display: block;
+  height: 100%;
+  background: var(--av-accent);
+  border-radius: 999px;
+}
+
+.absorb-visual .av-chart-value {
+  color: var(--av-text);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---------- 流式占位（可视化块未完成前的提示） ---------- */
+
+.absorb-visual-pending {
+  margin: var(--sp-2) 0;
+  padding: var(--sp-3);
+  border: 1px dashed var(--av-border-strong, var(--border-strong));
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+/* ---------- 渲染失败降级（原始内容 + 弱化告警） ---------- */
+
+.absorb-visual-degraded {
+  margin: var(--sp-2) 0;
+}
+
+.absorb-visual-degraded-tip {
+  margin-bottom: var(--sp-2);
+  padding: 4px var(--sp-3);
+  border-left: 2px solid var(--av-warn-strong, var(--danger));
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: break-word;
+}

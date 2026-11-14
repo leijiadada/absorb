@@ -1,0 +1,34 @@
+{
+  "type": "tech-media",
+  "capturedAt": "2026-10-16",
+  "expect": {
+    "nonEmpty": true,
+    "mdChars": 3927,
+    "mustContain": [
+      "无障碍说明"
+    ]
+  },
+  "queries": [
+    {
+      "keywords": [
+        "DeepMind"
+      ],
+      "expectHit": true,
+      "why": "标题/正文主题词（人工复核）"
+    },
+    {
+      "keywords": [
+        "DeepMind新电脑已可利用记忆自学 人工智能迈上新台阶_科技_腾讯网"
+      ],
+      "expectHit": true,
+      "why": "标题词"
+    },
+    {
+      "keywords": [
+        "qqx不存在词zqx"
+      ],
+      "expectHit": false,
+      "why": "零命中信号"
+    }
+  ]
+}

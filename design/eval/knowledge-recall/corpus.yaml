@@ -1,0 +1,338 @@
+# M3.1 检索评测语料：30 条个人知识，模拟真实用户的积累分布。
+#
+# 字段与 storage.KnowledgeItem / KnowledgeSource 对应（loader 负责补齐
+# app/user/origin/时间戳等运行时字段）。约定：
+#   - user_understanding 为空 = 用户只保存过原文/AI 提炼，未表达个人观点
+#     （观点归属场景：召回时只能说"你保存过"）；
+#   - status: active | archived（archived 条目不得被任何用例召回）；
+#   - source_type: quote（有 quote_text）| conversation（quote_text 必须为空）。
+#
+# 主题分布：RAG/检索 5 条、长上下文 1、提示词安全 1、评测方法 1、
+# 工程/系统/前端/安全/测试等填充条目约 20 条、归档 1 条。
+meta:
+  description: M3.1 知识检索评测语料 v1（与 cases.yaml 配套，二者须同步演进）
+
+items:
+  # ---- 正例目标条目 ----
+  - id: k01
+    title: RAG 检索质量决定最终回答
+    ai_summary: >-
+      RAG 系统回答质量不佳时，多数根因在检索环节：召回不全、排序噪声或分块不当。
+      应优先诊断检索结果，再考虑更换生成模型。
+    user_understanding: 当 RAG 的回答质量不佳时，应该先检查检索结果（召回与排序），而不是立即更换大模型。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: RAG 质量排查指南
+        source_url: https://example.com/rag/retrieval-quality
+        quote_text: 检索质量不足是 RAG 回答劣化的首要根因，先看召回与排序，再看生成端。
+      - source_type: conversation
+        source_title: 与 AI 的问答记录
+        source_url: ""
+        quote_text: ""
+  - id: k02
+    title: Reranker 精排弥补向量召回
+    ai_summary: >-
+      向量检索保证"找得到"，但对语义漂移噪声控制不足；交叉编码器精排（Reranker）
+      在候选集上重排，可显著提升 top-k 纯度。
+    user_understanding: 向量检索负责找得到，Reranker 负责排得好；两者是分工关系，不是替代关系。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: 检索与排序分工
+        source_url: https://example.com/rag/reranker
+        quote_text: 精排模型对召回结果重排后，top-k 噪声明显下降。
+  - id: k03
+    title: 长上下文的成本与注意力稀释
+    ai_summary: >-
+      长上下文窗口提升单次可携带信息量，但成本随 token 数增长，且中间内容利用率下降
+      （注意力稀释），有效性依赖任务与资料规模。
+    user_understanding: 长上下文不是免费的：token 成本上升，且并非所有位置都被均匀关注。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: 长上下文实测
+        source_url: https://example.com/llm/long-context
+        quote_text: 注意力稀释使中间位置的细节更容易被忽略。
+  - id: k04
+    title: 提示词注入的防御
+    ai_summary: >-
+      提示词注入通过诱导模型偏离系统指令造成风险；缓解手段包括系统提示隔离、
+      输入过滤与输出审查。
+    user_understanding: ""
+    status: active
+    sources:
+      - source_type: quote
+        source_title: LLM 安全入门
+        source_url: https://example.com/llm/prompt-injection
+        quote_text: 提示词注入可通过系统提示隔离与输出过滤缓解，无法仅靠提示词措辞根除。
+  - id: k05
+    title: 先建评测集再调优
+    ai_summary: >-
+      LLM 应用优化应先建立可重复的评测集（含负例与边界用例），再迭代提示词与检索策略；
+      无评测的调优是主观漂移。
+    user_understanding: 先建评测集（尤其负例），再动手调提示词。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: 评测驱动开发
+        source_url: https://example.com/llm/eval-driven
+        quote_text: 负例用例定义了系统"不应该做什么"，与正例同样重要。
+  - id: k06
+    title: CPU 缓存局部性与命中率
+    ai_summary: >-
+      程序性能往往取决于缓存命中率而非指令数；时间/空间局部性好的数据布局
+      能显著减少主存访问。
+    user_understanding: 优化数据布局比微调指令更有效，因为缓存命中差距是数量级的。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: 性能工程笔记
+        source_url: https://example.com/perf/cache-locality
+        quote_text: 缓存行与预取决定了热循环的真实吞吐。
+  - id: k07
+    title: Git rebase 与 merge 的取舍
+    ai_summary: rebase 得到线性历史但重写提交，merge 保留真实拓扑但产生合并节点；团队约定比技术优劣更重要。
+    user_understanding: 公共分支用 merge，私有分支可 rebase。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: Git 工作流讨论
+        source_url: https://example.com/git/rebase-merge
+        quote_text: 重写公共历史会让协作者的本地状态失配。
+  - id: k08
+    title: Python GIL 对多线程的限制
+    ai_summary: CPython 的 GIL 使同一时刻仅一个线程执行字节码，CPU 密集任务多线程无法并行；IO 密集任务受影响较小。
+    user_understanding: CPU 密集用多进程，IO 密集多线程尚可。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: CPython 并发模型
+        source_url: https://example.com/python/gil
+        quote_text: GIL 的存在使多线程无法利用多核执行字节码。
+  - id: k09
+    title: 幂等接口设计
+    ai_summary: 幂等性保证同一请求重复提交结果一致；常用手段包括幂等键、条件更新与去重表。
+    user_understanding: 幂等键要放在业务语义层设计，而不是传输层。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: 支付系统设计笔记
+        source_url: https://example.com/api/idempotency
+        quote_text: 幂等键与业务单据一一对应才能防重。
+  - id: k10
+    title: 分词与词元化的多语言影响
+    ai_summary: >-
+      分词器的子词策略（BPE/Unigram）决定词表覆盖与序列长度，多语言场景下
+      低资源语言往往被过度切分。
+    user_understanding: 中文语料要检查分词压缩率，否则成本与效果都吃亏。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: tokenizer 选型笔记
+        source_url: https://example.com/llm/tokenizer
+        quote_text: 低资源语言的过度切分会拉长序列并推高成本。
+  - id: k14
+    title: 向量索引 HNSW 原理
+    ai_summary: HNSW 以分层图结构支持近似最近邻查询，在召回率与查询延迟之间可调权衡；参数决定内存与精度。
+    user_understanding: HNSW 用近似换速度，参数调优本质是在召回率与延迟间找平衡。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: 向量数据库内幕
+        source_url: https://example.com/vectordb/hnsw
+        quote_text: 分层跳表式的图遍历让近似最近邻查询达到亚线性复杂度。
+  - id: k15
+    title: 流式输出与首 token 延迟
+    ai_summary: 流式输出不降低总耗时，但显著改善首 token 延迟感知；预取与增量渲染决定体验上限。
+    user_understanding: 用户感知的是首字速度，不是总时长。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: 交互延迟设计
+        source_url: https://example.com/ux/streaming
+        quote_text: 首 token 延迟是主观速度感的主要来源。
+
+  # ---- 填充条目（提供负压与真实分布，不作为正例目标） ----
+  - id: k11
+    title: HTTP 状态码的语义边界
+    ai_summary: 4xx 与 5xx 的责任划分；自定义状态码应避免劫持标准语义。
+    user_understanding: 状态码表达传输层结果，业务结果放响应体。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: API 设计规范
+        source_url: https://example.com/api/status-codes
+        quote_text: 用 200 包裹错误体是反模式。
+  - id: k12
+    title: SQL 索引失效的常见场景
+    ai_summary: 函数包裹列、隐式类型转换、前导通配符 LIKE 与低选择性列都会让索引失效。
+    user_understanding: 索引设计要看查询姿势，不是建了就有效。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: 数据库调优手册
+        source_url: https://example.com/db/index-miss
+        quote_text: 对索引列套函数会退化为全表扫描。
+  - id: k13
+    title: Docker 镜像分层与构建提速
+    ai_summary: 把低频变动的层放在前面可以复用分层结果，显著加速重复构建。
+    user_understanding: 分层顺序就是缓存命中率的工程化表达。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: 容器构建优化
+        source_url: https://example.com/docker/layers
+        quote_text: 依赖清单先于源码拷贝，分层结果才能复用。
+  - id: k16
+    title: 单元测试与集成测试的边界
+    ai_summary: 单测锁定逻辑分支与边界条件，集成测试验证模块协作；边界不清会导致重复覆盖或真空地带。
+    user_understanding: 测试分层是成本分配问题，不是技术优劣问题。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: 测试策略
+        source_url: https://example.com/testing/pyramid
+        quote_text: 测试金字塔的核心是让反馈环尽量短。
+  - id: k17
+    title: WebSocket 心跳与重连
+    ai_summary: 心跳检测半开连接，退避重连避免雪崩；会话恢复需要应用层序号。
+    user_understanding: 长连接的可靠性是应用层责任，传输层不会替你兜底。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: 实时通信实践
+        source_url: https://example.com/net/ws-heartbeat
+        quote_text: 半开连接只有心跳能发现。
+  - id: k18
+    title: Go context 的取消传播
+    ai_summary: context 取消沿调用链传播，超时应在入口统一设定；忽略 ctx.Err 是常见泄漏源。
+    user_understanding: 取消信号是协作式的，子任务必须主动检查。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: Go 并发模式
+        source_url: https://example.com/go/context
+        quote_text: ctx.Done 是取消传播的唯一通道。
+  - id: k19
+    title: OAuth2 PKCE 防授权码拦截
+    ai_summary: 公共客户端必须使用 PKCE，将授权码与一次性验证器绑定，防止拦截重放。
+    user_understanding: 授权码本身不是凭据，PKCE 之后才算闭环。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: OAuth 安全实践
+        source_url: https://example.com/oauth/pkce
+        quote_text: 没有验证器的授权码对拦截者同样有用。
+  - id: k20
+    title: 分布式锁的常见误用
+    ai_summary: 锁过期与业务未完成的竞态、可重入缺失、误当互斥万能药是三大高频问题。
+    user_understanding: 锁保护的是不变量，不是流程。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: 分布式系统笔记
+        source_url: https://example.com/dist/locks
+        quote_text: 过期续约与 fencing token 才能闭环竞态。
+  - id: k21
+    title: Web Worker 与主线程阻塞
+    ai_summary: 超过数毫秒的纯计算应移出主线程；Worker 通信成本要用数据规模衡量。
+    user_understanding: 先测阻塞时长，再决定是否引入 Worker。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: 前端性能笔记
+        source_url: https://example.com/fe/web-worker
+        quote_text: 长任务会挤掉输入响应，造成可感知卡顿。
+  - id: k22
+    title: 正则回溯导致的灾难性耗时
+    ai_summary: 嵌套量词在特定输入下指数回溯；输入长度无界时必须限制或改写表达式。
+    user_understanding: 正则也是执行引擎，复杂度要当算法分析。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: ReDoS 案例
+        source_url: https://example.com/security/redos
+        quote_text: 一个恶意构造的字符串就能打满 CPU。
+  - id: k23
+    title: TLS 握手优化
+    ai_summary: 会话复用、OCSP 装订与 TLS1.3 的 1-RTT 特性能显著压缩握手耗时。
+    user_understanding: 建连延迟是边际成本，能省一次 RTT 就省一次。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: 网络优化手册
+        source_url: https://example.com/net/tls
+        quote_text: TLS1.3 把完全握手压到 1-RTT。
+  - id: k24
+    title: CDN 回源与边缘节点调度
+    ai_summary: 回源风暴可用合并回源与预热缓解；边缘命中率的收益随内容热度分布变化。
+    user_understanding: 热点内容预热的收益远高于被动回源。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: 分发网络实践
+        source_url: https://example.com/net/cdn
+        quote_text: 合并回源把 N 份请求收敛为 1 份。
+  - id: k25
+    title: 限流的令牌桶与漏桶
+    ai_summary: 令牌桶允许突发、漏桶整形平滑；分布式场景要考虑配额拆分与时钟偏差。
+    user_understanding: 选桶先看要不要允许突发。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: 流量治理
+        source_url: https://example.com/net/rate-limit
+        quote_text: 突发容忍度是两种桶的分水岭。
+  - id: k26
+    title: SSE 与 WebSocket 的选择
+    ai_summary: 单向推送用 SSE 更简单（自动重连、文本协议），双向交互才需要 WebSocket。
+    user_understanding: 先问方向性，再选协议。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: 推送技术选型
+        source_url: https://example.com/net/sse-vs-ws
+        quote_text: 单向场景引入双向协议是过度设计。
+  - id: k27
+    title: Mock 的边界与测试脆弱性
+    ai_summary: Mock 固化了实现细节，过度使用让重构成本转嫁到测试；应 mock 端口而非实现。
+    user_understanding: Mock 契约要跟着真实依赖同步演化。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: 测试替身
+        source_url: https://example.com/testing/mocks
+        quote_text: 对实现细节断言的测试是负资产。
+  - id: k28
+    title: Markdown 渲染与 XSS
+    ai_summary: 富文本渲染必须过 sanitize 白名单；链接协议与事件属性是高频注入点。
+    user_understanding: 用户内容永远是不可信输入。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: 前端安全清单
+        source_url: https://example.com/security/md-xss
+        quote_text: "javascript: 协议链接是最容易被忽略的注入点。"
+  - id: k29
+    title: 日志采样与可观测成本
+    ai_summary: 全量日志的成本增长快于业务价值；尾部采样与分级保留能守住排障能力。
+    user_understanding: 采样策略要保证错误路径 100% 保留。
+    status: active
+    sources:
+      - source_type: quote
+        source_title: 可观测性实践
+        source_url: https://example.com/obs/sampling
+        quote_text: 尾部采样保住的是失败请求的完整视图。
+
+  # ---- 归档条目（任何用例都不得召回） ----
+  - id: k30
+    title: Kubernetes 节点亲和性调度
+    ai_summary: nodeAffinity 硬/软约束控制 Pod 落点；与污点容忍配合实现隔离。
+    user_understanding: ""
+    status: archived
+    sources:
+      - source_type: quote
+        source_title: K8s 调度笔记
+        source_url: https://example.com/k8s/affinity
+        quote_text: 硬亲和约束无满足节点时 Pod 将长期 Pending。

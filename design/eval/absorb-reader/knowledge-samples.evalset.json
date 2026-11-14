@@ -1,0 +1,118 @@
+{
+  "evalSetId": "knowledge-samples",
+  "name": "knowledge-samples",
+  "_note": "语料结构参考集：展示 M0 语料支持的全部结构形态（多轮追问、paragraph 指代、page_context 章节锚定、page_content 无划词路径、工具调用轮）。兼作多轮/多形态冒烟集，指标从宽（不评 final_response，工具轨迹 subsetMatching）。",
+  "evalCases": [
+    {
+      "evalId": "ks-01-multiturn-followup",
+      "_note": "多轮结构样例：划词首问 + 无新划词追问（追问靠会话重申参考材料，无需 state 变化）。两轮都期望零工具。",
+      "conversation": [
+        {
+          "invocationId": "ks-01-1",
+          "userContent": {"role": "user", "content": "这句话的核心方法是什么？"},
+          "finalResponse": {"role": "assistant", "content": "核心方法是把任务拆成可以一周内交付的小块，以此对抗延期焦虑。"},
+          "tools": []
+        },
+        {
+          "invocationId": "ks-01-2",
+          "userContent": {"role": "user", "content": "能用做饭打个比方吗？"},
+          "finalResponse": {"role": "assistant", "content": "比如做一桌年夜饭：先定菜单，再按凉菜、热菜、汤分批准备，每批一小时内完成，先易后难，边做边上桌——把大任务拆成小批次正是同样的思路。"},
+          "tools": []
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://blog.example.com/essays/beat-procrastination",
+          "quote": "把任务拆成可以在一周内交付的小块，是对抗延期焦虑最有效的手段。"
+        }
+      }
+    },
+    {
+      "evalId": "ks-02-paragraph-reference",
+      "_note": "paragraph 结构样例：划选句含指代词「它」，答案需要 paragraph 才能消解。",
+      "conversation": [
+        {
+          "invocationId": "ks-02-1",
+          "userContent": {"role": "user", "content": "「它」指的是什么？快了多少？"},
+          "finalResponse": {"role": "assistant", "content": "「它」指第二代推理引擎 T2，比前一代快了近一倍。"},
+          "tools": []
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://eng.example.com/blog/t2-inference-engine",
+          "quote": "它比前一代快了近一倍。",
+          "paragraph": "第二代推理引擎 T2 在保持精度不变的前提下，把单请求尾延迟降到了 90 毫秒。它比前一代快了近一倍。"
+        }
+      }
+    },
+    {
+      "evalId": "ks-03-page-context-anchor",
+      "_note": "page_context 结构样例：章节路径锚定术语所属领域（K8s 调度语境），消除通用词歧义。",
+      "conversation": [
+        {
+          "invocationId": "ks-03-1",
+          "userContent": {"role": "user", "content": "Pod 什么情况下会被排除在带污点的节点之外？"},
+          "finalResponse": {"role": "assistant", "content": "没有匹配容忍（toleration）的 Pod 无法被调度到带有该污点（taint）的节点上。"},
+          "tools": []
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://k8s.example.com/docs/scheduling-taints",
+          "page_context": "Kubernetes 文档 > 调度 > 污点与容忍",
+          "quote": "没有匹配容忍的 Pod 无法被调度到带有该污点的节点上。"
+        }
+      }
+    },
+    {
+      "evalId": "ks-04-page-content-no-quote",
+      "_note": "无划词路径样例：只带 page_md（无 quote），prompt 注入头部 6000 字 page_content，答案在头部内则零工具直接作答。",
+      "conversation": [
+        {
+          "invocationId": "ks-04-1",
+          "userContent": {"role": "user", "content": "每人最多能同时借几本书？"},
+          "finalResponse": {"role": "assistant", "content": "每人最多同时借阅 10 册。"},
+          "tools": []
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://lib.example.com/hours-and-rules",
+          "page_md": "# 图书馆开放时间与借阅规则\n\n主馆：周一至周五 8:00-22:00；周末 9:00-17:00。\n\n## 借阅规则\n\n每人最多同时借阅 10 册，借期 30 天，可续借 1 次。"
+        }
+      }
+    },
+    {
+      "evalId": "ks-05-tool-call-turn",
+      "_note": "工具调用轮结构样例：与 knowledge-relevance 组同形态（quote 不含答案 + page_md 含答案，期望 expand_context）。",
+      "conversation": [
+        {
+          "invocationId": "ks-05-1",
+          "userContent": {"role": "user", "content": "第一周的起始灰度比例是多少？"},
+          "finalResponse": {"role": "assistant", "content": "第一周起始灰度比例为 2%。"},
+          "tools": [
+            {"id": "kt-s5", "name": "expand_context", "arguments": {"reason": "起始比例数字在评审记录正文", "keywords": ["灰度比例", "第 1 周", "2%"]}}
+          ]
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "eval-user",
+        "state": {
+          "source_url": "https://wiki.example.com/release/canary-review-2026-41",
+          "quote": "该功能的灰度放量节奏由发布委员会逐周评审，具体起始比例见评审记录。",
+          "page_md": "# 灰度发布评审记录（第 41 周）\n\n## 第 1 周\n\n起始灰度比例 2%，观察指标为崩溃率与首屏耗时，若崩溃率超过 0.1% 立即冻结放量。"
+        }
+      }
+    }
+  ]
+}

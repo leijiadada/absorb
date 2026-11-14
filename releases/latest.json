@@ -1,0 +1,15 @@
+{
+  "version": "0.1.0",
+  "channel": "stable",
+  "published_at": "2026-11-14T00:00:00Z",
+  "minimum_version": "0.1.0",
+  "notes_url": "https://gitee.com/leij1/absorb/releases",
+  "artifacts": [
+    {
+      "name": "absorb-agent-setup-0.1.0.exe",
+      "url": "https://github.com/leijiadada/absorb/releases/download/v0.1.0/absorb-agent-setup-0.1.0.exe",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "size": 0
+    }
+  ]
+}
