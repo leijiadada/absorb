@@ -93,30 +93,21 @@ describe('模型卡三态', () => {
   })
 })
 
-describe('英雄横幅', () => {
-  it('全绿状态：横幅显示一切正常与服务运行时长', () => {
+describe('英雄横幅已移除', () => {
+  it('全绿状态：不渲染横幅（一切正常/服务运行时长均不出现）', () => {
     const w = mountStatus(makeStatus({ serviceRunning: true, extConnected: true, extState: 'connected', uptime: '2m3s', memoryEnabled: true, proxyUrl: '', version: '0.1.0' }))
-    expect(w.text()).toContain('一切正常')
-    expect(w.text()).toContain('服务运行 2m3s')
+    expect(w.text()).not.toContain('一切正常')
+    expect(w.text()).not.toContain('服务运行 2m3s')
+    expect(w.text()).toContain('已连接') // 状态卡仍在
     expect(w.text()).not.toContain('运行信息') // 审计卡已移除，页面只留结论层+决策层
     w.unmount()
   })
 
-  it('服务停止：横幅变红提示服务未运行', () => {
+  it('服务停止：同样不渲染横幅，仅状态卡中性展示', () => {
     const w = mountStatus(makeStatus({ serviceRunning: false }))
-    expect(w.text()).toContain('服务未运行')
-    expect(w.text()).toContain('可尝试重启应用')
+    expect(w.text()).not.toContain('服务未运行')
+    expect(w.text()).not.toContain('可尝试重启应用')
     w.unmount()
-  })
-
-  it('extLastSeen 为 0 显示从未；非 0 显示相对时间（异常横幅内）', () => {
-    const w = mountStatus(makeStatus({ extState: 'disconnected', extLastSeen: 0 }))
-    expect(w.text()).toContain('从未')
-    w.unmount()
-    const now = Math.floor(Date.now() / 1000)
-    const w2 = mountStatus(makeStatus({ extState: 'disconnected', extLastSeen: now - 300 }))
-    expect(w2.text()).toContain('5 分钟前')
-    w2.unmount()
   })
 })
 

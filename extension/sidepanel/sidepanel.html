@@ -18,16 +18,14 @@
   </header>
 
   <main class="main">
-    <!-- 文档卡（PDF 解读 PR3）：活动标签页为 PDF 时显示，三态由 doccard.js 渲染 -->
-    <section class="doccard" id="docCard" hidden></section>
     <!-- 对话消息流 -->
     <section class="messages" id="messages" aria-live="polite">
       <div class="empty-tip" id="emptyTip">
         <div class="empty-illustration" aria-hidden="true">
-          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h7M9 11h5"/></svg>
+          <img src="../icons/Artwork.png" alt="" width="140" height="140">
         </div>
-        <p data-i18n="ui.emptyTip1">右键划词后,会以标签插入输入框;可多段划词,针对标签提问即可。</p>
-        <p class="muted" data-i18n="ui.emptyTip2">回答将在此流式显示。</p>
+        <p class="empty-title" data-i18n="ui.emptyTitle">右键划词提问</p>
+        <p data-i18n="ui.emptyTip1">输入框,针对网页提问即可,回答将在此流式显示。</p>
         <!-- 桌面端未安装引导：宿主注册缺失时由 desktop-guide.js 显示（只读探测，不拉起进程） -->
         <div class="desktop-guide" id="desktopGuide" hidden>
           <div class="dg-icon" aria-hidden="true">
@@ -52,6 +50,9 @@
 
   <!-- 输入区 -->
   <footer class="composer">
+    <!-- 文档工具栏（PDF 解读 PR4）：输入框上方的单行条，活动标签页为 PDF 时显示；
+         ⌄ 展开文档信息/建议问题/操作面板，四态由 doccard.js 渲染，× 仅隐藏展示不删记录 -->
+    <section class="docbar" id="docCard" hidden></section>
     <!-- 图片附件行：区域/元素/视口截图、上传、粘贴的图片以 chip 缩略图展示（不进输入框、不持久化） -->
     <div class="attachments" id="attachments" hidden></div>
     <!-- 可编辑输入框：划词以 chip 标签内嵌，可多段、可删除、光标在标签间移动 -->
@@ -62,6 +63,8 @@
               aria-label="插入图片" title="插入图片" data-i18n-title="ui.imageTip">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.6-3.6a2 2 0 0 0-2.8 0L6 20"/></svg>
       </button>
+      <!-- × 隐藏文档工具栏后的迷你恢复入口（仅图标圆标，doccard.js 渲染；置于发送左侧） -->
+      <span id="docMiniSlot" hidden></span>
       <button id="askBtn" class="primary-btn" disabled data-i18n="buttons.ask">发送</button>
     </div>
     <!-- 隐藏的文件选择：由“上传图片”菜单项触发 -->

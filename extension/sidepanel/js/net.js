@@ -388,7 +388,8 @@ export async function saveKnowledge(payload) {
 }
 
 // 文档准备（PDF 解读 PR3）：POST /api/page/prepare，服务端获取并提取文档正文
-// 后落库，返回 {documentId,url,finalUrl,title,contentType,status,charCount,byteSize,truncated,message}。
+// 后落库，返回 {documentId,url,finalUrl,title,contentType,status,charCount,byteSize,truncated,message}
+// （documentId = documents.id UUID，M0 起不再是 URL）。
 // 分类状态（needs_auth/too_large 等）是 200 + status 产品语义，由调用方渲染；仅
 // 请求体解析失败 400、内部错误 500。不加连接重试：这是最长 10 分钟的长操作
 // （与服务端 prepareTimeout 对齐），失败重试由用户在文档卡上显式点"重试"。

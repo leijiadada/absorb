@@ -53,71 +53,6 @@ function fmtTokens(n: number): string {
 // 今日缓存命中率百分比（0-1 → 整数百分数）
 const cacheHitPct = computed(() => Math.round((tokenStats.value?.cacheHitRate ?? 0) * 100))
 
-// 入口中文名（kind ∈ chat/draft/summary）
-const kindLabels: Record<string, string> = { chat: '问答', draft: '草稿', summary: '摘要' }
-
-// 各入口分布（全期）：只列出有调用记录的入口
-const kindParts = computed(() =>
-  Object.entries(tokenStats.value?.byKind ?? {})
-    .filter(([, v]) => v.calls > 0)
-    .map(([k, v]) => `${kindLabels[k] ?? k} ${fmtTokens(v.totalTokens)}`),
-)
-
-// 相对时间（extLastSeen 为 Unix 秒，0=从未心跳）
-function relTime(sec: number): string {
-  if (!sec) return '从未'
-  const diff = Math.floor(Date.now() / 1000) - sec
-  if (diff < 60) return '刚刚'
-  if (diff < 3600) return `${Math.floor(diff / 60)} 分钟前`
-  if (diff < 86400) return `${Math.floor(diff / 3600)} 小时前`
-  return `${Math.floor(diff / 86400)} 天前`
-}
-
-// 英雄横幅：综合服务/扩展/模型三源健康度（方案 A 的页面锚点）
-// 优先级：服务停止(红) > 部分待就绪(琥珀) > 一切正常(蓝底绿点)
-const hero = computed(() => {
-  const s = status?.value
-  if (!s) return null
-  const up = s.uptime || '刚刚启动'
-  if (!s.serviceRunning) {
-    return {
-      cls: 'bg-danger/10',
-      dot: 'bg-danger',
-      tCls: 'text-danger',
-      t: '服务未运行',
-      sub: '后台服务已停止，功能暂不可用，可尝试重启应用。',
-    }
-  }
-  const extMap: Record<string, string> = {
-    connected: `扩展已连接 · ${relTime(s.extLastSeen)}活跃`,
-    disconnected: `扩展已断开 · ${relTime(s.extLastSeen)}活跃`,
-    'browser-closed': '浏览器未运行',
-    never: '扩展从未连接',
-  }
-  const modelOk = !!(s.modelName && s.keyConfigured)
-  if (s.extState === 'connected' && modelOk) {
-    return {
-      cls: 'bg-primary-soft',
-      dot: 'bg-success',
-      tCls: 'text-primary',
-      t: '一切正常',
-      // 结论层只留一句证据；扩展/模型详情卡片里都有，不重复
-      sub: `服务运行 ${up}`,
-    }
-  }
-  // 异常态：横幅只列异常项，负责定位问题；正常项不重复
-  const issues: string[] = []
-  if (s.extState !== 'connected') issues.push(extMap[s.extState] ?? '扩展未连接')
-  if (!modelOk) issues.push('模型未就绪')
-  return {
-    cls: 'bg-warning/10',
-    dot: 'bg-warning',
-    tCls: 'text-warning',
-    t: '服务运行中',
-    sub: [`服务运行 ${up}`, ...issues].join(' · '),
-  }
-})
-
 // 手动安装引导弹窗（信息条 + 下载 / 前往安装 两步）
 const exporting = ref(false)
 const showGuide = ref(false)
@@ -173,15 +108,6 @@ async function gotoExtensions() {
 <template>
   <div>
     <h1 class="mb-4 text-lg font-semibold">状态</h1>
-
-    <!-- 英雄横幅：第一眼传达整体健康度（apple-design：最重要的东西最明显） -->
-    <div v-if="hero" class="mb-4 flex items-center gap-3 rounded-xl px-5 py-3.5" :class="hero.cls">
-      <span class="status-dot inline-block h-3 w-3 shrink-0 rounded-full" :class="hero.dot" />
-      <div class="min-w-0">
-        <div class="text-base font-bold" :class="hero.tCls">{{ hero.t }}</div>
-        <div class="mt-0.5 truncate text-xs text-txt2">{{ hero.sub }}</div>
-      </div>
-    </div>
 
     <div class="grid grid-cols-2 gap-4">
       <!-- 浏览器扩展（四态） -->
@@ -270,7 +196,6 @@ async function gotoExtensions() {
       </div>
       <div class="mt-1 text-xs text-muted">
         累计 {{ fmtTokens(tokenStats.total.totalTokens) }} tokens
-        <template v-if="kindParts.length"> · {{ kindParts.join(' · ') }}</template>
       </div>
     </div>
 
