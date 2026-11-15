@@ -15,6 +15,11 @@ func defaultSystemProxyLookup(*url.URL) (*url.URL, bool) {
 	return nil, false
 }
 
+// NormalizeProxyServer 导出 parseProxyServer：把 WinINET ProxyServer 原始值规范化为
+// 可被 url.Parse 的代理 URL（裸 "host:port" 补 http:// 前缀）。供 fetch 之外的
+// HTTP 客户端装配层（如升级链路）复用，保证系统代理解析行为一致。
+func NormalizeProxyServer(server string) string { return parseProxyServer(server) }
+
 // parseProxyServer 解析 WinINET ProxyServer 值为单个代理 URL。
 // 两种形态："host:port"（全协议共用）与 "http=a;https=b;ftp=c;socks=d"（按协议拆分，
 // 优先 https，其次 http，最后 socks；https/http 的代理协议仍是 HTTP，socks 映射为 socks5://）。
