@@ -92,7 +92,12 @@ func (s *FetchPageService) httpTool() (inner tool.CallableTool, maxBytes int64, 
 // 导出以供模型 API 客户端复用同一套解析逻辑，保证全局代理一致。
 func ProxyResolver(proxyFn func() string) func(*http.Request) (*url.URL, error) {
 	return func(req *http.Request) (*url.URL, error) {
-		p := strings.TrimSpace(proxyFn())
+		// proxyFn 允许为 nil（如 local embedding 走 127.0.0.1 无需手动代理），
+		// 视为未配置，走系统代理回退链路。
+		p := ""
+		if proxyFn != nil {
+			p = strings.TrimSpace(proxyFn())
+		}
 		if p == "" {
 			if u, decided := systemProxyLookup(req.URL); decided {
 				return u, nil

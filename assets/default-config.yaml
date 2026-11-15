@@ -20,6 +20,12 @@ memory:
 proxy:
   url: ""             # 全局 HTTP 代理（如 http://127.0.0.1:7897），空=跟随系统代理/环境变量
 
+embedding:
+  api_key: ""         # 硅基流动 API Key，空 = 禁用语义检索（纯词法兜底）
+  # base_url: ""      # 空 = https://api.siliconflow.cn/v1（OpenAI 兼容 /v1/embeddings）
+  # model: ""         # 空 = BAAI/bge-m3
+  # batch_size: 32    # 索引期单批文本数
+
 fetch:
   timeout_seconds: 30
 

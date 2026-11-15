@@ -14,8 +14,8 @@ import (
 
 	"absorb-agent/internal/document/extract"
 	"absorb-agent/internal/log"
+	"absorb-agent/internal/retrieval"
 	"absorb-agent/internal/store/storage"
-	retriever "absorb-agent/tool/pageretriever"
 )
 
 // Service 文档准备服务：SSRF 校验 → 提取 → 状态分类 → documents 锚点 +
@@ -24,6 +24,7 @@ type Service struct {
 	app, user string
 	st        storage.Storage
 	extractor extract.Extractor
+	embedder  retrieval.Embedder // M3：nil = 语义向量禁用（纯词法）
 }
 
 // NewService 构建文档准备服务。extractor 为 PDF 提取器（未来格式经同一接缝注入）。
@@ -50,10 +51,11 @@ type PrepareResult struct {
 	Message     string `json:"message,omitempty"`
 }
 
-// Prepare 准备文档。ready/partial 时正文完整落库（partial 表示注入问答时只能
-// 覆盖部分正文，全文不受影响）；失败状态不落库（扩展端持临时状态，重试即重新
-// 准备）。对外 documentId = 原始 URL：documents 表 (app,user,url) 唯一锚点，
-// 第一版原样存 URL 不做规范化，扩展端提问时原样带回。
+// Prepare 准备文档。ready/partial 时正文完整落库（partial 仅表示获取侧截断，
+// 与注入上下文的长度限制无关——20.9 万字全文照存，检索增强是后续增强项）；
+// 失败状态不落库（扩展端持临时状态，重试即重新准备）。对外 documentId =
+// documents.id（UUID，M0 统一身份）：chunks/摘要/知识来源回链共用同一稳定键；
+// 扩展端旧卡片持 URL 的情况由问答链路按 URL 回退兼容。
 func (s *Service) Prepare(ctx context.Context, rawURL, title string) (*PrepareResult, error) {
 	url := strings.TrimSpace(rawURL)
 	title = strings.TrimSpace(title)
@@ -90,10 +92,11 @@ func (s *Service) Prepare(ctx context.Context, rawURL, title string) (*PrepareRe
 	}
 
 	charCount := len([]rune(text))
-	// partial 语义：进入问答上下文时只能覆盖部分正文（超 PageTextMaxLen 注入截断，
-	// 或获取侧已静默截断）；全文仍完整落库，长文档检索是后续增强项。
+	// partial 语义（M0 修正）：仅表达「获取侧已静默截断」（提取完整度）。
+	// 超过 PageTextMaxLen 属上下文交付限制（注入时截断、缓存只存开头），
+	// 不再混入提取状态——全文完整落库的文档不应被判为 partial。
 	status := extract.StatusReady
-	if res.Truncated || charCount > retriever.PageTextMaxLen {
+	if res.Truncated {
 		status = extract.StatusPartial
 	}
 	sum := sha256.Sum256([]byte(text))
@@ -109,13 +112,19 @@ func (s *Service) Prepare(ctx context.Context, rawURL, title string) (*PrepareRe
 		Truncated:         res.Truncated,
 		FetchedAt:         time.Now(),
 	}
-	// documents 锚点（未来知识来源回链复用）+ 正文缓存
-	if _, err := s.st.UpsertDocument(ctx, s.app, s.user, url, title); err != nil {
+	// documents 锚点（知识来源回链 / 未来 chunks 关联复用）+ 正文缓存；
+	// documentId 取锚点 UUID，替代早期的「URL 即 documentId」语义。
+	doc, err := s.st.UpsertDocument(ctx, s.app, s.user, url, title)
+	if err != nil {
 		return nil, fmt.Errorf("保存文档锚点失败: %w", err)
 	}
+	base.DocumentID = doc.ID
 	if err := s.st.SaveDocumentContent(ctx, s.app, s.user, dc); err != nil {
 		return nil, fmt.Errorf("保存文档正文失败: %w", err)
 	}
+	// M1：构建检索索引（分块+分词+FTS）。索引是派生数据，失败只标 failed
+	// 不影响本次准备结果；重建由下次读取或 index_state 调度触发。
+	s.BuildIndex(ctx, base.DocumentID, dc)
 	log.Infof("[Absorb] document prepared | url=%q status=%s type=%q chars=%d bytes=%d dur=%s",
 		url, status, res.ContentType, charCount, dc.ByteSize, time.Since(start).Round(time.Millisecond))
 

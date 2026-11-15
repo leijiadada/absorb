@@ -68,8 +68,12 @@ func (w *evalRunner) Run(ctx context.Context, userID, sessionID string, message 
 			PageMd:        stateStr(st, "page_md"),
 			ContentStatus: stateStr(st, "content_status"),
 		}
-		if u := stateStr(st, "page_url"); u != "" || stateStr(st, "page_title") != "" {
-			in.Page = &chat.PageInput{URL: u, Title: stateStr(st, "page_title")}
+		if u := stateStr(st, "page_url"); u != "" || stateStr(st, "page_title") != "" || stateStr(st, "document_id") != "" {
+			in.Page = &chat.PageInput{
+				URL:        u,
+				Title:      stateStr(st, "page_title"),
+				DocumentID: stateStr(st, "document_id"), // 文档场景（M1 调用率评测）：UUID 须与 -db 库内 documents.id 一致
+			}
 		}
 	}
 	prep, err := chat.PrepareInvocation(ctx, chat.AppName, userID, in, chat.InvocationDeps{
@@ -131,6 +135,7 @@ func main() {
 	outDir := flag.String("out", "design/eval/results", "评估结果输出目录")
 	setID := flag.String("set", "understanding-basic", "要执行的评估集 ID")
 	runs := flag.Int("runs", 3, "每个用例的重复运行次数")
+	dbOverride := flag.String("db", "", "直接使用指定会话库（跳过临时库）：文档场景评测用，库需已含 documents/document_contents/索引；注意评估会写该库")
 	flag.Parse()
 
 	if _, err := os.Stat(*cfgPath); err != nil {
@@ -143,17 +148,28 @@ func main() {
 		os.Exit(1)
 	}
 
-	// 临时隔离会话库：评估不读写生产 data/sessions.db，跑完即删
-	tmpDir, err := os.MkdirTemp("", "absorb-eval-*")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "创建临时目录失败: %v\n", err)
-		os.Exit(1)
-	}
-	defer os.RemoveAll(tmpDir)
-	dbPath, err := filepath.Abs(filepath.Join(tmpDir, "sessions.db"))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "解析库路径失败: %v\n", err)
-		os.Exit(1)
+	// 会话库：默认临时隔离（评估不读写生产 data/sessions.db，跑完即删）；
+	// -db 直连模式用于文档场景评测（复用验收副本中已建索引的真实文档）。
+	dbPath := ""
+	if *dbOverride != "" {
+		abs, err := filepath.Abs(*dbOverride)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "解析 -db 路径失败: %v\n", err)
+			os.Exit(1)
+		}
+		if _, err := os.Stat(abs); err != nil {
+			fmt.Fprintf(os.Stderr, "-db 库不存在: %s\n", abs)
+			os.Exit(1)
+		}
+		dbPath = abs
+	} else {
+		tmpDir, err := os.MkdirTemp("", "absorb-eval-*")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "创建临时目录失败: %v\n", err)
+			os.Exit(1)
+		}
+		defer os.RemoveAll(tmpDir)
+		dbPath = filepath.Join(tmpDir, "sessions.db")
 	}
 	cfg.Store.Backend = "sqlite"
 	cfg.Store.SQLite.Path = dbPath
@@ -166,16 +182,20 @@ func main() {
 	}
 	defer sessSvc.Close()
 
-	// 与生产 startCore 同一导入链：config.yaml 的模型配置进临时库作为默认模型
-	migrated, err := sessSvc.MigrateLegacyModelConfig(ctx, chat.AppName,
-		cfg.Model.Name, cfg.Model.APIKey, cfg.Model.BaseURL,
-		cfg.Model.Temperature, cfg.Model.MaxTokens, cfg.Model.Thinking.Enabled)
-	if err != nil {
-		log.Warnf("[Absorb] migrate model config from config.yaml failed: %v", err)
-	}
-	if !migrated {
-		fmt.Fprintln(os.Stderr, "评估中止：没有可用默认模型（config.yaml 未配置完整模型信息）")
-		os.Exit(1)
+	// 与生产 startCore 同一导入链：config.yaml 的模型配置进临时库作为默认模型。
+	// -db 直连库自带 model_configs（如验收副本），已有默认模型时跳过迁移检查——
+	// 否则 config.yaml 未配模型会误伤直连模式。
+	if mc, _ := sessSvc.GetDefaultModelConfig(ctx, chat.AppName); mc == nil {
+		migrated, err := sessSvc.MigrateLegacyModelConfig(ctx, chat.AppName,
+			cfg.Model.Name, cfg.Model.APIKey, cfg.Model.BaseURL,
+			cfg.Model.Temperature, cfg.Model.MaxTokens, cfg.Model.Thinking.Enabled)
+		if err != nil {
+			log.Warnf("[Absorb] migrate model config from config.yaml failed: %v", err)
+		}
+		if !migrated {
+			fmt.Fprintln(os.Stderr, "评估中止：没有可用默认模型（config.yaml 未配置完整模型信息）")
+			os.Exit(1)
+		}
 	}
 	if mc, _ := sessSvc.GetDefaultModelConfig(ctx, chat.AppName); mc != nil {
 		log.Infof("[Absorb] eval default model: %s (%s)", mc.ModelID, mc.BaseURL)

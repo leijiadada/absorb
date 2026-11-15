@@ -100,8 +100,28 @@ type Storage interface {
 
 	// 文档提取正文缓存（PDF 解读 PR2）：SaveDocumentContent 按 (app,user,url)
 	// 幂等覆盖写（重新读取即刷新）；LoadDocumentContent 查无返回 (nil, nil)。
+	// LoadDocumentContentByID 按 documents.id（UUID）JOIN 读取，供 M0 统一身份
+	// 后的问答链路使用；查无同样返回 (nil, nil)（调用方自行决定是否按 URL 回退）。
 	SaveDocumentContent(ctx context.Context, app, user string, dc *DocumentContent) error
 	LoadDocumentContent(ctx context.Context, app, user, url string) (*DocumentContent, error)
+	LoadDocumentContentByID(ctx context.Context, app, user, documentID string) (*DocumentContent, error)
+
+	// 文档检索索引（M1）：chunk 与 FTS 是派生数据，ReplaceDocumentIndex 在单事务内
+	// 整体替换（删旧插新 + 覆盖 index_state，失败回滚不留中间态）；chunks 为 nil 时
+	// 仅写 index_state（构建失败标记用）。SearchDocumentChunks 为 FTS5 + bm25 检索，
+	// query 须为分词后的 OR 表达式；documentIDs 为空查当前用户全部已索引文档，
+	// 返回按 bm25 升序（越小越相关）；查无返回空切片。
+	ReplaceDocumentIndex(ctx context.Context, app, user, documentID string, chunks []*DocumentChunk, state *DocumentIndexState) error
+	LoadDocumentIndexState(ctx context.Context, app, user, documentID string) (*DocumentIndexState, error)
+	SearchDocumentChunks(ctx context.Context, app, user, query string, documentIDs []string, limit int) ([]DocumentChunkHit, error)
+
+	// 文档 chunk 向量（M3 语义召回）：ReplaceDocumentVectors 单事务整体替换
+	// 文档级向量（chunks 重建后必须重建向量，键为 chunk_id）；LoadDocumentVectors
+	// /LoadAllVectors 按 model 过滤（跨模型向量不可比），查无返回空切片。
+	// VectorHit 携带 chunk 原文与标题（JOIN chunks/documents），供融合层直接用。
+	ReplaceDocumentVectors(ctx context.Context, app, user, documentID, model string, vectors []*ChunkVectorRow) error
+	LoadDocumentVectors(ctx context.Context, app, user, documentID, model string) ([]ChunkVectorRow, error)
+	LoadVectorHits(ctx context.Context, app, user, model string, documentIDs []string) ([]DocumentChunkHit, []ChunkVectorRow, error)
 
 	// 知识持久化（M1）：item 可编辑（title/ai_summary/user_understanding），source 为不可变证据。
 	// CreateKnowledge 幂等：同 (app,user,dedup_key) 已存在时不新增、不触碰既有 sources，

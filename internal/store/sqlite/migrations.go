@@ -26,7 +26,7 @@ import (
 
 // schemaVersion 本版本代码所支持的数据库 schema 版本。
 // 每次增改表结构或数据语义：migrations 追加一条，并把此常量 +1。
-const schemaVersion = 7
+const schemaVersion = 9
 
 // migration 一条前向迁移。Up 在单个事务内执行。
 type migration struct {
@@ -74,6 +74,35 @@ var migrations = []migration{
 		Name:    "document_contents",
 		Up:      migrateDocumentContents,
 	},
+	{
+		Version: 8,
+		Name:    "document_index",
+		Up:      migrateDocumentIndex,
+	},
+	{
+		Version: 9,
+		Name:    "document_chunk_vectors",
+		Up:      migrateChunkVectors,
+	},
+}
+
+// migrateChunkVectors 0009：文档 chunk 向量表（M3 混合检索语义召回路）。
+// vector 存 float32 little-endian 打包 BLOB（SQLite 无原生向量类型，内存暴力
+// 扫描足够——万级 chunk × 1024 维 ≈ 数十 MB）。model 入库：不同模型的向量
+// 不可比，加载按当前模型过滤，换模型即等效未建（待重建）。
+func migrateChunkVectors(ctx context.Context, tx *sql.Tx) error {
+	_, err := tx.ExecContext(ctx, chunkVectorsDDL)
+	return err
+}
+
+// migrateDocumentIndex 0008：建文档检索索引三件套（M1）——document_chunks、
+// document_chunks_fts（FTS5）、document_index_state。只追加新表，不触碰任何
+// 既有表/行；DDL 与 schemaDDL 共用 documentIndexDDL 单一文本源；
+// CREATE TABLE/VTABLE IF NOT EXISTS 幂等，新库上为空操作，可安全重跑。
+// FTS5 可用性已在 modernc.org/sqlite v1.29.0 实测（虚拟表+中文 MATCH+bm25）。
+func migrateDocumentIndex(ctx context.Context, tx *sql.Tx) error {
+	_, err := tx.ExecContext(ctx, documentIndexDDL)
+	return err
 }
 
 // migrateModelConfigs 0001：补 model_configs 新列，并把 thinking 的旧布尔语义

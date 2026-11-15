@@ -117,6 +117,8 @@ func TestNoQuotePageMdInjectsPageContent(t *testing.T) {
 // 文档注入（PDF 解读）：page.documentId 命中已提取正文 → prompt 注入
 // <page_content>（正文可达模型），不再注入 <page_url>/fetch_page 提示；
 // 正文同时入会话页面缓存（追问复用）。
+// 本例 documentId=URL（M0 前旧扩展卡片语义），守卫问答链路「按 ID 查无回退
+// 按 URL」的兼容窗口。UUID 主路径见 TestDocumentIdUUIDInjectsPageContent。
 // 回归守卫：PR2 初版只写缓存与 expand_context 工具态、未回写 askCtx.PageMd，
 // prompt 里没有 <page_content>，模型看不到正文、反而被"按需 fetch_page"
 // 提示误导（实测回复"把目录贴给我"）。
@@ -175,6 +177,66 @@ func TestDocumentIdInjectsPageContent(t *testing.T) {
 	}
 	if strings.Contains(userMsg, "<page_url>") {
 		t.Fatalf("文档正文已注入，不应再注入 <page_url>，user message: %q", userMsg)
+	}
+}
+
+// 文档注入（M0 统一身份主路径）：documentId = documents.id UUID，按 ID 直接
+// 命中 document_contents（JOIN documents），无需 URL 回退。
+func TestDocumentIdUUIDInjectsPageContent(t *testing.T) {
+	h, cap2, svc := setup(t, "openai", true, false, defaultOKStream)
+	const sid = "s-doc-uuid"
+	const url = "https://paper.example.com/uuid-doc.pdf"
+	doc, err := svc.Storage().UpsertDocument(context.Background(), AppName, UserID, url, "论文")
+	if err != nil {
+		t.Fatalf("UpsertDocument: %v", err)
+	}
+	dc := &storage.DocumentContent{
+		URL:              url,
+		ContentText:      "UUID 主路径正文：文档身份统一后的注入验证",
+		CharCount:        22,
+		ContentType:      "application/pdf",
+		ExtractionStatus: "ready",
+		FetchedAt:        time.Now(),
+		UpdatedAt:        time.Now(),
+	}
+	if err := svc.Storage().SaveDocumentContent(context.Background(), AppName, UserID, dc); err != nil {
+		t.Fatalf("SaveDocumentContent: %v", err)
+	}
+	body, _ := json.Marshal(map[string]any{
+		"question":  "这份文档讲什么？",
+		"sessionId": sid,
+		"page":      map[string]any{"url": url, "title": "论文", "documentId": doc.ID},
+	})
+	req := httptest.NewRequest(http.MethodPost, "/api/ask", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	h(rec, req)
+	if strings.Contains(rec.Body.String(), `"type":"error"`) {
+		t.Fatalf("请求不应报错，SSE: %s", rec.Body.String())
+	}
+	if got := loadPageCache(t, svc, sid, url); !strings.Contains(got, "UUID 主路径正文") {
+		t.Fatalf("文档正文应写入页面缓存，got %q", got)
+	}
+	reqBody := cap2.get()
+	var sent struct {
+		Messages []struct {
+			Role    string `json:"role"`
+			Content any    `json:"content"`
+		} `json:"messages"`
+	}
+	if err := json.Unmarshal([]byte(reqBody), &sent); err != nil {
+		t.Fatalf("请求体解析失败: %v", err)
+	}
+	var userMsg string
+	for _, m := range sent.Messages {
+		if m.Role == "user" {
+			if s, ok := m.Content.(string); ok {
+				userMsg = s
+			}
+		}
+	}
+	if !strings.Contains(userMsg, "<page_content>") || !strings.Contains(userMsg, "UUID 主路径正文") {
+		t.Fatalf("UUID documentId 应注入 <page_content>，user message: %q", userMsg)
 	}
 }
 

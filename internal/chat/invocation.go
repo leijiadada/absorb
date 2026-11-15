@@ -12,11 +12,13 @@ import (
 	expand "absorb-agent/tool/expand_context"
 	retriever "absorb-agent/tool/pageretriever"
 	recall "absorb-agent/tool/recall_history"
+	searchdoc "absorb-agent/tool/search_document"
 
 	"absorb-agent/internal/conf"
 	"absorb-agent/internal/document/extract"
 	"absorb-agent/internal/kind"
 	"absorb-agent/internal/log"
+	"absorb-agent/internal/retrieval"
 	"absorb-agent/internal/store"
 )
 
@@ -39,7 +41,8 @@ type ContextInput struct {
 }
 
 // PageInput 当前浏览页：无划词提问时供 agent fetch_page 获取正文。
-// DocumentID 为 /api/page/prepare 的产物（document_contents 锚点 = URL），
+// DocumentID 为 /api/page/prepare 的产物（documentId = documents.id UUID，
+// M0 前为 URL，问答链路按 ID 优先、URL 回退），
 // 非空时优先注入已提取的文档正文（PDF 解读 PR2）。
 type PageInput struct {
 	URL        string `json:"url"`
@@ -165,14 +168,20 @@ func PrepareInvocation(ctx context.Context, app, user string, in InvocationInput
 			pageText = t
 		}
 	}
-	// 文档上下文（PDF 解读 PR2）：页面携带 documentId（/api/page/prepare 产物）
-	// 时注入已提取正文，覆盖网页快照路径的 pageText（文档正文完整度高于快照）。
-	// 同时写入会话页面缓存，后续追问（无 documentId 轮）经既有 LoadPageText 复用，
-	// 不再重复读取 document_contents。注入前统一按 PageTextMaxLen 截断（与
-	// pageMd 直读路径同一守卫）。
+	// 文档上下文（PDF 解读 PR2）：页面携带 documentId（/api/page/prepare 产物，
+	// M0 起 = documents.id UUID）时注入已提取正文，覆盖网页快照路径的 pageText
+	// （文档正文完整度高于快照）。兼容窗口：M0 前扩展端卡片持 URL 语义，按 ID
+	// 查无时回退按 URL 读（宁缺勿错原则不变，回退仅一次查询）。同时写入会话
+	// 页面缓存，后续追问（无 documentId 轮）经既有 LoadPageText 复用，不再重复
+	// 读取 document_contents。注入前统一按 PageTextMaxLen 截断（与 pageMd 直读
+	// 路径同一守卫）。
 	if in.Page != nil {
 		if docID := strings.TrimSpace(in.Page.DocumentID); docID != "" {
-			dc, derr := sessionSvc.Storage().LoadDocumentContent(ctx, app, user, docID)
+			dc, derr := sessionSvc.Storage().LoadDocumentContentByID(ctx, app, user, docID)
+			if dc == nil && derr == nil {
+				// 旧语义兼容：documentId 可能是 M0 前的 URL
+				dc, derr = sessionSvc.Storage().LoadDocumentContent(ctx, app, user, docID)
+			}
 			switch {
 			case derr != nil:
 				log.Warnf("[Absorb] load document content failed (doc=%s): %v", docID, derr)
@@ -215,6 +224,15 @@ func PrepareInvocation(ctx context.Context, app, user string, in InvocationInput
 	}
 	// 注入页面检索状态（缓存全文+参考材料），expand_context 工具从 ctx 读取
 	runCtx := expand.WithPageSearchState(ctx, pageText, refMat)
+	// 注入文档检索状态（M3 hybrid）：当前文档锚定注入（不接受模型指定
+	// document_id，范围与归属校验都在服务端）；无文档轮为空 = 租户内全部
+	// 已索引文档。SharedEmbedder 为 nil（未配置）时自动纯词法。
+	var docScope []string
+	if askCtx.DocumentID != "" {
+		docScope = []string{askCtx.DocumentID}
+	}
+	runCtx = searchdoc.WithHybridSearchState(runCtx, sessionSvc.Storage(),
+		retrieval.SharedEmbedder(), sessionSvc.Storage(), app, user, docScope)
 	// DetachedCancel:取消信号不随 SSE 连接关闭传播,保证正常收尾落库不被断连打断;
 	// 主动停止改由 /api/cancel -> managed.Cancel(requestID) 触发(见 cancelHandler)。
 	requestID := uuid.NewString()

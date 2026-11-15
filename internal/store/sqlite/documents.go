@@ -125,3 +125,31 @@ func (ss *sqliteStore) LoadDocumentContent(ctx context.Context, app, user, url s
 	dc.UpdatedAt = time.Unix(updated, 0)
 	return &dc, nil
 }
+
+// LoadDocumentContentByID 按 documents.id（UUID）读取提取正文：JOIN 关联
+// document_contents（同 app/user/url 聚合键）。查无返回 (nil, nil)——调用方
+// 据此决定是否按 URL 回退（M0 前 documentId=URL 的旧扩展卡片兼容）。
+func (ss *sqliteStore) LoadDocumentContentByID(ctx context.Context, app, user, documentID string) (*storage.DocumentContent, error) {
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
+	var dc storage.DocumentContent
+	var fetched, updated int64
+	err := ss.db.QueryRowContext(ctx,
+		`SELECT dc.url, dc.content_text, dc.char_count, dc.content_type, dc.byte_size, dc.content_hash,
+			dc.extraction_status, dc.extraction_version, dc.truncated, dc.fetched_at, dc.updated_at
+		 FROM document_contents dc
+		 JOIN documents d
+		   ON d.app_name = dc.app_name AND d.user_id = dc.user_id AND d.url = dc.url
+		 WHERE d.app_name=? AND d.user_id=? AND d.id=?`,
+		app, user, documentID).Scan(&dc.URL, &dc.ContentText, &dc.CharCount, &dc.ContentType, &dc.ByteSize,
+		&dc.ContentHash, &dc.ExtractionStatus, &dc.ExtractionVersion, &dc.Truncated, &fetched, &updated)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	dc.FetchedAt = time.Unix(fetched, 0)
+	dc.UpdatedAt = time.Unix(updated, 0)
+	return &dc, nil
+}

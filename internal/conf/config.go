@@ -35,8 +35,27 @@ type Config struct {
 	Upgrade    UpgradeConfig    `yaml:"upgrade"`
 	Proxy      ProxyConfig      `yaml:"proxy"`
 	Fetch      FetchConfig      `yaml:"fetch"`
+	Embedding  EmbeddingConfig  `yaml:"embedding"`
 	Log        LogConfig        `yaml:"logs"`
 	Telemetry  TelemetryConfig  `yaml:"telemetry"`
+}
+
+// EmbeddingConfig 语义向量检索配置（M3 混合检索）。api_key 为空且 provider
+// 非 local = 整体禁用，检索链路自动降级为纯词法（FTS5+BM25）。
+// 两种 provider：
+//   - ""（默认）：OpenAI 兼容 /v1/embeddings 云 API（硅基流动 bge-m3 等）；
+//   - "local"：本机 llama-server 子进程（--embeddings 模式，GGUF 模型，
+//     CPU 推理，离线零 API 成本），server_exe/model_path 指向本机文件。
+type EmbeddingConfig struct {
+	APIKey   string `yaml:"api_key"`   // 云 provider 的密钥；local 模式忽略
+	BaseURL  string `yaml:"base_url"`  // 云 provider 地址，空 = https://api.siliconflow.cn/v1
+	Model    string `yaml:"model"`     // 空 = BAAI/bge-m3
+	BatchSize int   `yaml:"batch_size"` // 索引期单批文本数，0 = 默认 32
+
+	Provider  string `yaml:"provider"`   // 空 = 云 API；"local" = llama-server 子进程
+	ServerExe string `yaml:"server_exe"` // local：llama-server.exe 绝对路径
+	ModelPath string `yaml:"model_path"` // local：GGUF 模型文件绝对路径
+	Port      int    `yaml:"port"`       // local：监听端口，0 = 默认 8935
 }
 
 // TelemetryConfig 生产可观测性（框架链路追踪）配置（默认关闭）。

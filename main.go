@@ -24,6 +24,7 @@ import (
 	"absorb-agent/internal/log"
 	"absorb-agent/internal/nativehost"
 	"absorb-agent/internal/obs"
+	"absorb-agent/internal/retrieval"
 	"absorb-agent/internal/store"
 	"absorb-agent/internal/store/storage"
 	"absorb-agent/internal/telemetry/tokentracker"
@@ -121,6 +122,9 @@ func runCLI() {
 		log.Warnf("[Absorb] telemetry init failed (tracing disabled): %v", err)
 	}
 	defer obs.Close()
+	// M3 语义检索装配：local = llama-server 子进程（离线）；默认 = 云 API；
+	// 两者都未配置 = 禁用（纯词法）。失败降级词法，不阻断启动。
+	setupEmbedding(cfg, func() string { return cfg.Proxy.URL })
 
 	r, sessionSvc, strategy, _ := startCore(cfg, cfgPath, func() string { return cfg.Proxy.URL })
 	defer sessionSvc.Close()
@@ -182,12 +186,44 @@ func runCLI() {
 
 // newDocumentAPI 文档准备端点（PDF 解读 PR2）：复用 fetch 公共获取服务，代理与
 // 内容上限经闭包实时读取（与 fetch_page 同款热生效约定；CLI 形态传静态闭包）。
+// M3：embedding 配置启用时注入语义向量化（SharedEmbedder 为 nil 即纯词法）。
 func newDocumentAPI(sessionSvc *store.SessionService, proxyFn func() string, maxBytesFn func() int64) *document.API {
 	return document.NewAPI(document.NewService(
 		sessionSvc.Storage(),
 		docextract.NewPDFExtractor(fetch_page.NewFetchPageService(proxyFn, maxBytesFn)),
 		chat.AppName, chat.UserID,
-	))
+	).WithEmbedder(retrieval.SharedEmbedder()))
+}
+
+// setupEmbedding 语义检索装配（M3）：按 provider 构造共享 Embedder。
+// 返回 local 模式的子进程管理器（调用方负责 Stop；云模式返回 nil）。
+func setupEmbedding(cfg conf.Config, proxyFn func() string) *retrieval.LocalEmbeddingServer {
+	emb := cfg.Embedding
+	switch emb.Provider {
+	case "local":
+		srv := retrieval.NewLocalEmbeddingServer(emb.ServerExe, emb.ModelPath, emb.Port)
+		if err := srv.Start(context.Background()); err != nil {
+			log.Warnf("[Absorb] local embedding server failed (lexical-only): %v", err)
+			return nil
+		}
+		model := strings.TrimSuffix(filepath.Base(emb.ModelPath), filepath.Ext(emb.ModelPath))
+		// local 批上限 8：llama-server embeddings 不做跨请求切片，physical
+		// batch（8192）须覆盖单次请求 token 总和（8 条 × ~700 token ≈ 5600）
+		localBatch := emb.BatchSize
+		if localBatch <= 0 || localBatch > 8 {
+			localBatch = 8
+		}
+		retrieval.SetSharedEmbedder(retrieval.NewOpenAICompatEmbedder(srv.BaseURL(), "local", model, localBatch, nil).
+			WithMaxChars(500)) // bge-v1.5 系 512 token 上下文，llama-server 拒绝超长输入
+		return srv
+	default:
+		if strings.TrimSpace(emb.APIKey) == "" {
+			return nil // 未配置：纯词法
+		}
+		retrieval.SetSharedEmbedder(retrieval.NewOpenAICompatEmbedder(
+			emb.BaseURL, emb.APIKey, emb.Model, emb.BatchSize, proxyFn))
+		return nil
+	}
 }
 
 // runDesktop 桌面形态：数据根解析 → 初始化（同 CLI）→ 内嵌 HTTP 桥 → Wails 窗口 + 托盘
@@ -209,6 +245,11 @@ func runDesktop() {
 		log.Warnf("[Absorb] telemetry init failed (tracing disabled): %v", err)
 	}
 	defer obs.Close()
+	// M3 语义检索装配（同 CLI 分支）：local 子进程生命周期挂 app.shutdown
+	localSrv := setupEmbedding(cfg, func() string { return cfg.Proxy.URL })
+	if localSrv != nil {
+		defer localSrv.Stop()
+	}
 
 	// 配置运行时句柄：设置页保存后经句柄更新，请求侧实时读取（热切换）
 	cfgH := conf.NewHandle(cfg)

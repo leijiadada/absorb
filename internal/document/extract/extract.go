@@ -17,8 +17,8 @@ import (
 // 产品状态枚举（prepare 链路对外语义，document_contents.extraction_status 同值域）。
 // 失败状态不落库，由扩展端渲染对应文案并决定重试。
 const (
-	StatusReady        = "ready"        // 完整提取，全文可注入
-	StatusPartial      = "partial"      // 部分可读：全文已落库，但超 PageTextMaxLen 注入截断或获取侧截断
+	StatusReady        = "ready"        // 完整提取（全文已落库；注入是否截断属上下文交付，不影响本状态）
+	StatusPartial      = "partial"      // 获取侧静默截断（提取不完整）；注入长度限制属上下文交付，不改变本状态
 	StatusTooLarge     = "too_large"    // 文件超内容大小上限
 	StatusNeedsAuth    = "needs_auth"   // 401/403：需要登录或访问权限
 	StatusNoText       = "no_text"      // 无可提取文本（扫描件/图片型 PDF）
@@ -74,8 +74,17 @@ func (p *PDFExtractor) Extract(ctx context.Context, url string) (*Result, error)
 	if err != nil {
 		return nil, classify(err)
 	}
+	content := CollapsePDFSpacing(doc.Content)
+	// 乱码守卫：字体缺 ToUnicode cmap 时（实测《人月神话》某文字版、《程序员
+	// 的自我修养》），dslipak 提取出替换符/空串——落库只会污染索引，按扫描件
+	// 同语义拒绝（no_text：无可提取文本）。
+	if garbledRatio(content) > 0.05 {
+		return nil, &Error{Status: StatusNoText, Message: "文本无法解码（PDF 字体缺少 Unicode 映射，可能是扫描件或特殊编码）"}
+	}
+	// PDF 文本层的逐字符空格化修复（CID 字体常见现象，实测《Go 程序设计
+	// 语言》中文版整本 "最 早 参 与"——不分词不可用、原文呈现不可读）
 	return &Result{
-		Content:     doc.Content,
+		Content:     content,
 		ContentType: doc.ContentType,
 		FinalURL:    doc.FinalURL,
 		Truncated:   doc.Truncated,

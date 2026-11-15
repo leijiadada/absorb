@@ -24,10 +24,12 @@ import (
 
 	expand "absorb-agent/tool/expand_context"
 	recall "absorb-agent/tool/recall_history"
+	searchdoc "absorb-agent/tool/search_document"
 
 	"absorb-agent/internal/errs"
 	"absorb-agent/internal/kind"
 	"absorb-agent/internal/log"
+	"absorb-agent/internal/retrieval"
 	"absorb-agent/internal/store"
 )
 
@@ -128,6 +130,9 @@ func resumePhase(
 	refMat, _ := sessionSvc.RecentReferenceMaterial(ctx, app, user, sessionID, filterKey)
 	recallKey := session.Key{AppName: app, UserID: user, SessionID: sessionID}
 	runCtx := expand.WithPageSearchState(ctx, pageText, refMat)
+	// search_document（M3 hybrid）：恢复轮无 documentId 上下文，nil = 租户内全部已索引文档
+	runCtx = searchdoc.WithHybridSearchState(runCtx, sessionSvc.Storage(),
+		retrieval.SharedEmbedder(), sessionSvc.Storage(), app, user, nil)
 	runCtx = recall.WithRecallState(runCtx, sessionSvc, recallKey, filterKey,
 		sessionSvc.SummaryCutoffs(ctx, recallKey))
 

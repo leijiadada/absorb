@@ -22,7 +22,7 @@ type AskContext struct {
 	URL               string // 来源 URL
 	PageTitle         string // 当前浏览页标题（无划词提问时随 URL 注入，可空）
 	PageMd            string // 当前页整页结构化文本（无划词提问时扩展端采集，非空则注入 <page_content> 并免 fetch_page）
-	DocumentID        string // /api/page/prepare 产物（PDF 解读）：非空表示 PageMd 为文档正文（划词提问也注入 <page_content>）
+	DocumentID        string // /api/page/prepare 产物（PDF 解读）：= documents.id UUID（M0 前为 URL），非空表示 PageMd 为文档正文（划词提问也注入 <page_content>）
 	ContentStatus     string // 页面正文完整度（full/partial/selected_only/unavailable，空=不上报不渲染）
 	Question          string // 用户提问
 	ReferenceMaterial string // 会话参考材料：首轮=SelectedText，追问=从历史查得（追问重申机制）
@@ -245,7 +245,8 @@ func (s *glmStrategy) userProfileBlock() string {
 }
 
 // pageContentHeadRunes <page_content> 注入的头部预算：首屏/导语通常在此范围内，
-// 全量内容已入页面缓存，更多细节由模型按需 expand_context 检索（避免 prompt 膨胀）。
+// 更多内容已入页面缓存（缓存本身按 PageTextMaxLen 截断，超出部分检索不可达），
+// 细节由模型按需 expand_context 检索（避免 prompt 膨胀）。
 const pageContentHeadRunes = 6000
 
 // pageContentBlock 扩展端采集到页面内容时注入 <page_content>：LLM 直接看到正文，
@@ -264,7 +265,12 @@ func pageContentBlock(c AskContext) string {
 	tail := ""
 	if len(md) > pageContentHeadRunes {
 		md = md[:pageContentHeadRunes]
-		tail = "\n（以上为页面开头部分；完整内容已缓存，如需更多细节可调用 expand_context 工具按关键词检索）"
+		// 如实标注：缓存有上限（PageTextMaxLen），不能声称"完整内容已缓存"
+		tail = "\n（以上为页面开头部分；后续内容已缓存至篇幅上限，可调用 expand_context 工具按关键词检索；如仍未覆盖所需细节请如实说明）"
+		if strings.TrimSpace(c.DocumentID) != "" {
+			// 文档场景（PDF/长文）：30k 缓存之外的全文证据走 search_document（FTS 全文检索）
+			tail += "长文档全文证据可用 search_document 工具检索（不受上述篇幅上限约束）。"
+		}
 	}
 	var b strings.Builder
 	b.WriteString("<page_content>\n")
