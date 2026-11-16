@@ -123,8 +123,18 @@ const (
 	IndexStatusFailed  = "failed"  // 构建失败（旧索引保留，ErrorMessage 记原因）
 )
 
+// 向量索引状态值（document_index_state.vector_status，0010 起）。
+// '' = 未建/未知（含 chunks 刚重建、向量待补）。向量域独立于词法 index_status：
+// ready 且 vector_model=当前模型 且 vector_count=chunk_count 才视为向量就绪。
+const (
+	VectorStatusReady  = "ready"
+	VectorStatusFailed = "failed"
+)
+
 // DocumentIndexState document_index_state 表行：文档索引生命周期。
 // IndexedContentHash 比对 document_contents.content_hash 判定待重建。
+// 词法域（IndexStatus/ChunkerVersion/TokenizerVersion）与向量域（Vector*）解耦：
+// 词法 ready 不代表向量完整——向量缺失/失败/换模型须能被独立检测并补建。
 type DocumentIndexState struct {
 	AppName            string    `json:"-"`
 	UserID             string    `json:"-"`
@@ -136,6 +146,20 @@ type DocumentIndexState struct {
 	ChunkCount         int       `json:"chunkCount"`
 	IndexedAt          time.Time `json:"indexedAt"`
 	ErrorMessage       string    `json:"errorMessage,omitempty"`
+	// 向量索引状态（0010 起）：embedding 模型指纹 + 完成度。
+	VectorModel  string `json:"vectorModel"`
+	VectorStatus string `json:"vectorStatus"`
+	VectorCount  int    `json:"vectorCount"`
+	VectorError  string `json:"vectorError,omitempty"`
+}
+
+// DocumentVectorState 向量域状态写入载荷（UpdateDocumentVectorState 用）：
+// 只覆盖 document_index_state 的 vector_* 四列，不触碰词法状态。
+type DocumentVectorState struct {
+	Model  string `json:"model"`
+	Status string `json:"status"`
+	Count  int    `json:"count"`
+	Error  string `json:"error,omitempty"`
 }
 
 // DocumentChunkHit FTS 检索命中：chunk 原文 + 所属文档标题 + bm25 得分。

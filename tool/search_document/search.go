@@ -60,3 +60,33 @@ func DiversifyHits(raw []storage.DocumentChunkHit, perDoc, total int) ([]storage
 func normalizeForDedup(content string) string {
 	return strings.Join(strings.Fields(content), "")
 }
+
+// DeduplicateHits 单文档范围的结果裁剪（M3 修正）：只做内容去重 + 总量控制，
+// 不施加每文档配额——范围已限定（通常为当前阅读的单篇文档），per-doc 轮转
+// 只会把 top_k 硬性压到 perDoc（3 < 5/10），Recall@K 名不副实。跨文档范围
+// 仍走 DiversifyHits（防长文垄断）。返回最终片段与覆盖文档数，入参假定已排序。
+func DeduplicateHits(raw []storage.DocumentChunkHit, total int) ([]storage.DocumentChunkHit, int) {
+	if len(raw) == 0 {
+		return nil, 0
+	}
+	if total <= 0 {
+		total = FinalLimit
+	}
+	seen := make(map[string]struct{}, len(raw))
+	docs := make(map[string]struct{}, 4)
+	out := make([]storage.DocumentChunkHit, 0, total)
+	for i := range raw {
+		h := raw[i]
+		key := normalizeForDedup(h.Content)
+		if _, dup := seen[key]; dup {
+			continue
+		}
+		seen[key] = struct{}{}
+		docs[h.DocumentID] = struct{}{}
+		out = append(out, h)
+		if len(out) >= total {
+			break
+		}
+	}
+	return out, len(docs)
+}

@@ -26,6 +26,19 @@ embedding:
   # model: ""         # 空 = BAAI/bge-m3
   # batch_size: 32    # 索引期单批文本数
 
+  # 精排（可选）：rerank_model 为云模型名（复用上方 api_key/base_url，/v1/rerank）
+  # rerank_model: ""  # 如 BAAI/bge-reranker-v2-m3；空 = 禁用精排
+  # rerank_top_n: 8   # 精排候选数
+
+  # 本地语义检索（离线，provider: local）：llama-server 子进程，零 API 成本
+  # provider: "local"
+  # server_exe: "D:/path/llama-server.exe"
+  # model_path: "D:/path/bge-small-zh-v1.5-f16.gguf"
+  # port: 8935
+  # 本地精排（local 模式可选）：CPU 上每候选约 0.7s（Q8_0），top_n 按延迟预算选择
+  # rerank_model_path: "D:/path/bge-reranker-v2-m3-Q8_0.gguf"
+  # rerank_port: 8937
+
 fetch:
   timeout_seconds: 30
 

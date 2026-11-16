@@ -32,7 +32,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
-	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -149,6 +149,7 @@ func TestSynonymRetrievalBaseline(t *testing.T) {
 	hybrid := os.Getenv("ABSORB_LOCAL_EMBED") == "1"
 	var emb retrieval.Embedder
 	var reranker retrieval.Reranker // ABSORB_RERANK_GGUF 配置时启用精排
+	rrTopN := 16                    // 精排候选数（ABSORB_RERANK_TOPN 可调）
 	if hybrid {
 		exe := os.Getenv("ABSORB_LLAMA_EXE")
 		gguf := os.Getenv("ABSORB_LLAMA_GGUF")
@@ -180,7 +181,14 @@ func TestSynonymRetrievalBaseline(t *testing.T) {
 				t.Fatalf("rerank sidecar: %v", err)
 			}
 			defer rrSrv.Stop()
-			reranker = retrieval.NewLlamaRerankClient(rrSrv.BaseURL(), filepath.Base(rrGGUF))
+			reranker = retrieval.NewLlamaRerankClient(rrSrv.BaseURL(), filepath.Base(rrGGUF), "", nil)
+			// 候选数可调（ABSORB_RERANK_TOPN，默认 16）：生产延迟-质量权衡用
+			if v := os.Getenv("ABSORB_RERANK_TOPN"); v != "" {
+				if n, nerr := strconv.Atoi(v); nerr == nil && n > 0 {
+					rrTopN = n
+				}
+			}
+			t.Logf("rerank topN=%d", rrTopN)
 		}
 		// 分身 URL：强制全量重建（原 URL 词法幂等跳过，向量不会补齐）
 		mirrorURL := bookURL + "?hybrid-eval=1"
@@ -193,15 +201,8 @@ func TestSynonymRetrievalBaseline(t *testing.T) {
 		if err := st.SaveDocumentContent(ctx, app, user, &mdc); err != nil {
 			t.Fatalf("save mirror content: %v", err)
 		}
-		// 分身索引可能在上次中断的评测中已 ready 但向量未入库（中断时词法已
-		// 建成、embedChunks 未跑完，幂等跳过会让向量永远补不上）——先标 failed
-		// 强制全量重建，保证向量入库后再评测。
-		if err := st.ReplaceDocumentIndex(ctx, app, user, mdoc.ID, nil, &storage.DocumentIndexState{
-			DocumentID: mdoc.ID, IndexStatus: storage.IndexStatusFailed,
-			ErrorMessage: "force rebuild for hybrid eval",
-		}); err != nil {
-			t.Fatalf("force rebuild mark: %v", err)
-		}
+		// 幂等按词法/向量双域判断（0010 起）：分身上次中断留下的「词法 ready、
+		// 向量缺失」会被 BuildIndex 独立检测并只补向量，无需再手动标 failed。
 		document.NewService(st, nil, app, user).WithEmbedder(emb).BuildIndex(ctx, mdoc.ID, &mdc)
 		if _, vrows, verr := st.LoadVectorHits(ctx, app, user, emb.Model(), []string{mdoc.ID}); verr != nil || len(vrows) == 0 {
 			t.Fatalf("分身文档向量未入库 (err=%v, rows=%d)——HYBRID 评测无效", verr, len(vrows))
@@ -232,6 +233,7 @@ func TestSynonymRetrievalBaseline(t *testing.T) {
 		synResults, ctlResults []result
 		recallAt5, recallAt10  float64
 		mrrSum                 float64
+		rrFallbackCnt          int // 精排失败降级融合序的条数（>0 时 Reranker 口径部分失真）
 	)
 	t.Logf("%-28s %-6s %-6s %s", "题目", "命中", "MRR", "耗时")
 	for _, c := range synonymCases {
@@ -248,14 +250,20 @@ func TestSynonymRetrievalBaseline(t *testing.T) {
 					vector := retrieval.TopKByCosine(vhits, vrows, qv, 50)
 					fused := retrieval.FuseRRF(lexical, vector, 50)
 					if reranker != nil {
-						fused = rerankCandidates(ctx, fused, c.query, reranker, 16)
+						var applied bool
+						fused, applied = retrieval.RerankCandidates(ctx, fused, c.query, reranker, rrTopN)
+						if !applied {
+							rrFallbackCnt++
+							t.Logf("rerank 失败降级融合序（%s）——本条 Reranker 口径无效", c.name)
+						}
 					}
-					hits, _ = searchdoc.DiversifyHits(fused, searchdoc.PerDocLimit, 10)
+					hits, _ = searchdoc.DeduplicateHits(fused, 10)
 				}
 			}
 		} else {
-			// 词法模式同口径：过多样性层后取前 10
-			hits, _ = searchdoc.DiversifyHits(lexical, searchdoc.PerDocLimit, 10)
+			// 词法模式同口径：只去重 + 总量 10（单文档范围不做 per-doc 配额，
+			// 与生产 scoped 路径一致；否则 Recall@5/10 被压到 3 条候选失真）
+			hits, _ = searchdoc.DeduplicateHits(lexical, 10)
 		}
 		dur := time.Since(start).Milliseconds()
 		rank, rankRaw := 0, 0
@@ -280,10 +288,10 @@ func TestSynonymRetrievalBaseline(t *testing.T) {
 		mark := "✗"
 		if rank > 0 {
 			mark = "✓"
-			mrrSum += 1.0 / float64(rank)
-			// Recall 只统计同义组（分母 n=len(synResults) 也是同义组）——
-			// 曾经分子混入对照命中、分母不含对照，成绩单被系统性抬高
+			// MRR 与 Recall 同口径：只统计同义组（对照组是正向可达性校验，
+			// 混入分子会系统性抬高成绩）
 			if isSyn {
+				mrrSum += 1.0 / float64(rank)
 				if rank <= 5 {
 					recallAt5++
 				}
@@ -317,7 +325,7 @@ func TestSynonymRetrievalBaseline(t *testing.T) {
 	}
 
 	n := float64(len(synResults))
-	mrr := mrrSum / float64(len(synonymCases))
+	mrr := mrrSum / n
 	t.Logf("")
 	modeName := "词法检索基线"
 	if hybrid && emb != nil {
@@ -327,8 +335,11 @@ func TestSynonymRetrievalBaseline(t *testing.T) {
 		}
 	}
 	t.Logf("==== %s 同义评测（M3 决策数据，语料：%d 字）====", modeName, dc.CharCount)
-	t.Logf("同义组（%d 题）：Recall@5=%.0f%%  Recall@10=%.0f%%", int(n), recallAt5/n*100, recallAt10/n*100)
-	t.Logf("全体 MRR@10=%.2f", mrr)
+	if reranker != nil && rrFallbackCnt > 0 {
+		t.Logf("警告：%d/%d 条精排失败降级融合序，Reranker 口径部分失真，先排查 8937 sidecar 再解读指标",
+			rrFallbackCnt, len(synonymCases))
+	}
+	t.Logf("同义组（%d 题）：Recall@5=%.0f%%  Recall@10=%.0f%%  MRR@10=%.2f", int(n), recallAt5/n*100, recallAt10/n*100, mrr)
 	t.Logf("判读：Recall@10 低（如 <50%%）说明同义缺口显著，接 Embedding 收益大；")
 	t.Logf("      若 ≥80%%，词法已够用，M3 语义检索优先级降低。")
 }
@@ -350,30 +361,4 @@ func itoa(i int) string {
 		i /= 10
 	}
 	return digits
-}
-
-// rerankCandidates 对融合候选 topN 精排：按 reranker 分数降序重排前 topN 条，
-// 其余保持原序缀后；rerank 失败降级原序（宁可用融合排名也不丢结果）。
-func rerankCandidates(ctx context.Context, fused []storage.DocumentChunkHit, query string, r retrieval.Reranker, topN int) []storage.DocumentChunkHit {
-	if len(fused) <= topN {
-		topN = len(fused)
-	}
-	docs := make([]string, topN)
-	for i := 0; i < topN; i++ {
-		docs[i] = fused[i].Content
-	}
-	scores, err := r.Rerank(ctx, query, docs)
-	if err != nil || len(scores) != topN {
-		return fused
-	}
-	ord := make([]int, topN)
-	for i := range ord {
-		ord[i] = i
-	}
-	sort.SliceStable(ord, func(a, b int) bool { return scores[ord[a]] > scores[ord[b]] })
-	out := make([]storage.DocumentChunkHit, 0, len(fused))
-	for _, id := range ord {
-		out = append(out, fused[id])
-	}
-	return append(out, fused[topN:]...)
 }

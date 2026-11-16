@@ -1,13 +1,12 @@
 module absorb-agent
 
-go 1.27.0
+go 1.27.4
 
-// govulncheck 门禁要求：GO-2026-6859（net/http MaxBytesReader 竞态）修复于 go1.27.4。
-// GOTOOLCHAIN=auto 下会自动下载匹配版本，保证本地与 CI 的 stdlib 口径一致。
-toolchain go1.27.4
-
+// 评测链路专用：evaluation v1.11.0 自身 pin 的 model/* 子模块 v0.8.0 与核心 v1.11.2
+// 不兼容（缺 imodel.DefaultOutputTokensFloor），此处显式升到与核心同代的 v1.11.0（MVS 取高者）。
 require (
 	github.com/energye/systray v1.0.3
+	github.com/go-ego/gse v1.0.0
 	github.com/google/uuid v1.6.0
 	github.com/openai/openai-go v1.12.0
 	github.com/wailsapp/wails/v2 v2.16.0
@@ -30,8 +29,6 @@ require (
 	trpc.group/trpc-go/trpc-agent-go/tool/webfetch/httpfetch v1.11.0
 )
 
-// 评测链路专用：evaluation v1.11.0 自身 pin 的 model/* 子模块 v0.8.0 与核心 v1.11.2
-// 不兼容（缺 imodel.DefaultOutputTokensFloor），此处显式升到与核心同代的 v1.11.0（MVS 取高者）。
 require (
 	cloud.google.com/go v0.123.0 // indirect
 	cloud.google.com/go/auth v0.18.2 // indirect
@@ -49,21 +46,11 @@ require (
 	github.com/creack/pty v1.1.24 // indirect
 	github.com/dslipak/pdf v0.0.2 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/eliben/go-sentencepiece v0.7.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
-	github.com/go-ego/gse v1.0.0 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
-	github.com/gofrs/flock v0.13.2 // indirect
-	github.com/gomlx/compute v0.1.28 // indirect
-	github.com/gomlx/compute-onnx v0.1.28 // indirect
-	github.com/gomlx/exceptions v0.0.3 // indirect
-	github.com/gomlx/go-huggingface v0.4.32 // indirect
-	github.com/gomlx/go-xla v0.4.28 // indirect
-	github.com/gomlx/gomlx v0.28.34 // indirect
-	github.com/gomlx/onnx-gomlx v0.5.31 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.11 // indirect
@@ -74,8 +61,6 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/jchv/go-winloader v0.0.0-20210711035445-715c2860da7e // indirect
-	github.com/knights-analytics/hugot v0.8.6 // indirect
-	github.com/knights-analytics/ortgenai v0.3.5 // indirect
 	github.com/labstack/echo/v4 v4.13.3 // indirect
 	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/leaanthony/go-ansi-parser v1.6.1 // indirect
@@ -85,17 +70,19 @@ require (
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/microsoft/onnxruntime/go v0.0.0-20261111070922-6cc3c09506ec // indirect
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/neurosnap/sentences v1.1.2 // indirect
 	github.com/ollama/ollama v0.17.1 // indirect
 	github.com/panjf2000/ants/v2 v2.10.0 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
+	github.com/rogpeppe/go-internal v1.16.0 // indirect
 	github.com/samber/lo v1.49.1 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
+	github.com/stretchr/testify v1.12.1 // indirect
 	github.com/tidwall/gjson v1.18.0 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
@@ -115,16 +102,17 @@ require (
 	go.opentelemetry.io/otel/metric v1.45.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.11.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
+	go.yaml.in/yaml/v3 v3.0.6 // indirect
 	golang.org/x/crypto v0.58.0 // indirect
-	golang.org/x/exp v0.0.0-20261109185158-a52e3aef5920 // indirect
 	golang.org/x/sync v0.25.0 // indirect
+	golang.org/x/term v0.48.0 // indirect
 	golang.org/x/text v0.44.0 // indirect
+	golang.org/x/tools v0.52.1-0.20261106145633-d407941a339a // indirect
 	google.golang.org/genai v1.36.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260803160001-6ac0973c030d // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260803160001-6ac0973c030d // indirect
 	google.golang.org/grpc v1.83.1 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
-	k8s.io/klog/v2 v2.140.0 // indirect
 	modernc.org/gc/v3 v3.0.0-20240107210532-573471604cb6 // indirect
 	modernc.org/libc v1.41.0 // indirect
 	modernc.org/mathutil v1.6.0 // indirect

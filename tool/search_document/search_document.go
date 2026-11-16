@@ -130,7 +130,29 @@ func NewSearchDocumentTool() tool.CallableTool {
 			}
 		}
 		fused := retrieval.FuseRRF(lexical, vectorHits, RawRecallLimit)
-		final, docsCovered := DiversifyHits(fused, PerDocLimit, limit)
+		// 精排（M3 可选）：SharedReranker 非空时对融合候选 top-N 重排，失败降级
+		// 融合序。rerankState 供 span/日志观测：off=未配置 / applied=生效 /
+		// fallback=调用失败降级（降级时 RerankCandidates 内部已记 Warn 日志）
+		rr := retrieval.SharedReranker()
+		fused, rerankApplied := retrieval.RerankCandidates(ctx, fused, q, rr, retrieval.SharedRerankTopN())
+		rerankState := "off"
+		if rr != nil {
+			if rerankApplied {
+				rerankState = "applied"
+			} else {
+				rerankState = "fallback"
+			}
+		}
+		// 范围感知的结果裁剪：单文档范围（当前阅读的资料）只去重 + 总量控制，
+		// per-doc 配额会把 top_k 硬性压到 3（Recall@5/10 失真）；跨文档范围才
+		// 按 M2 多样性轮转（防长文垄断、短文无曝光）。
+		var final []storage.DocumentChunkHit
+		var docsCovered int
+		if len(st.documentIDs) == 1 {
+			final, docsCovered = DeduplicateHits(fused, limit)
+		} else {
+			final, docsCovered = DiversifyHits(fused, PerDocLimit, limit)
+		}
 		dur := time.Since(started).Round(time.Millisecond)
 		scope := "all_documents"
 		if len(st.documentIDs) > 0 {
@@ -143,10 +165,11 @@ func NewSearchDocumentTool() tool.CallableTool {
 			attribute.Int("final_hits", len(final)),
 			attribute.Int("docs_covered", docsCovered),
 			attribute.String("scope", scope),
+			attribute.String("rerank", rerankState),
 			attribute.Int("call_index", int(callIdx)),
 		)
-		log.Infof("[Absorb] search_document call#%d: q=%q lex=%d vec=%d final=%d docs=%d scope=%s dur=%s",
-			callIdx, q, len(lexical), len(vectorHits), len(final), docsCovered, scope, dur)
+		log.Infof("[Absorb] search_document call#%d: q=%q lex=%d vec=%d final=%d docs=%d scope=%s rerank=%s dur=%s",
+			callIdx, q, len(lexical), len(vectorHits), len(final), docsCovered, scope, rerankState, dur)
 		if len(fused) == 0 {
 			return searchDocumentOutput{
 				Success: true,

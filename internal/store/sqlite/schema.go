@@ -266,6 +266,8 @@ CREATE TABLE IF NOT EXISTS document_contents (
 //     indexed_content_hash 比对 document_contents.content_hash 判定待重建；
 //     chunker/tokenizer 版本变化同样触发重建。重建在事务内整体替换，
 //     失败保留旧索引并标 failed（不留新旧混杂中间态）。
+//     vector_* 四列为向量域状态（0010 起，与词法 index_status 解耦）：
+//     词法 ready 不代表向量完整——缺失/失败/换模型由 embedChunks 独立补建。
 const documentIndexDDL = `
 CREATE TABLE IF NOT EXISTS document_chunks (
 	id                 TEXT PRIMARY KEY,
@@ -305,23 +307,28 @@ CREATE TABLE IF NOT EXISTS document_index_state (
 	chunk_count          INTEGER NOT NULL DEFAULT 0,
 	indexed_at           INTEGER NOT NULL DEFAULT 0,
 	error_message        TEXT NOT NULL DEFAULT '',
+	vector_model         TEXT NOT NULL DEFAULT '',
+	vector_status        TEXT NOT NULL DEFAULT '',
+	vector_count         INTEGER NOT NULL DEFAULT 0,
+	vector_error         TEXT NOT NULL DEFAULT '',
 	PRIMARY KEY (app_name, user_id, document_id)
 );
 `
 
 // schemaDDL 全新库的建库文本：基础表 + 知识表 + 资料表 + 追踪表 + 扩展镜像表 +
-// token 用量表 + 文档正文表 + 文档检索索引表 + chunk 向量表（升级库由
-// 0002~0009 迁移补建）。
+// token 用量表 + 文档正文表 + 文档检索索引表（含向量状态列）+ chunk 向量表
+// （升级库由 0002~0010 迁移补齐）。
 const schemaDDL = baseSchemaDDL + knowledgeTablesDDL + documentsDDL + TraceTablesDDL + extMirrorDDL + tokenUsageDDL + documentContentsDDL + documentIndexDDL + chunkVectorsDDL
 
 // chunkVectorsDDL 文档 chunk 向量表（M3 语义召回）：
 //   - 与 document_chunks 按 chunk_id 关联，app/user/document_id 冗余同租户约定；
 //   - vector 为 float32 LE 打包 BLOB，dims 记维度（余弦计算时校验）；
-//   - model 入库：跨模型向量不可比，加载按当前配置模型过滤——换模型等效
-//     未建向量，检索自动降级词法直至重建完成。
+//   - model 入库且复合主键 (chunk_id, model)：跨模型向量不可比，加载按当前
+//     配置模型过滤；换模型重新嵌入写新模型行（旧模型行由下次 chunks 重建清空），
+//     单列 chunk_id 主键会让换模型嵌入撞 UNIQUE 约束（0010 修复）。
 const chunkVectorsDDL = `
 CREATE TABLE IF NOT EXISTS document_chunk_vectors (
-	chunk_id     TEXT PRIMARY KEY,
+	chunk_id     TEXT NOT NULL,
 	app_name     TEXT NOT NULL,
 	user_id      TEXT NOT NULL,
 	document_id  TEXT NOT NULL,
@@ -329,7 +336,8 @@ CREATE TABLE IF NOT EXISTS document_chunk_vectors (
 	dims         INTEGER NOT NULL,
 	model        TEXT NOT NULL,
 	vector       BLOB NOT NULL,
-	created_at   INTEGER NOT NULL
+	created_at   INTEGER NOT NULL,
+	PRIMARY KEY (chunk_id, model)
 );
 CREATE INDEX IF NOT EXISTS idx_chunk_vectors_doc
 ON document_chunk_vectors(app_name, user_id, document_id, model);

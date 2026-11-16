@@ -1,131 +1,162 @@
-package document
+package document_test
 
-// 索引构建（M1）：Prepare 全链路集成——建索引、可检索、重建替换、失败不阻塞。
-// 长文验收（M1 验收标准）：开头/中间/末尾的证据均可通过检索找到。
+// BuildIndex 幂等双域判定测试（0010 P0 修复）：词法 ready 不再挡住向量补建。
+// 用真实 sqlite store + 可控 fake embedder 走完整链路：
+//  1. 首次构建（embed 失败）→ 词法 ready + 向量 failed
+//  2. embed 恢复后重建 → 只补向量（chunk_id 不变，词法索引不重写）
+//  3. 换模型 → 向量重建到新模型
+//  4. 向量就绪后再触发 → 完全跳过（幂等）
+//
+// 外部测试包：import tool/search_document 成环的约束同 synonym_eval_test.go。
 
 import (
 	"context"
-	"fmt"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
 	"path/filepath"
-	"strings"
 	"testing"
 
+	"absorb-agent/internal/document"
+	"absorb-agent/internal/retrieval"
 	_ "absorb-agent/internal/store/sqlite"
 	"absorb-agent/internal/store/storage"
-	"absorb-agent/internal/document/extract"
 )
 
-func newIdxTestService(t *testing.T) (*Service, storage.Storage) {
-	t.Helper()
-	st, err := storage.New("sqlite", filepath.Join(t.TempDir(), "idx-test.db"))
-	if err != nil {
-		t.Fatalf("storage.New: %v", err)
-	}
-	t.Cleanup(func() { _ = st.Close() })
-	return NewService(st, nil, "app", "user"), st
+// fakeEmbedder 可控向量化替身：failNext 置真时 EmbedDocuments 返回错误一次。
+type fakeEmbedder struct {
+	model    string
+	failNext bool
+	calls    int
 }
 
-// TestPrepareBuildsSearchableIndex 长文验收：>30k 字正文完整落库 + 索引就绪，
-// 开头/中间/末尾的专属标记词均可检索命中（30k 缓存之外可达）。
-func TestPrepareBuildsSearchableIndex(t *testing.T) {
-	svc, st := newIdxTestService(t)
-	// 三段专属标记分别落在开头/中间/末尾（超 PageTextMaxLen 两倍）
-	marker := func(i int) string { return fmt.Sprintf("独有标记词%d号", i) }
-	var b strings.Builder
-	b.WriteString("开篇。" + marker(1) + "。\n\n")
-	fill := strings.Repeat("填充内容，软件工程与智能体的讨论。", 4000) // ~4.8万字
-	b.WriteString(fill)
-	b.WriteString("\n\n中段。" + marker(2) + "。\n\n")
-	b.WriteString(fill)
-	b.WriteString("\n\n结尾。" + marker(3) + "。")
-	text := b.String()
-	fx := &fakeExtractor{res: &extract.Result{Content: text, ContentType: "application/pdf"}}
-	svc.extractor = fx
+func (f *fakeEmbedder) Model() string { return f.model }
 
-	res, err := svc.Prepare(context.Background(), "https://example.com/long.pdf", "长文档")
+func (f *fakeEmbedder) EmbedDocuments(_ context.Context, texts []string) ([][]float32, error) {
+	f.calls++
+	if f.failNext {
+		f.failNext = false
+		return nil, errors.New("sidecar unavailable")
+	}
+	out := make([][]float32, len(texts))
+	for i := range texts {
+		out[i] = []float32{float32(f.calls), float32(i + 1)}
+	}
+	return out, nil
+}
+
+func (f *fakeEmbedder) EmbedQuery(_ context.Context, _ string) ([]float32, error) {
+	return []float32{1, 0}, nil
+}
+
+func idxContent(t *testing.T, st storage.Storage, ctx context.Context, url, text string) string {
+	t.Helper()
+	sum := sha256.Sum256([]byte(text))
+	doc, err := st.UpsertDocument(ctx, "app", "user", url, "幂等验证")
 	if err != nil {
-		t.Fatalf("Prepare: %v", err)
+		t.Fatalf("upsert: %v", err)
 	}
-	if res.Status != extract.StatusReady {
-		t.Fatalf("long doc status = %s, want ready（M0 语义）", res.Status)
+	if err := st.SaveDocumentContent(ctx, "app", "user", &storage.DocumentContent{
+		URL: url, ContentText: text, CharCount: len([]rune(text)),
+		ContentHash: hex.EncodeToString(sum[:]), ContentType: "text/plain",
+	}); err != nil {
+		t.Fatalf("save content: %v", err)
 	}
-	// 索引就绪
-	state, err := st.LoadDocumentIndexState(context.Background(), "app", "user", res.DocumentID)
+	return doc.ID
+}
+
+func chunkIDs(t *testing.T, st storage.Storage, ctx context.Context, docID string) []string {
+	t.Helper()
+	chunks, err := st.LoadDocumentChunks(ctx, "app", "user", docID)
+	if err != nil {
+		t.Fatalf("load chunks: %v", err)
+	}
+	ids := make([]string, len(chunks))
+	for i, c := range chunks {
+		ids[i] = c.ID
+	}
+	return ids
+}
+
+func TestBuildIndexVectorRetry(t *testing.T) {
+	st, cleanup := newTestStore(t)
+	defer cleanup()
+	ctx := context.Background()
+	text := "这是用于幂等验证的正文内容。软件工程的实践会随着智能体的加入而改变。足够长以切出多个分块，幂等验证需要至少两个分块才能观察向量数量对齐。"
+	docID := idxContent(t, st, ctx, "https://x.invalid/retry.pdf", text)
+
+	emb := &fakeEmbedder{model: "m1", failNext: true}
+	svc := document.NewService(st, nil, "app", "user").WithEmbedder(emb)
+
+	// 第一次：embed 失败 → 词法 ready、向量 failed（不再被 ready 一刀切挡住）
+	svc.BuildIndex(ctx, docID, mustContent(t, st, ctx, "https://x.invalid/retry.pdf"))
+	state, err := st.LoadDocumentIndexState(ctx, "app", "user", docID)
 	if err != nil || state == nil {
-		t.Fatalf("index state: (%v, %v)", state, err)
+		t.Fatalf("load state: %v", err)
 	}
 	if state.IndexStatus != storage.IndexStatusReady || state.ChunkCount == 0 {
-		t.Fatalf("index not ready: %+v", state)
+		t.Fatalf("lexical must be ready: %+v", state)
 	}
-	// 三个位置的标记词均可检索（GSE 切分「标记词N号」形态词项）。
-	// 断言"存在命中含标记"而非"top1 含标记"：三段填充内容同质，等价块的
-	// bm25 排序会抖动，位置可达性由命中存在性表达。
-	a := SharedAnalyzer()
-	for i := 1; i <= 3; i++ {
-		hits, err := st.SearchDocumentChunks(context.Background(), "app", "user",
-			a.QueryExpression(marker(i)), []string{res.DocumentID}, 10)
-		if err != nil {
-			t.Fatalf("search marker%d: %v", i, err)
+	if state.VectorStatus != storage.VectorStatusFailed || state.VectorModel != "m1" {
+		t.Fatalf("vector state must record failure: %+v", state)
+	}
+	ids1 := chunkIDs(t, st, ctx, docID)
+
+	// 第二次（embed 恢复）：只补向量——chunk_id 不变证明词法索引未被重写
+	svc.BuildIndex(ctx, docID, mustContent(t, st, ctx, "https://x.invalid/retry.pdf"))
+	state, _ = st.LoadDocumentIndexState(ctx, "app", "user", docID)
+	if state.VectorStatus != storage.VectorStatusReady ||
+		state.VectorCount != state.ChunkCount || state.VectorError != "" {
+		t.Fatalf("vector retry did not complete: %+v", state)
+	}
+	ids2 := chunkIDs(t, st, ctx, docID)
+	if len(ids1) != len(ids2) {
+		t.Fatalf("chunk count drifted: %d -> %d", len(ids1), len(ids2))
+	}
+	for i := range ids1 {
+		if ids1[i] != ids2[i] {
+			t.Fatalf("lexical index was rewritten on vector-only rebuild (chunk %d id changed)", i)
 		}
-		if len(hits) == 0 {
-			t.Fatalf("marker%d（位置=%s）零命中——长文档该位置不可达", i,
-				map[int]string{1: "开头", 2: "中间", 3: "末尾"}[i])
-		}
-		found := false
-		for _, h := range hits {
-			if strings.Contains(h.Content, marker(i)) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			t.Fatalf("marker%d 无任何命中片段包含标记（hits=%d）", i, len(hits))
-		}
+	}
+
+	// 向量就绪后再次触发：完全跳过（embed 调用数不再增长）
+	callsBefore := emb.calls
+	svc.BuildIndex(ctx, docID, mustContent(t, st, ctx, "https://x.invalid/retry.pdf"))
+	if emb.calls != callsBefore {
+		t.Fatalf("up-to-date index must skip embedding: calls %d -> %d", callsBefore, emb.calls)
+	}
+
+	// 换模型：向量域检测到 model 不匹配 → 重建到 m2（词法仍不重写）
+	emb.model = "m2"
+	svc.BuildIndex(ctx, docID, mustContent(t, st, ctx, "https://x.invalid/retry.pdf"))
+	state, _ = st.LoadDocumentIndexState(ctx, "app", "user", docID)
+	if state.VectorModel != "m2" || state.VectorStatus != storage.VectorStatusReady ||
+		state.VectorCount != state.ChunkCount {
+		t.Fatalf("model switch must re-embed: %+v", state)
+	}
+	if got, _ := st.LoadDocumentVectors(ctx, "app", "user", docID, "m2"); len(got) != state.ChunkCount {
+		t.Fatalf("m2 vector rows = %d, want %d", len(got), state.ChunkCount)
 	}
 }
 
-// TestPrepareReindexReplaces 重新读取：正文变化 → hash 变化 → 索引整体替换。
-func TestPrepareReindexReplaces(t *testing.T) {
-	svc, st := newIdxTestService(t)
-	svc.extractor = &fakeExtractor{res: &extract.Result{
-		Content: strings.Repeat("旧版正文内容，讨论软件工程。", 300), ContentType: "application/pdf",
-	}}
-	res, err := svc.Prepare(context.Background(), "https://example.com/re.pdf", "")
+// newTestStore 打开临时文件库（每次独立，不依赖开发库副本）。
+func newTestStore(t *testing.T) (storage.Storage, func()) {
+	t.Helper()
+	st, err := storage.New("sqlite", filepath.Join(t.TempDir(), "buildindex-test.db"))
 	if err != nil {
-		t.Fatalf("first prepare: %v", err)
+		t.Fatalf("open store: %v", err)
 	}
-	old, _ := st.LoadDocumentIndexState(context.Background(), "app", "user", res.DocumentID)
-	if old == nil || old.IndexStatus != storage.IndexStatusReady {
-		t.Fatalf("first index: %+v", old)
-	}
-
-	svc.extractor = &fakeExtractor{res: &extract.Result{
-		Content: strings.Repeat("新版正文内容，新增GraphRAG讨论。", 200), ContentType: "application/pdf",
-	}}
-	if _, err := svc.Prepare(context.Background(), "https://example.com/re.pdf", ""); err != nil {
-		t.Fatalf("re-prepare: %v", err)
-	}
-	fresh, _ := st.LoadDocumentIndexState(context.Background(), "app", "user", res.DocumentID)
-	if fresh.IndexedContentHash == old.IndexedContentHash {
-		t.Fatal("content hash must change on re-prepare")
-	}
-	// 旧词不再命中（旧块已被替换）、新词命中
-	a := SharedAnalyzer()
-	hits, _ := st.SearchDocumentChunks(context.Background(), "app", "user",
-		a.QueryExpression("GraphRAG"), []string{res.DocumentID}, 10)
-	if len(hits) == 0 {
-		t.Fatal("new content must be searchable after reindex")
-	}
+	return st, func() { _ = st.Close() }
 }
 
-// TestPrepareIndexFailureNotBlocking 索引构建失败：prepare 仍成功（索引是派生数据）。
-func TestPrepareIndexFailureNotBlocking(t *testing.T) {
-	// 用未初始化 documents 锚点的旁路调用模拟失败路径：直接对空 docID 构建 = no-op；
-	// 真正的失败注入经 fake store 需要 storage 假体，此处验证「失败标记」API 契约：
-	// ReplaceDocumentIndex(chunks=nil) 只写状态不删索引（sqlite 层已测）。
-	svc, _ := newIdxTestService(t)
-	svc.BuildIndex(context.Background(), "", &storage.DocumentContent{ContentText: "x"}) // no-op 不 panic
-	svc.BuildIndex(context.Background(), "doc-404", &storage.DocumentContent{ContentText: "x"})
-	// 空正文 no-op
-	svc.BuildIndex(context.Background(), "doc-404", &storage.DocumentContent{ContentText: "  "})
+func mustContent(t *testing.T, st storage.Storage, ctx context.Context, url string) *storage.DocumentContent {
+	t.Helper()
+	dc, err := st.LoadDocumentContent(ctx, "app", "user", url)
+	if err != nil || dc == nil {
+		t.Fatalf("load content: (%v, %v)", dc, err)
+	}
+	return dc
 }
+
+// 编译期确认接缝：fakeEmbedder 必须满足 Embedder 接口
+var _ retrieval.Embedder = (*fakeEmbedder)(nil)

@@ -26,9 +26,13 @@ func (s *Service) WithEmbedder(e retrieval.Embedder) *Service {
 
 // BuildIndex 为已落库正文构建检索索引并整体替换。失败不返回错误（调用方是
 // Prepare 主流程）：标 failed、记日志，旧索引保留（宁可用旧索引也不错删）。
-// 幂等：index_state 显示 ready 且 content_hash / 切块与分词版本均未变化时跳过
-// （重复 prepare 不重复分词——20 万字正文省 1~2s，也是 document_index_state
-// 存在的本意：事实数据与派生索引的生命周期分离）。
+// 幂等判断按词法/向量两个域拆分（0010 起）：
+//   - 词法域：index_state ready 且 content_hash / 切块与分词版本均未变化时跳过
+//     （重复 prepare 不重复分词——20 万字正文省 1~2s，也是 document_index_state
+//     存在的本意：事实数据与派生索引的生命周期分离）。
+//   - 向量域：vector_status=ready 且 vector_model=当前模型 且 vector_count=chunk_count
+//     才视为就绪——向量缺失、上次 embed 失败、换模型都能被独立检测并补建，
+//     不再被词法 ready 挡住（P0 修复）。补建复用库内现有 chunks，不重写词法索引。
 func (s *Service) BuildIndex(ctx context.Context, documentID string, dc *storage.DocumentContent) {
 	if documentID == "" || dc == nil || strings.TrimSpace(dc.ContentText) == "" {
 		return
@@ -38,6 +42,18 @@ func (s *Service) BuildIndex(ctx context.Context, documentID string, dc *storage
 		st.IndexedContentHash == dc.ContentHash &&
 		st.ChunkerVersion == ChunkerVersion &&
 		st.TokenizerVersion == TokenizerVersion {
+		// 词法已就绪：是否需要补向量只由向量域决定
+		if s.embedder == nil {
+			return
+		}
+		if st.VectorStatus == storage.VectorStatusReady &&
+			st.VectorModel == s.embedder.Model() &&
+			st.VectorCount == st.ChunkCount {
+			return
+		}
+		log.Infof("[Absorb] document index lexical ready, vectors stale/missing (doc=%s, vector_status=%q, model=%q) — re-embed only",
+			documentID, st.VectorStatus, st.VectorModel)
+		s.embedChunks(ctx, documentID, nil)
 		return
 	}
 	start := time.Now()
@@ -71,14 +87,29 @@ func (s *Service) BuildIndex(ctx context.Context, documentID string, dc *storage
 	s.embedChunks(ctx, documentID, chunks)
 }
 
-// embedChunks 索引期语义向量化（M3）：chunks 已替换成功后按 chunk_index 批量
-// 向量入库。向量是派生数据的派生数据——失败只告警不回滚（词法路完整可用），
-// 重建由下次 prepare 触发；chunk_id 与本次写入一致，余弦路按 model 过滤加载。
+// embedChunks 索引期语义向量化（M3）：chunks 已就绪后按 chunk_index 批量向量
+// 入库。chunks 为 nil 时复用库内现有 chunks（词法 ready、向量缺失/失败/换模型的
+// 补建路径——不重写词法索引）。向量是派生数据的派生数据：失败标 failed 只告警，
+// 下次 prepare/BuildIndex 自动补建；chunk_id 与库内 chunks 一致，余弦路按 model
+// 过滤加载。向量域状态经 UpdateDocumentVectorState 独立记录（不与词法 ready 混用）。
 func (s *Service) embedChunks(ctx context.Context, documentID string, chunks []*storage.DocumentChunk) {
-	if s.embedder == nil || len(chunks) == 0 {
+	if s.embedder == nil {
 		return
 	}
+	if chunks == nil {
+		var err error
+		chunks, err = s.st.LoadDocumentChunks(ctx, s.app, s.user, documentID)
+		if err != nil {
+			log.Warnf("[Absorb] chunk vectors: load chunks failed (doc=%s): %v", documentID, err)
+			return
+		}
+		if len(chunks) == 0 {
+			log.Warnf("[Absorb] chunk vectors: no chunks to embed (doc=%s)", documentID)
+			return
+		}
+	}
 	start := time.Now()
+	model := s.embedder.Model()
 	texts := make([]string, len(chunks))
 	rows := make([]*storage.ChunkVectorRow, len(chunks))
 	for i, c := range chunks {
@@ -87,22 +118,38 @@ func (s *Service) embedChunks(ctx context.Context, documentID string, chunks []*
 	}
 	vecs, err := s.embedder.EmbedDocuments(ctx, texts)
 	if err != nil {
-		log.Warnf("[Absorb] chunk embedding failed (doc=%s, lexical-only until next rebuild): %v", documentID, err)
+		log.Warnf("[Absorb] chunk embedding failed (doc=%s, lexical-only until next prepare): %v", documentID, err)
+		s.markVectorState(ctx, documentID, storage.DocumentVectorState{
+			Model: model, Status: storage.VectorStatusFailed, Error: err.Error(),
+		})
 		return
 	}
 	for i, v := range vecs {
 		rows[i].ChunkID = chunks[i].ID
 		rows[i].DocumentID = documentID
 		rows[i].Dims = len(v)
-		rows[i].Model = s.embedder.Model()
+		rows[i].Model = model
 		rows[i].Vector = v
 	}
-	if err := s.st.ReplaceDocumentVectors(ctx, s.app, s.user, documentID, s.embedder.Model(), rows); err != nil {
+	if err := s.st.ReplaceDocumentVectors(ctx, s.app, s.user, documentID, model, rows); err != nil {
 		log.Warnf("[Absorb] chunk vector persist failed (doc=%s): %v", documentID, err)
+		s.markVectorState(ctx, documentID, storage.DocumentVectorState{
+			Model: model, Status: storage.VectorStatusFailed, Error: err.Error(),
+		})
 		return
 	}
+	s.markVectorState(ctx, documentID, storage.DocumentVectorState{
+		Model: model, Status: storage.VectorStatusReady, Count: len(rows),
+	})
 	log.Infof("[Absorb] chunk vectors built | doc=%s count=%d model=%s dur=%s",
-		documentID, len(rows), s.embedder.Model(), time.Since(start).Round(time.Millisecond))
+		documentID, len(rows), model, time.Since(start).Round(time.Millisecond))
+}
+
+// markVectorState 向量域状态落库（失败仅告警——状态记录本身不中断主流程）。
+func (s *Service) markVectorState(ctx context.Context, documentID string, vs storage.DocumentVectorState) {
+	if err := s.st.UpdateDocumentVectorState(ctx, s.app, s.user, documentID, vs); err != nil {
+		log.Warnf("[Absorb] vector state update failed (doc=%s): %v", documentID, err)
+	}
 }
 
 // buildChunks 分块 + 分词 + 组装存储行。search_text 与 content 分离：原文供

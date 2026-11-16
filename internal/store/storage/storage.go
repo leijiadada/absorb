@@ -114,6 +114,12 @@ type Storage interface {
 	ReplaceDocumentIndex(ctx context.Context, app, user, documentID string, chunks []*DocumentChunk, state *DocumentIndexState) error
 	LoadDocumentIndexState(ctx context.Context, app, user, documentID string) (*DocumentIndexState, error)
 	SearchDocumentChunks(ctx context.Context, app, user, query string, documentIDs []string, limit int) ([]DocumentChunkHit, error)
+	// LoadDocumentChunks 读取文档现有 chunks（chunk_index 升序）：词法索引就绪但
+	// 向量缺失/换模型时的补建路径用——复用 chunks，不重写词法索引。
+	LoadDocumentChunks(ctx context.Context, app, user, documentID string) ([]*DocumentChunk, error)
+	// UpdateDocumentVectorState 只覆盖 document_index_state 的 vector_* 四列
+	// （向量域状态，独立于词法 index_status）：embedChunks 成功/失败后调用。
+	UpdateDocumentVectorState(ctx context.Context, app, user, documentID string, vs DocumentVectorState) error
 
 	// 文档 chunk 向量（M3 语义召回）：ReplaceDocumentVectors 单事务整体替换
 	// 文档级向量（chunks 重建后必须重建向量，键为 chunk_id）；LoadDocumentVectors

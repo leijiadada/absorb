@@ -56,6 +56,18 @@ type EmbeddingConfig struct {
 	ServerExe string `yaml:"server_exe"` // local：llama-server.exe 绝对路径
 	ModelPath string `yaml:"model_path"` // local：GGUF 模型文件绝对路径
 	Port      int    `yaml:"port"`       // local：监听端口，0 = 默认 8935
+
+	// 精排（Reranker）：对 RRF 融合候选 top-N 按查询-文档相关度重排后再进
+	// 多样性层。两种形态：
+	//   - 云：rerank_model 为云模型名（如 BAAI/bge-reranker-v2-m3），鉴权与
+	//     base_url 复用上方 api_key / base_url（硅基流动同款 /v1/rerank 风格）；
+	//   - local：rerank_model_path 为 GGUF 绝对路径，由 provider=local 的
+	//     server_exe 拉起第二个 llama-server 子进程。
+	// 两者都空 = 禁用精排（纯融合序）。云 rerank 延迟 <1s，local CPU 每候选约 0.7s。
+	RerankModel     string `yaml:"rerank_model"`      // 云 rerank 模型名，空 = 不用云精排
+	RerankModelPath string `yaml:"rerank_model_path"` // local：reranker GGUF 绝对路径
+	RerankPort      int    `yaml:"rerank_port"`       // local：监听端口，0 = 默认 8937
+	RerankTopN      int    `yaml:"rerank_top_n"`      // 精排候选数，0 = 默认 8
 }
 
 // TelemetryConfig 生产可观测性（框架链路追踪）配置（默认关闭）。
