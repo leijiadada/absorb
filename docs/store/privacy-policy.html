@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Absorb 阅读助手 — 隐私政策 | Privacy Policy</title>
+  <style>
+    :root { --ink: #1f2329; --sub: #5b6470; --line: #e3e6ea; --brand: #1667d9; --bg: #f7f8fa; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+           color: var(--ink); background: var(--bg); line-height: 1.75; font-size: 15px; }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 48px 24px 80px; background: #fff; }
+    h1 { font-size: 26px; margin: 0 0 4px; }
+    h2 { font-size: 19px; margin: 40px 0 12px; padding-top: 18px; border-top: 1px solid var(--line); }
+    h3 { font-size: 16px; margin: 24px 0 8px; }
+    p, li { color: var(--ink); }
+    .meta { color: var(--sub); font-size: 13px; margin-bottom: 28px; }
+    .summary { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; margin: 20px 0; }
+    .summary strong { color: var(--brand); }
+    table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 14px; }
+    th, td { border: 1px solid var(--line); padding: 9px 12px; text-align: left; vertical-align: top; }
+    th { background: var(--bg); color: var(--sub); font-weight: 600; white-space: nowrap; }
+    code { background: var(--bg); padding: 1px 6px; border-radius: 4px; font-size: 13px; }
+    .en h2 { margin-top: 48px; }
+    footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--sub); font-size: 13px; }
+    @media print { body { background: #fff; } .wrap { padding: 12px; } }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Absorb 阅读助手 浏览器扩展隐私政策</h1>
+  <p class="meta">生效日期：2026-11-16 ｜ 最近更新：2026-11-16 ｜ 适用于：Absorb 阅读助手浏览器扩展（Chrome / Edge，Manifest V3）</p>
+
+  <div class="summary">
+    <strong>一句话摘要：</strong>本扩展不会把任何数据发送给我们或任何第三方服务器。你划选的文字、网页内容、截图与提问，只通过 <code>localhost</code> 传给你在自己电脑上安装的 Absorb 桌面应用，并由桌面应用发送至<b>你自行配置并持有密钥的 AI 服务商</b>以生成回答。本扩展不含任何统计、分析或追踪代码。
+  </div>
+
+  <h2>一、我们处理哪些数据</h2>
+  <p>本扩展是"触发式"工作的：只有当你主动划词提问、点击解读按钮或截图时，才会读取当次操作所需的数据。没有用户操作时，不采集任何内容。</p>
+  <table>
+    <tr><th>数据类型</th><th>具体内容</th><th>触发条件</th></tr>
+    <tr><td>选中文本</td><td>你划选的文字片段</td><td>划词提问</td></tr>
+    <tr><td>网页上下文</td><td>当前页面的 URL、标题、正文主内容文本（用于让回答贴合页面）</td><td>划词提问 / 整页解读</td></tr>
+    <tr><td>截图与图片</td><td>区域 / 元素 / 视口截图，或你主动上传、粘贴的图片</td><td>使用图片提问功能</td></tr>
+    <tr><td>对话内容</td><td>你的提问与 AI 回答、会话列表、未发送的草稿</td><td>使用对话功能</td></tr>
+    <tr><td>扩展设置</td><td>界面偏好等本地设置项</td><td>使用扩展时</td></tr>
+  </table>
+
+  <h2>二、数据流向与存储</h2>
+  <ul>
+    <li><b>扩展自身只访问本机。</b>所有网络请求仅指向 <code>http://localhost</code> / <code>http://127.0.0.1</code> 上的本地桌面应用桥接服务。扩展内不存在任何指向外部服务器的请求。</li>
+    <li><b>AI 处理由桌面应用完成。</b>桌面应用把提问与页面内容发送给你在桌面端自行配置的 AI 服务商（使用你自己的 API Key），用于生成回答。该环节受对应服务商隐私政策约束，本扩展不参与、不中转、不缓存。</li>
+    <li><b>本地存储。</b>会话记录、知识草稿由桌面应用保存在你电脑的数据目录；扩展的草稿、待发送划词队列、文档卡片与设置保存在浏览器 <code>chrome.storage.local</code> 中。以上数据均不出本机。</li>
+    <li><b>桌面应用版本检查。</b>桌面应用可能访问其发布服务器获取新版本号，该请求不含你的任何使用数据。</li>
+  </ul>
+
+  <h2>三、我们不做什么</h2>
+  <ul>
+    <li>不收集、不出售、不出租、不与任何第三方共享你的数据（AI 服务商除外——那是你自己的配置）。</li>
+    <li>不含广告、埋点、崩溃上报、行为追踪。</li>
+    <li>不在后台扫描或预读你的浏览记录；对网页的读取仅在你在当前页面主动触发功能时发生。</li>
+    <li>不将数据用于机器学习训练或与核心功能无关的用途。</li>
+  </ul>
+
+  <h2>四、权限用途说明</h2>
+  <table>
+    <tr><th>权限</th><th>用途</th></tr>
+    <tr><td>contextMenus</td><td>提供右键菜单"Absorb 解读"入口</td></tr>
+    <tr><td>sidePanel</td><td>展示对话侧边栏界面</td></tr>
+    <tr><td>storage</td><td>本地保存草稿、待发送队列与设置</td></tr>
+    <tr><td>activeTab + scripting</td><td>经你触发后，向当前页注入划词/正文抓取脚本</td></tr>
+    <tr><td>&lt;all_urls&gt;（主机权限）</td><td>核心功能需要在任意网页上划词提问与整页解读；仅在用户主动操作当前页时注入脚本，无后台采集</td></tr>
+    <tr><td>tabs</td><td>读取活动标签页的 URL 与标题以构建提问上下文、识别 PDF 页面</td></tr>
+    <tr><td>clipboardWrite</td><td>一键复制回答</td></tr>
+    <tr><td>alarms</td><td>与桌面应用的连接心跳保活、待发送划词重试</td></tr>
+    <tr><td>nativeMessaging</td><td>与本机 Absorb 桌面应用通信（回答生成由桌面端完成）</td></tr>
+    <tr><td>http://localhost/* 与 http://127.0.0.1/*（主机权限）</td><td>与本地桌面应用桥接服务通信</td></tr>
+  </table>
+
+  <h2>五、第三方服务</h2>
+  <p>本扩展自身不调用任何第三方服务。AI 能力由桌面应用按你的配置调用对应服务商（如智谱、DeepSeek、Kimi、OpenAI 兼容端点等），提交的内容与密钥直接发生在桌面应用与该服务商之间。</p>
+
+  <h2>六、数据删除</h2>
+  <ul>
+    <li>卸载扩展即删除浏览器侧全部本地数据（草稿、队列、设置）。</li>
+    <li>桌面应用侧的会话与知识数据保存在本机数据目录，可在桌面应用中删除，或直接删除数据目录。</li>
+  </ul>
+
+  <h2>七、儿童隐私</h2>
+  <p>本扩展面向一般用户，不面向 14 岁以下儿童营销，不有意收集儿童个人信息。</p>
+
+  <h2>八、政策变更与联系方式</h2>
+  <p>本政策如有实质性变更，我们会在本页面更新并修改"最近更新"日期。</p>
+  <p>联系方式：<b>584839656@qq.com</b></p>
+
+  <!-- ==================== English Version ==================== -->
+  <section class="en" lang="en">
+    <h1>Absorb Reading Assistant — Privacy Policy (Browser Extension)</h1>
+    <p class="meta">Effective: 2026-11-16 ｜ Last updated: 2026-11-16 ｜ Applies to: Absorb Reading Assistant extension (Chrome / Edge, Manifest V3)</p>
+
+    <div class="summary">
+      <strong>Summary:</strong> This extension never sends data to us or to any third-party server. Selected text, page content, screenshots, and your questions go only to the Absorb desktop application installed on your own computer via <code>localhost</code>. The desktop app then sends prompts to the <b>AI provider you configure yourself (with your own API key)</b> to generate answers. The extension contains no analytics, tracking, or telemetry of any kind.
+    </div>
+
+    <h2>1. Data We Process</h2>
+    <p>The extension is fully user-triggered. It reads only the data required by the action you take, and collects nothing in the background.</p>
+    <table>
+      <tr><th>Data</th><th>Details</th><th>Trigger</th></tr>
+      <tr><td>Selected text</td><td>Text you highlight on a page</td><td>Selection-based question</td></tr>
+      <tr><td>Page context</td><td>URL, title, and main-content text of the page you are reading</td><td>Question / full-page interpret</td></tr>
+      <tr><td>Screenshots &amp; images</td><td>Region / element / viewport screenshots, or images you upload or paste</td><td>Image-based questions</td></tr>
+      <tr><td>Conversation</td><td>Your questions, AI answers, session list, unsent drafts</td><td>Chat usage</td></tr>
+      <tr><td>Settings</td><td>Local UI preferences</td><td>Extension usage</td></tr>
+    </table>
+
+    <h2>2. Data Flow &amp; Storage</h2>
+    <ul>
+      <li><b>The extension only talks to your machine.</b> All network requests go exclusively to <code>http://localhost</code> / <code>http://127.0.0.1</code>, where the companion desktop app listens. The extension makes no requests to any external server.</li>
+      <li><b>AI processing happens in the desktop app.</b> The desktop app sends prompts to the AI provider you configure (with your own API key). That step is governed by the provider's privacy policy; the extension is not involved.</li>
+      <li><b>Local storage.</b> Sessions and knowledge drafts are stored on disk by the desktop app; drafts, pending selections, document cards, and settings are stored in the browser via <code>chrome.storage.local</code>. Nothing leaves your machine from storage.</li>
+      <li><b>Desktop update check.</b> The desktop app may query its release server for a newer version number; this request carries none of your usage data.</li>
+    </ul>
+
+    <h2>3. What We Do Not Do</h2>
+    <ul>
+      <li>We do not collect, sell, rent, or share your data with any third party (other than the AI provider you configured yourself).</li>
+      <li>No ads, no telemetry, no crash reporting, no behavioral tracking.</li>
+      <li>No background scanning of browsing history; page access happens only when you trigger a feature on that page.</li>
+      <li>No use of data for model training or any purpose unrelated to the core features.</li>
+    </ul>
+
+    <h2>4. Permissions</h2>
+    <ul>
+      <li><b>contextMenus</b> — right-click menu entry to start an interpretation.</li>
+      <li><b>sidePanel</b> — hosts the chat side panel UI.</li>
+      <li><b>storage</b> — local drafts, pending-selection queue, settings.</li>
+      <li><b>activeTab + scripting</b> — injects the capture/reading script into the current page only after you trigger it.</li>
+      <li><b>Host permission &lt;all_urls&gt;</b> — the core feature (select-to-ask and full-page interpretation) must work on any web page you are reading. Scripts are injected only on user action on the current page; no background collection.</li>
+      <li><b>tabs</b> — reads the active tab's URL/title to build question context and detect PDF pages.</li>
+      <li><b>clipboardWrite</b> — one-click copy of answers.</li>
+      <li><b>alarms</b> — connection heartbeat with the desktop app and retry of pending selections.</li>
+      <li><b>nativeMessaging</b> — communicates with the local Absorb desktop native host (answer generation is done locally).</li>
+      <li><b>Host permissions http://localhost/*, http://127.0.0.1/*</b> — communicate with the local bridge service of the desktop app.</li>
+    </ul>
+
+    <h2>5. Third-Party Services</h2>
+    <p>The extension itself calls no third-party services. AI capability is invoked by the desktop app per your configuration (e.g., Zhipu, DeepSeek, Kimi, OpenAI-compatible endpoints); content and keys flow directly between the desktop app and that provider.</p>
+
+    <h2>6. Data Deletion</h2>
+    <ul>
+      <li>Uninstalling the extension removes all browser-side local data (drafts, queue, settings).</li>
+      <li>Desktop-side sessions and knowledge data live in a local data directory and can be deleted in the app or by removing the directory.</li>
+    </ul>
+
+    <h2>7. Children's Privacy</h2>
+    <p>Not directed at children under 14; no knowing collection of children's personal information.</p>
+
+    <h2>8. Changes &amp; Contact</h2>
+    <p>Material changes will be reflected on this page with an updated "Last updated" date.</p>
+    <p>Contact: <b>584839656@qq.com</b></p>
+  </section>
+
+  <footer>Absorb 阅读助手 ｜ 本页面为商店审核用隐私政策，托管后以实际 URL 为准</footer>
+</div>
+</body>
+</html>

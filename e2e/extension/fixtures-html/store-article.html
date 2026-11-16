@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>从 Cursor 迁移到 Codex：两周适应记录 - TechFlow 技术博客</title>
+<style>
+  /* 商店截图用文章页：自包含样式，模拟真实技术博客排版（无外链依赖） */
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #fbfbfd; color: #2c3e50;
+         font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; }
+  .nav { background: #fff; border-bottom: 1px solid #ececf1; padding: 0 40px; height: 52px;
+         display: flex; align-items: center; gap: 28px; position: sticky; top: 0; }
+  .nav .logo { font-weight: 700; font-size: 17px; color: #1667d9; letter-spacing: .5px; }
+  .nav a { color: #5b6470; text-decoration: none; font-size: 14px; }
+  .nav a.active { color: #1667d9; font-weight: 600; }
+  .nav .spacer { flex: 1; }
+  .nav .search { background: #f2f3f7; border-radius: 16px; padding: 5px 14px; font-size: 12px; color: #9aa2ad; }
+  .page { max-width: 700px; margin: 0 auto; padding: 40px 24px 80px; }
+  h1.title { font-size: 27px; line-height: 1.4; color: #1d2430; margin: 8px 0 14px; }
+  .meta { display: flex; align-items: center; gap: 12px; color: #8b93a1; font-size: 13px; margin-bottom: 26px; }
+  .avatar { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #4a90e2, #1667d9);
+            color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; }
+  .meta b { color: #4a5262; font-weight: 600; }
+  .tags { display: flex; gap: 8px; margin-bottom: 8px; }
+  .tag { background: #eef3fb; color: #1667d9; font-size: 12px; border-radius: 4px; padding: 3px 10px; }
+  .article { font-size: 16px; line-height: 1.9; color: #333d4c; }
+  .article p { margin: 14px 0; }
+  .article h2 { font-size: 20px; color: #1d2430; margin: 34px 0 12px; padding-left: 12px;
+                border-left: 4px solid #1667d9; line-height: 1.4; }
+  .article ul { padding-left: 22px; margin: 12px 0; }
+  .article li { margin: 6px 0; }
+  .article blockquote { margin: 18px 0; padding: 12px 18px; background: #f2f6fc;
+                        border-left: 4px solid #7aa7e0; color: #44506b; border-radius: 0 8px 8px 0; }
+  .article code.inline { background: #f0f2f6; border-radius: 4px; padding: 2px 6px; font-size: 14px; color: #c7415c; }
+  .codeblock { background: #1e2230; border-radius: 10px; padding: 16px 20px; margin: 18px 0;
+               font-family: Consolas, "Courier New", monospace; font-size: 13.5px; line-height: 1.7; color: #d7dce6; }
+  .codeblock .cm { color: #6f7c94; }
+  .codeblock .kw { color: #82aaff; }
+  .codeblock .str { color: #a4d9a0; }
+  .divider { border: none; border-top: 1px solid #e8eaef; margin: 40px 0 18px; }
+  .footnote { color: #9aa2ad; font-size: 13px; }
+</style>
+</head>
+<body>
+<nav class="nav">
+  <span class="logo">TechFlow 技术博客</span>
+  <a href="#" class="active">首页</a><a href="#">AI 编程</a><a href="#">工程实践</a><a href="#">关于</a>
+  <span class="spacer"></span>
+  <span class="search">搜索文章…</span>
+</nav>
+<div class="page">
+  <div class="tags"><span class="tag">AI 编程</span><span class="tag">工具链</span><span class="tag">实战</span></div>
+  <h1 class="title">从 Cursor 迁移到 Codex：两周适应记录</h1>
+  <div class="meta">
+    <span class="avatar">陈</span>
+    <span><b>陈默</b> · 2026-10-28 发布 · 阅读 12,400</span>
+  </div>
+  <div class="article">
+    <p>用 Cursor 快两年了，上个月团队统一工具链，我被迫切到 Codex。头三天是抗拒的，第二周开始出现"回不去"的感觉。这篇不聊参数和营销，只记录一个重度用户真实感受到的差异，以及我摸索出的迁移节奏。</p>
+
+    <h2>差异一：补全从"抢答"变成"举手"</h2>
+    <p>Cursor 的补全是高频率主动推荐， Tab 键几乎不用思考；Codex 明显克制，只在它有把握的时候才出现。前三天我总觉得"它是不是坏了"，到第四天才意识到：这不是变笨，而是把判断权还给了人。长函数需要自己写出意图清晰的函数签名，补全质量才会上来。</p>
+    <p>一个直观的对比：写数据清洗脚本时，Cursor 会一次补全整个 <code class="inline">if-else</code> 链，而 Codex 先补一个分支，确认方向后再展开。前期慢，后期返工少。</p>
+
+    <h2>差异二：@ 引用精确，但联想弱一档</h2>
+    <p>Codex 的 <code class="inline">@file</code>、<code class="inline">@symbol</code> 引用是指哪打哪，大仓库里非常稳；而跨文件的"你懂的"式联想确实不如 Cursor。我的对策是把上下文喂得更明确，反而减少了它猜错方向带来的浪费。</p>
+
+    <div class="codeblock">
+      <span class="cm"># 迁移前把 Cursor 的规则文件搬过去，保留团队约定</span><br>
+      <span class="kw">cp</span> .cursorrules ~/.codex/instructions.md<br>
+      <span class="kw">echo</span> <span class="str">"prefer explicit imports"</span> &gt;&gt; ~/.codex/instructions.md
+    </div>
+
+    <h2>差异三：计费从订阅变成按量</h2>
+    <p>订阅制让人"可劲造"，按量计费让人"每一刀都心疼"。两周下来我的实际开销比订阅低 30%，但前提是把重活儿批量打包提交，而不是碎片化地喊它改一行。</p>
+
+    <h2>两周适应节奏</h2>
+    <ul>
+      <li><b>第 1 周</b>：并行使用。同一段代码两边各跑一遍，记录哪些场景谁更顺手。</li>
+      <li><b>第 2 周</b>：全量切换。只保留一份工具，把别扭的点集中起来查配置、查文档。</li>
+      <li><b>周末复盘</b>：把两周记录整理成团队迁移手册，新同学少走弯路。</li>
+    </ul>
+
+    <blockquote>最大的感悟：迁移成本不在工具，在肌肉记忆。给自己两周，别在第三天做判断。</blockquote>
+
+    <p>最后放作者的总结：两周后回不去了，补全质量是主要拉力；如果你也是"高频补全 + 小步快跑"的风格，值得认真试一次。</p>
+
+    <hr class="divider">
+    <p class="footnote">本文为个人使用记录，不代表团队官方立场。数据与配置文件已脱敏。相关阅读：《AI 编程工具的上下文战争》。</p>
+  </div>
+</div>
+</body>
+</html>

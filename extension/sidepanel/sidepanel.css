@@ -101,23 +101,15 @@ button {
 }
 
 /* ---------- Header ----------
-   方案 A：单行工具条。品牌全名由系统标题栏承担，页面侧仅 logo 图形锚点 */
+   单行工具条：品牌由系统标题栏承担，页面内不放 logo，仅右侧操作按钮 */
 .app-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   padding: 6px 14px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
-}
-
-.logo {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  object-fit: cover;
-  display: block;
 }
 
 .header-actions {
