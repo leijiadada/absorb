@@ -41,6 +41,7 @@ import (
 	"absorb-agent/internal/chat"
 	"absorb-agent/internal/conf"
 	"absorb-agent/internal/log"
+	"absorb-agent/internal/retrieval"
 	"absorb-agent/internal/store"
 )
 
@@ -146,6 +147,28 @@ func main() {
 	if err := log.InitLogging(cfg.Log); err != nil {
 		fmt.Fprintf(os.Stderr, "init logging failed: %v\n", err)
 		os.Exit(1)
+	}
+
+	// 语义检索装配（与生产 setupEmbedding 同款，评测仅支持云模式）：embedding
+	// api_key 配置后注入 SharedEmbedder/SharedReranker，search_document 走全链
+	// （词法 + 云语义 + 云精排）；未配置时自动退回纯词法口径。
+	if emb := cfg.Embedding; strings.TrimSpace(emb.APIKey) != "" {
+		retrieval.SetSharedEmbedder(retrieval.NewOpenAICompatEmbedder(
+			emb.BaseURL, emb.APIKey, emb.Model, emb.BatchSize, func() string { return cfg.Proxy.URL }))
+		rrDesc := "off"
+		if rrModel := strings.TrimSpace(emb.RerankModel); rrModel != "" {
+			rrBase := emb.BaseURL
+			if rrBase == "" {
+				rrBase = "https://api.siliconflow.cn/v1"
+			}
+			retrieval.SetSharedReranker(retrieval.NewLlamaRerankClient(rrBase, rrModel, emb.APIKey,
+				func() string { return cfg.Proxy.URL }), emb.RerankTopN)
+			rrDesc = rrModel
+		}
+		log.Infof("[Absorb] eval semantic retrieval | embedding=%s rerank=%s topN=%d",
+			emb.Model, rrDesc, retrieval.SharedRerankTopN())
+	} else {
+		log.Infof("[Absorb] eval semantic retrieval disabled (embedding.api_key empty) — lexical only")
 	}
 
 	// 会话库：默认临时隔离（评估不读写生产 data/sessions.db，跑完即删）；

@@ -182,8 +182,10 @@ func NewSearchDocumentTool() tool.CallableTool {
 		function.WithName("search_document"),
 		function.WithDescription(
 			"检索个人资料库的全文证据（当前文档，或用户已索引的全部资料）。当问题涉及文档后文、具体论据、数据、"+
-				"或想跨资料查找相关内容时调用：对全文做关键词检索，返回最相关的原文片段（按资料分组、附资料标题），本地完成。"+
-				"提供 query（资料原文可能使用的表述，中英皆可），如 \"人机协作 研发模式\" 或 \"WaitAppGone\"。"+
+				"或想跨资料查找相关内容时调用：对全文做关键词+语义混合检索，返回最相关的原文片段（按资料分组、附资料标题）。"+
+				"提供 query——不要复制用户原话：先用对话上下文消解指代（\"它 / 这本书 / 刚才提到的\" 换成具体对象名），再把口语转为"+
+				"资料中可能出现的书面表述（中英术语皆可）。例：用户问「它的部署方式是什么」且上文在讨论 Docker → query 传 "+
+				"\"Docker 部署方式\"，不传 \"它的部署方式\"。"+
 				"零命中时返回信号：先换词再试一次，仍无则如实说明资料未覆盖该内容。"+
 				"不适用：解释概念本身（直接回答）；获取其他网页（用 fetch_page）；"+
 				"恢复当前网页页面内容（用 expand_context）。调用时不要输出正文说明，直接发起调用。",
@@ -193,8 +195,9 @@ func NewSearchDocumentTool() tool.CallableTool {
 			Required: []string{"query"},
 			Properties: map[string]*tool.Schema{
 				"query": {
-					Type:        "string",
-					Description: "检索问句或关键词组：文档原文可能使用的词（含英文术语），如 \"人机协作 研发模式\"",
+					Type: "string",
+					Description: "基于对话上下文消解指代后的检索问句，用资料原文可能出现的书面表述（中英术语皆可），" +
+						"完整短语优于单词。例：\"Docker 部署方式\"、\"隧道视野悖论\"",
 				},
 				"top_k": {
 					Type:        "integer",
