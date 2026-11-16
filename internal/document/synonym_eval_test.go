@@ -144,13 +144,34 @@ func TestSynonymRetrievalBaseline(t *testing.T) {
 		t.Fatalf("index not ready: %+v", state)
 	}
 
-	// M3 hybrid 开关：启用时在「分身 URL」上重建全量索引（触发向量入库），
-	// 评测走与 search_document 完全一致的生产管线（词法+余弦→RRF→多样性）。
-	hybrid := os.Getenv("ABSORB_LOCAL_EMBED") == "1"
+	// 语义路开关：ABSORB_CLOUD_EMBED=1（云 API，硅基流动）或
+	// ABSORB_LOCAL_EMBED=1（本地 llama-server sidecar）。评测走与
+	// search_document 完全一致的生产管线（词法+余弦→RRF→[精排]→多样性）。
+	cloud := os.Getenv("ABSORB_CLOUD_EMBED") == "1"
+	hybrid := cloud || os.Getenv("ABSORB_LOCAL_EMBED") == "1"
 	var emb retrieval.Embedder
-	var reranker retrieval.Reranker // ABSORB_RERANK_GGUF 配置时启用精排
+	var reranker retrieval.Reranker // 配置时启用精排（云模型或本地 sidecar）
 	rrTopN := 16                    // 精排候选数（ABSORB_RERANK_TOPN 可调）
-	if hybrid {
+	var embModel string
+	if cloud {
+		embKey := os.Getenv("ABSORB_EMB_API_KEY")
+		if embKey == "" {
+			t.Fatal("cloud 模式需要 ABSORB_EMB_API_KEY")
+		}
+		embModel = os.Getenv("ABSORB_EMB_MODEL")
+		if embModel == "" {
+			embModel = "BAAI/bge-m3"
+		}
+		emb = retrieval.NewOpenAICompatEmbedder("", embKey, embModel, 32, nil)
+		retrieval.SetSharedEmbedder(emb)
+		// 云精排：同 key 同域名 /v1/rerank（ABSORB_RR_MODEL 可换模型）
+		rrModel := os.Getenv("ABSORB_RR_MODEL")
+		if rrModel == "" {
+			rrModel = "BAAI/bge-reranker-v2-m3"
+		}
+		reranker = retrieval.NewLlamaRerankClient("https://api.siliconflow.cn/v1", rrModel, embKey, nil)
+		t.Logf("mode = HYBRID（云 %s + 云精排 %s，topN=%d）", embModel, rrModel, rrTopN)
+	} else if hybrid {
 		exe := os.Getenv("ABSORB_LLAMA_EXE")
 		gguf := os.Getenv("ABSORB_LLAMA_GGUF")
 		if exe == "" || gguf == "" {
@@ -163,14 +184,14 @@ func TestSynonymRetrievalBaseline(t *testing.T) {
 		defer srv.Stop()
 		// 模型可经 ABSORB_EMB_MODEL 切换（如 bge-m3），默认 bge-small-zh-v1.5；
 		// 模型名是向量入库 model 列与余弦查询过滤的标签，须与 GGUF 实际模型一致
-		model := os.Getenv("ABSORB_EMB_MODEL")
-		if model == "" {
-			model = "bge-small-zh-v1.5"
+		embModel = os.Getenv("ABSORB_EMB_MODEL")
+		if embModel == "" {
+			embModel = "bge-small-zh-v1.5"
 		}
-		emb = retrieval.NewOpenAICompatEmbedder(srv.BaseURL(), "local", model, 8, nil).WithMaxChars(500)
+		emb = retrieval.NewOpenAICompatEmbedder(srv.BaseURL(), "local", embModel, 8, nil).WithMaxChars(500)
 		retrieval.SetSharedEmbedder(emb)
-		// Reranker（可选）：ABSORB_RERANK_GGUF 配置时起第二个 sidecar（8937 端口），
-		// 对 RRF 融合候选 top16 精排后再过多样性层；缺省跳过保持纯 HYBRID 口径
+		// 本地 Reranker（可选）：ABSORB_RERANK_GGUF 配置时起第二个 sidecar
+		//（8937 端口），对融合候选 top-N 精排后再过多样性层
 		if rrGGUF := os.Getenv("ABSORB_RERANK_GGUF"); rrGGUF != "" {
 			rrExe := os.Getenv("ABSORB_RERANK_EXE")
 			if rrExe == "" {
@@ -190,7 +211,11 @@ func TestSynonymRetrievalBaseline(t *testing.T) {
 			}
 			t.Logf("rerank topN=%d", rrTopN)
 		}
-		// 分身 URL：强制全量重建（原 URL 词法幂等跳过，向量不会补齐）
+	}
+	if hybrid {
+		// 分身 URL：强制全量重建（原 URL 词法幂等跳过，向量不会补齐）。
+		// 幂等按词法/向量双域判断（0010 起）：分身上次中断留下的「词法 ready、
+		// 向量缺失」会被 BuildIndex 独立检测并只补向量，无需手动标 failed。
 		mirrorURL := bookURL + "?hybrid-eval=1"
 		mdc := *dc
 		mdc.URL = mirrorURL
@@ -201,17 +226,14 @@ func TestSynonymRetrievalBaseline(t *testing.T) {
 		if err := st.SaveDocumentContent(ctx, app, user, &mdc); err != nil {
 			t.Fatalf("save mirror content: %v", err)
 		}
-		// 幂等按词法/向量双域判断（0010 起）：分身上次中断留下的「词法 ready、
-		// 向量缺失」会被 BuildIndex 独立检测并只补向量，无需再手动标 failed。
 		document.NewService(st, nil, app, user).WithEmbedder(emb).BuildIndex(ctx, mdoc.ID, &mdc)
 		if _, vrows, verr := st.LoadVectorHits(ctx, app, user, emb.Model(), []string{mdoc.ID}); verr != nil || len(vrows) == 0 {
 			t.Fatalf("分身文档向量未入库 (err=%v, rows=%d)——HYBRID 评测无效", verr, len(vrows))
 		} else {
 			t.Logf("分身向量入库 rows=%d (model=%s)", len(vrows), emb.Model())
 		}
-		t.Log("mode = HYBRID（词法 + 本地 bge-small-zh 语义，RRF 融合）")
 	} else {
-		t.Log("mode = 词法基线（未启用 ABSORB_LOCAL_EMBED）")
+		t.Log("mode = 词法基线（未启用 ABSORB_LOCAL_EMBED / ABSORB_CLOUD_EMBED）")
 	}
 
 	// 锚点必须在原文中真实存在（评测集自检，防止锚点笔误造成假 miss）
@@ -329,7 +351,7 @@ func TestSynonymRetrievalBaseline(t *testing.T) {
 	t.Logf("")
 	modeName := "词法检索基线"
 	if hybrid && emb != nil {
-		modeName = "HYBRID 混合检索（词法 + 本地 " + emb.Model() + "，RRF）"
+		modeName = "HYBRID 混合检索（词法 + " + emb.Model() + "，RRF）"
 		if reranker != nil {
 			modeName += " + Reranker"
 		}
