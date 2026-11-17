@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Absorb promo tile (EN) 440x280</title>
+<style>
+  html, body { margin: 0; padding: 0; width: 440px; height: 280px; overflow: hidden; }
+  /* EN variant of the store promo tile (same brand layout as store-promo.html) */
+  .tile {
+    width: 440px; height: 280px; box-sizing: border-box;
+    display: flex; align-items: center; gap: 28px; padding: 0 36px;
+    background: linear-gradient(135deg, #f5f5f7 0%, #eef1f6 62%, #e6edf6 100%);
+    position: relative; overflow: hidden;
+    font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  .blob { position: absolute; border-radius: 50%; }
+  .blob-1 { width: 320px; height: 320px; right: -110px; top: -120px;
+            background: radial-gradient(closest-side, rgba(0, 102, 204, .10), transparent); }
+  .blob-2 { width: 260px; height: 260px; left: -100px; bottom: -130px;
+            background: radial-gradient(closest-side, rgba(0, 102, 204, .08), transparent); }
+  .ring { position: absolute; width: 120px; height: 120px; border-radius: 50%;
+          border: 2px solid rgba(0, 102, 204, .14); right: 44px; bottom: -38px; }
+  .icon {
+    width: 88px; height: 88px; border-radius: 22px; flex: none;
+    box-shadow: 0 8px 22px rgba(29, 29, 31, .16), 0 2px 6px rgba(29, 29, 31, .10);
+  }
+  .text { display: flex; flex-direction: column; gap: 9px; position: relative; }
+  h1 { margin: 0; font-size: 28px; line-height: 1.15; color: #1d1d1f; letter-spacing: .2px; font-weight: 700; }
+  .tag { margin: 0; font-size: 17px; color: #424245; }
+  .plat { margin: 3px 0 0; font-size: 12px; color: #86868b; }
+</style>
+</head>
+<body>
+<div class="tile">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="ring"></div>
+  <img class="icon" alt="" src="data:image/png;base64,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">
+  <div class="text">
+    <h1>Absorb Reading Assistant</h1>
+    <p class="tag">Ask as you read</p>
+    <p class="plat">Chrome / Edge extension · works with the local desktop app</p>
+  </div>
+</div>
+</body>
+</html>
