@@ -60,7 +60,7 @@ func TestAnalyzer_Normalize(t *testing.T) {
 	}
 }
 
-// TestAnalyzer_Empty 空输入产出空表达式（FTS MATCH '' 会报错，必须前置拦截）。
+// TestAnalyzer_Empty 空输入产出空表达式（FTS MATCH ” 会报错，必须前置拦截）。
 func TestAnalyzer_Empty(t *testing.T) {
 	a := newAnalyzer(t)
 	if expr := a.QueryExpression("   "); expr != "" {

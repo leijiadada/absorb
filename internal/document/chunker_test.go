@@ -63,7 +63,7 @@ func TestChunkTextPrefersParagraphBreak(t *testing.T) {
 func TestChunkTextTinyTailMerged(t *testing.T) {
 	var b strings.Builder
 	b.WriteString(strings.Repeat("正文内容。", 500)) // ~2500 runes，切成多块
-	b.WriteString("尾。")                  // 碎尾
+	b.WriteString("尾。")                         // 碎尾
 	chunks := ChunkText(b.String())
 	last := chunks[len(chunks)-1]
 	if last.EndOffset-last.StartOffset < minChunkRunes && len(chunks) > 1 {

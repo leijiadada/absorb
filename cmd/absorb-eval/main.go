@@ -32,6 +32,7 @@ import (
 	"trpc.group/trpc-go/trpc-agent-go/evaluation/evaluator/registry"
 	"trpc.group/trpc-go/trpc-agent-go/evaluation/metric"
 	"trpc.group/trpc-go/trpc-agent-go/event"
+
 	// metric/registry 是判据扩展注册表（rouge tokenizer 等），与 evaluator/registry（评分器注册表）不同
 	metriclocal "trpc.group/trpc-go/trpc-agent-go/evaluation/metric/local"
 	metricregistry "trpc.group/trpc-go/trpc-agent-go/evaluation/metric/registry"

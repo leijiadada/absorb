@@ -47,10 +47,10 @@ type Config struct {
 //   - "local"：本机 llama-server 子进程（--embeddings 模式，GGUF 模型，
 //     CPU 推理，离线零 API 成本），server_exe/model_path 指向本机文件。
 type EmbeddingConfig struct {
-	APIKey   string `yaml:"api_key"`   // 云 provider 的密钥；local 模式忽略
-	BaseURL  string `yaml:"base_url"`  // 云 provider 地址，空 = https://api.siliconflow.cn/v1
-	Model    string `yaml:"model"`     // 空 = BAAI/bge-m3
-	BatchSize int   `yaml:"batch_size"` // 索引期单批文本数，0 = 默认 32
+	APIKey    string `yaml:"api_key"`    // 云 provider 的密钥；local 模式忽略
+	BaseURL   string `yaml:"base_url"`   // 云 provider 地址，空 = https://api.siliconflow.cn/v1
+	Model     string `yaml:"model"`      // 空 = BAAI/bge-m3
+	BatchSize int    `yaml:"batch_size"` // 索引期单批文本数，0 = 默认 32
 
 	Provider  string `yaml:"provider"`   // 空 = 云 API；"local" = llama-server 子进程
 	ServerExe string `yaml:"server_exe"` // local：llama-server.exe 绝对路径
@@ -129,7 +129,7 @@ func (c SummaryConfig) Bool() bool { return c.Disabled != nil && *c.Disabled }
 type MemoryConfig struct {
 	Enabled      bool          `yaml:"enabled"`       // 总开关
 	DBPath       string        `yaml:"db_path"`       // 记忆库 SQLite 文件路径（独立于会话库）
-	PreloadLimit int `yaml:"preload_limit"` // 已废弃：框架预加载由 related_memories 尾部注入替代，恒为 0（字段保留兼容旧 yaml）
+	PreloadLimit int           `yaml:"preload_limit"` // 已废弃：框架预加载由 related_memories 尾部注入替代，恒为 0（字段保留兼容旧 yaml）
 	AsyncNum     int           `yaml:"async_num"`     // auto 提取并发 worker 数，0=默认 1
 	QueueSize    int           `yaml:"queue_size"`    // 提取任务队列长度（满则降级同步），0=默认 10
 	Profile      ProfileConfig `yaml:"profile"`       // L3 用户画像蒸馏（文件式，L1 之上周期蒸馏）

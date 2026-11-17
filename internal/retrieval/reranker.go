@@ -28,10 +28,10 @@ type Reranker interface {
 // 共享实例（与 SharedEmbedder 同模式）：装配层启动时 Set 一次，检索链路取用；
 // 未设置 = 禁用精排（RRF 融合序直接进多样性层）。
 var (
-	sharedRerankMu    sync.RWMutex
-	sharedReranker    Reranker
-	sharedRerankTopN  = 8
-	sharedRerankSetN  bool
+	sharedRerankMu   sync.RWMutex
+	sharedReranker   Reranker
+	sharedRerankTopN = 8
+	sharedRerankSetN bool
 )
 
 // SetSharedReranker 装配层注入共享精排器；candidates 指定精排候选数（<=0 取默认 8）。

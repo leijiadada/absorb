@@ -163,7 +163,7 @@ func (e *OpenAICompatEmbedder) call(ctx context.Context, texts []string) ([][]fl
 	}
 	var parsed struct {
 		Data []struct {
-			Index int       `json:"index"`
+			Index     int       `json:"index"`
 			Embedding []float32 `json:"embedding"`
 		} `json:"data"`
 	}

@@ -124,7 +124,7 @@ const (
 )
 
 // 向量索引状态值（document_index_state.vector_status，0010 起）。
-// '' = 未建/未知（含 chunks 刚重建、向量待补）。向量域独立于词法 index_status：
+// ” = 未建/未知（含 chunks 刚重建、向量待补）。向量域独立于词法 index_status：
 // ready 且 vector_model=当前模型 且 vector_count=chunk_count 才视为向量就绪。
 const (
 	VectorStatusReady  = "ready"
@@ -179,11 +179,11 @@ type DocumentChunkHit struct {
 // document_chunks；Vector 为 float32 切片（存储层负责 BLOB 编解码）。
 // Model 随行存储——跨模型向量不可比，加载按当前模型过滤。
 type ChunkVectorRow struct {
-	ChunkID     string    `json:"chunkId"`
-	DocumentID  string    `json:"documentId"`
-	ChunkIndex  int       `json:"chunkIndex"`
-	Dims        int       `json:"dims"`
-	Model       string    `json:"model"`
-	Vector      []float32 `json:"-"`
-	CreatedAt   time.Time `json:"createdAt"`
+	ChunkID    string    `json:"chunkId"`
+	DocumentID string    `json:"documentId"`
+	ChunkIndex int       `json:"chunkIndex"`
+	Dims       int       `json:"dims"`
+	Model      string    `json:"model"`
+	Vector     []float32 `json:"-"`
+	CreatedAt  time.Time `json:"createdAt"`
 }

@@ -343,7 +343,7 @@ func runDesktop() {
 		OnStartup:         app.startup,
 		HideWindowOnClose: true, // 关窗 = 隐藏到托盘，服务继续跑
 		OnShutdown:        app.shutdown,
-		Bind:              []interface{}{app},
+		Bind:              []any{app},
 		SingleInstanceLock: &options.SingleInstanceLock{
 			UniqueId:               "absorb-agent-desktop-8f4a2c",
 			OnSecondInstanceLaunch: app.onSecondInstance,

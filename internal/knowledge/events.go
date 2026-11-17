@@ -14,7 +14,7 @@ const (
 // KnowledgeEvent 知识变更事件：Service 在成功写入后向 onChange 出口发出的极薄通知。
 // Item 为变更后的条目快照（deleted 为删除前快照）。
 type KnowledgeEvent struct {
-	Kind string                  `json:"type"`
+	Kind string                 `json:"type"`
 	Item *storage.KnowledgeItem `json:"item"`
 }
 

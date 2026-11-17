@@ -52,11 +52,11 @@ func TestFuseRRFLimit(t *testing.T) {
 func TestTopKByCosine(t *testing.T) {
 	q := []float32{1, 0}
 	rows := []storage.ChunkVectorRow{
-		{ChunkIndex: 0, Vector: []float32{1, 0}},   // 相似度 1
-		{ChunkIndex: 1, Vector: []float32{0, 1}},   // 相似度 0
+		{ChunkIndex: 0, Vector: []float32{1, 0}},     // 相似度 1
+		{ChunkIndex: 1, Vector: []float32{0, 1}},     // 相似度 0
 		{ChunkIndex: 2, Vector: []float32{0.7, 0.7}}, // ≈0.707
 		{ChunkIndex: 3, Vector: []float32{9, 9, 9}},  // dims 不匹配，跳过
-		{ChunkIndex: 4, Vector: []float32{-1, 0}},  // 相似度 -1
+		{ChunkIndex: 4, Vector: []float32{-1, 0}},    // 相似度 -1
 	}
 	hits := make([]storage.DocumentChunkHit, len(rows))
 	for i := range rows {

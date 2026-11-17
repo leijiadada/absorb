@@ -25,17 +25,40 @@ import (
 
 const (
 	nativeHostName = "com.absorb.desktop"
-	nativeExtID    = "pgabpbnopahacdbfdmpgdmohbeppflgd"
 )
 
+// nativeExtIDs Native 管道放行的扩展 ID 白名单。
+//   - 开发环境与 CWS 商店包：manifest 带 key，ID 由 key 推导固定（首项）；
+//   - Edge 商店包：Edge 禁止 manifest 含 key，ID 由 Edge 分配（2026-11-17
+//     从 Partner Center 读取），随桌面端发版生效。
+var nativeExtIDs = []string{
+	"pgabpbnopahacdbfdmpgdmohbeppflgd", // 开发 / CWS 包（manifest key 推导）
+	"nfnkckljlhlcoppcpoiomcfhdgpmdfld", // Edge 商店版（Edge 分配）
+}
+
 // RunNativeHost Native Messaging 宿主入口。浏览器拉起时 argv 首参为 origin，
-// 与固定扩展 ID 不符则直接退出（防其他扩展占用通道）。
+// 不在白名单则直接退出（防其他扩展占用通道）。
 func RunNativeHost(args []string) {
-	if len(args) == 0 || args[0] != "chrome-extension://"+nativeExtID+"/" {
+	if len(args) == 0 || !allowedOrigin(args[0]) {
 		fmt.Fprintf(os.Stderr, "[absorb-native] origin validation failed: %v\n", args)
 		return
 	}
 	runHost(os.Stdin, &msgWriter{w: os.Stdout}, reportExtEvent, readBridgePort, time.Second)
+}
+
+// allowedOrigin 校验浏览器传入的 origin 是否命中白名单（兼容带/不带尾斜杠）。
+func allowedOrigin(origin string) bool {
+	const prefix = "chrome-extension://"
+	if !strings.HasPrefix(origin, prefix) {
+		return false
+	}
+	id := strings.TrimSuffix(strings.TrimPrefix(origin, prefix), "/")
+	for _, allowed := range nativeExtIDs {
+		if id == allowed {
+			return true
+		}
+	}
+	return false
 }
 
 // runHost 宿主核心循环，stdin/stdout/上报/端口读取均可注入（单测）。
@@ -220,16 +243,19 @@ func writeNMMessage(w io.Writer, msg []byte) error {
 	return err
 }
 
-// nativeHostManifest 生成 native-host.json 内容（path 指向当前 exe，白名单只放行固定扩展 ID）。
+// nativeHostManifest 生成 native-host.json 内容（path 指向当前 exe，
+// allowed_origins 放行白名单内全部扩展 ID）。
 func nativeHostManifest(exe string) ([]byte, error) {
+	origins := make([]string, 0, len(nativeExtIDs))
+	for _, id := range nativeExtIDs {
+		origins = append(origins, "chrome-extension://"+id+"/")
+	}
 	return json.MarshalIndent(map[string]any{
-		"name":        nativeHostName,
-		"description": "Absorb 阅读助手桌面端",
-		"path":        exe,
-		"type":        "stdio",
-		"allowed_origins": []string{
-			"chrome-extension://" + nativeExtID + "/",
-		},
+		"name":            nativeHostName,
+		"description":     "Absorb 阅读助手桌面端",
+		"path":            exe,
+		"type":            "stdio",
+		"allowed_origins": origins,
 	}, "", "  ")
 }
 

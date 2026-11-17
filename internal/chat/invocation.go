@@ -36,7 +36,7 @@ type ContextInput struct {
 	Paragraph     string `json:"paragraph"`
 	PageContext   string `json:"pageContext"`
 	URL           string `json:"url"`
-	PageMd        string `json:"pageMd"` // 整页结构化文本（扩展端已转换，直读入缓存，上限 100K 字符）
+	PageMd        string `json:"pageMd"`        // 整页结构化文本（扩展端已转换，直读入缓存，上限 100K 字符）
 	ContentStatus string `json:"contentStatus"` // 页面正文完整度：full/partial/selected_only/unavailable（空=不上报，提示词不渲染）
 }
 

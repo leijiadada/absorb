@@ -93,12 +93,15 @@ var migrations = []migration{
 
 // migrateDocumentVectorState 0010：词法与向量索引生命周期解耦（P0 修复）。
 // 1）document_index_state 增加向量索引状态四列（vector_model/vector_status/
-//    vector_count/vector_error）：向量缺失/失败/换模型可被独立检测并补建，
-//    不再被词法 ready 挡住；chunks 重建时向量随事务一并作废。
+//
+//	vector_count/vector_error）：向量缺失/失败/换模型可被独立检测并补建，
+//	不再被词法 ready 挡住；chunks 重建时向量随事务一并作废。
+//
 // 2）document_chunk_vectors 主键 chunk_id → (chunk_id, model)：旧单列主键下
-//    同一 chunk 只能存一个模型向量，换模型重新嵌入撞 UNIQUE(chunk_id)，向量
-//    永远无法随模型更换重建。SQLite 改主键无原地 ALTER，走建新表 → 拷行 →
-//    删旧 → 改名。新库 DDL 已是目标形态，两项均 pragma 守卫幂等跳过。
+//
+//	同一 chunk 只能存一个模型向量，换模型重新嵌入撞 UNIQUE(chunk_id)，向量
+//	永远无法随模型更换重建。SQLite 改主键无原地 ALTER，走建新表 → 拷行 →
+//	删旧 → 改名。新库 DDL 已是目标形态，两项均 pragma 守卫幂等跳过。
 func migrateDocumentVectorState(ctx context.Context, tx *sql.Tx) error {
 	for _, col := range []struct {
 		name string

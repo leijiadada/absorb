@@ -53,7 +53,7 @@ func TestDiversifyHitsPerDocCap(t *testing.T) {
 func TestDiversifyHitsDedup(t *testing.T) {
 	raw := []storage.DocumentChunkHit{
 		hit("d1", "完全 相同 的 内容", -1),
-		hit("d1", "完全相同的内容", -2),  // 归一化后与前条相同
+		hit("d1", "完全相同的内容", -2),       // 归一化后与前条相同
 		hit("d1", "完全  相同\t的\n内容", -3), // 空白差异
 		hit("d2", "不同的内容", -4),
 	}

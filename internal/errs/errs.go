@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"absorb-agent/internal/kind"
+
 	"trpc.group/trpc-go/trpc-agent-go/model"
 )
 
