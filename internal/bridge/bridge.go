@@ -15,9 +15,9 @@ import (
 
 // Deps 桥的端点依赖（由宿主提供 handler），bridge 包不直接依赖 chat 层。
 type Deps struct {
-	Ask          http.HandlerFunc // POST /api/ask：扩展问答 SSE（经 "POST /api/ask" 模式注册）
-	Cancel       http.HandlerFunc // POST /api/cancel：中断运行
-	Capabilities http.HandlerFunc // GET /api/capabilities：默认模型能力下发（扩展端视觉软闸数据源）
+	Ask          http.HandlerFunc     // POST /api/ask：扩展问答 SSE（经 "POST /api/ask" 模式注册）
+	Cancel       http.HandlerFunc     // POST /api/cancel：中断运行
+	Capabilities http.HandlerFunc     // GET /api/capabilities：默认模型能力下发（扩展端视觉软闸数据源）
 	Extra        func(*http.ServeMux) // 附加路由注册（如知识库端点组，由宿主包整体注册；nil 跳过）
 }
 
