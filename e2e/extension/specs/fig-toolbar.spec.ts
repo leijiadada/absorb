@@ -46,6 +46,9 @@ async function openSidepanel(context: BrowserContext, serviceWorker: Worker) {
   });
   await page.goto(`chrome-extension://${new URL(serviceWorker.url()).host}/sidepanel/sidepanel.html`);
   await expect(page.locator('#questionInput')).toBeVisible();
+  // init 是异步的（storage 读经 SW）：慢 CI 上 init 的 renderComposerChips 可能在 fill
+  // 之后才跑并清空已输入文本（#askBtn 卡 disabled 挂满超时的根因），以就绪标记为屏障
+  await expect(page.locator('body')).toHaveAttribute('data-panel-ready', '1', { timeout: 15_000 });
   return page;
 }
 
@@ -78,9 +81,9 @@ test.describe('图卡片工具栏', () => {
     ]);
     sidepanel = await openSidepanel(context, serviceWorker);
     await ask(sidepanel, QUESTION);
-    // mermaid vendor 脚本 2.8MB 首次懒加载 + 渲染，放宽到 15s
+    // mermaid vendor 脚本 2.8MB 首次懒加载 + 渲染；CI 冷缓存实测超 15s，放宽到 30s
     fig = sidepanel.locator('.mermaid-figure');
-    await expect(fig).toBeVisible({ timeout: 15_000 });
+    await expect(fig).toBeVisible({ timeout: 30_000 });
   });
 
   test.afterEach(async ({ context }) => {
