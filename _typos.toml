@@ -1,8 +1,12 @@
 # typos 拼写检查排除配置（配合 .github/workflows/ci.yml 的 typos 步骤）
+# 排除项为抓取的网页语料与第三方文件：外文词、CSS module 类名、页面自带
+# 元素名（如 GitHub 页面内的 markdown-accessiblity-table）会被词典误判
 [files]
 extend-exclude = [
-    "runtime",                      # 随安装包分发的便携 python/mingit
-    "docs/page-corpus",             # 网页语料（整页 HTML 源码）
-    "extension/sidepanel/vendor",   # 第三方 min.js
-    "go.sum",                       # 模块校验和
+    "runtime",                                   # 随安装包分发的便携 python/mingit
+    "docs/page-corpus",                          # 网页语料（整页 HTML）
+    "docs/defuddle-coverage",                    # 提取效果对照语料（整页 HTML）
+    "frontend/tests/extension/fixtures/page-md", # page.md 抓取快照
+    "extension/sidepanel/vendor",                # 第三方 min.js
+    "go.sum",                                    # 模块校验和
 ]
