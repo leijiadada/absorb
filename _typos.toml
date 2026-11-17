@@ -1,0 +1,8 @@
+# typos 拼写检查排除配置（配合 .github/workflows/ci.yml 的 typos 步骤）
+[files]
+extend-exclude = [
+    "runtime",                      # 随安装包分发的便携 python/mingit
+    "docs/page-corpus",             # 网页语料（整页 HTML 源码）
+    "extension/sidepanel/vendor",   # 第三方 min.js
+    "go.sum",                       # 模块校验和
+]

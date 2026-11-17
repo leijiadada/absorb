@@ -5,6 +5,10 @@
 # - Linux 无法运行 Windows 测试二进制（nativehost 依赖 windows/registry），
 #   故 Linux 侧只做交叉编译检查，真正的 go test 交给 windows runner；
 # - 扩展 E2E 在 windows runner 上跑真实 Chromium（live 演示用例自动 skip）；
+# - 依赖与格式检查：go mod tidy 一致性、gofmt（含 interface{} → any）、goimports、
+#   typos 拼写检查（排除规则见 _typos.toml）；
+# - 大文件防护：新增/复制/重命名文件超过 1.5MB 时 check-file-size job 失败，
+#   已跟踪大文件的修改不拦；
 # - Windows 安装包由 tag 触发的 release.yml 流水线构建（Inno Setup）。
 name: CI
 
@@ -26,6 +30,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+
+      # 全仓拼写检查，排除规则见 _typos.toml
+      - name: typos 拼写检查
+        uses: crate-ci/typos@v1.52.2
 
       - uses: actions/setup-go@v5
         with:
@@ -51,6 +59,34 @@ jobs:
           find . -name '*.md' -delete
           zip -qr ../internal/extension/extension_bundle.zip .
         # 文档不随扩展分发，与 scripts/pack-extension.ps1 的规则保持一致
+
+      # go.mod/go.sum 与源码不一致则失败（-diff 只报告，不修改文件）
+      - name: go mod tidy 一致性检查
+        run: go mod tidy -diff
+
+      # -l 与 -r 连用，同时列出未格式化和仍在用 interface{}（应为 any）的文件
+      # 修复：gofmt -w -r 'interface{} -> any' .
+      - name: gofmt 格式检查（含 interface{} → any）
+        run: |
+          files=$(gofmt -r 'interface{} -> any' -l .)
+          if [ -n "$files" ]; then
+            echo "::error::以下文件需要 gofmt 格式化或仍在使用 interface{}："
+            echo "$files"
+            echo "自动修复：gofmt -w -r 'interface{} -> any' ."
+            exit 1
+          fi
+
+      # 检查 import 分组与排序。修复：goimports -w .
+      - name: goimports 检查
+        run: |
+          go install golang.org/x/tools/cmd/goimports@latest
+          files=$("$(go env GOPATH)/bin/goimports" -l .)
+          if [ -n "$files" ]; then
+            echo "::error::以下文件 import 分组或排序不符合 goimports 规范："
+            echo "$files"
+            echo "自动修复：goimports -w ."
+            exit 1
+          fi
 
       - name: Go 静态检查（Windows 目标）
         env:
@@ -158,3 +194,48 @@ jobs:
       # （CI 下 reuseExistingServer 自动禁用）；本地语料 spa-modal-noise 不入库，自动 skip
       - name: 运行扩展 E2E
         run: npx playwright test -c extension/playwright.config.ts
+
+  # 拦截新增/复制/重命名的超过 1.5MB 的文件；过滤条件不含 M，已跟踪大文件
+  # （runtime/、语料、vendor）的修改不受影响
+  check-file-size:
+    name: 大文件防护（新增文件超过 1.5MB 拒绝）
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 校验变更文件大小
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          BEFORE_SHA: ${{ github.event.before }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          limit=1572864
+          zero="0000000000000000000000000000000000000000"
+          if [ -n "${BASE_REF}" ]; then
+            # PR：对 merge-base 比较，只看本 PR 引入的变更
+            base="$(git merge-base HEAD "origin/${BASE_REF}")"
+            range="${base}..HEAD"
+          elif [ -n "${BEFORE_SHA}" ] && [ "${BEFORE_SHA}" != "${zero}" ] \
+            && git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+            range="${BEFORE_SHA}..HEAD"
+          elif git rev-parse HEAD^ >/dev/null 2>&1; then
+            range="HEAD^..HEAD"
+          else
+            echo "无可比基线（仓库首个提交），跳过大文件检查"
+            exit 0
+          fi
+          echo "检查范围: ${range}（上限 $(expr ${limit} / 1048576) MB/文件，A/C/R）"
+          fail=0
+          while IFS= read -r -d '' f; do
+            [ -f "$f" ] || continue
+            size=$(stat -c '%s' "$f")
+            if [ "$size" -gt "$limit" ]; then
+              echo "::error file=${f}::新增文件 ${size} 字节，超过 ${limit} 字节上限"
+              fail=1
+            fi
+          done < <(git diff --name-only -z --diff-filter=ACR "${range}" --)
+          exit $fail
