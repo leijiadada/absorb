@@ -17,13 +17,13 @@ import (
 // 产品状态枚举（prepare 链路对外语义，document_contents.extraction_status 同值域）。
 // 失败状态不落库，由扩展端渲染对应文案并决定重试。
 const (
-	StatusReady        = "ready"        // 完整提取，全文可注入
-	StatusPartial      = "partial"      // 部分可读：全文已落库，但超 PageTextMaxLen 注入截断或获取侧截断
-	StatusTooLarge     = "too_large"    // 文件超内容大小上限
-	StatusNeedsAuth    = "needs_auth"   // 401/403：需要登录或访问权限
-	StatusNoText       = "no_text"      // 无可提取文本（扫描件/图片型 PDF）
-	StatusEncrypted    = "encrypted"    // 加密/密码保护
-	StatusInvalidURL   = "invalid_url"  // URL 非法或指向内网（SSRF 拦截）
+	StatusReady        = "ready"         // 完整提取，全文可注入
+	StatusPartial      = "partial"       // 部分可读：全文已落库，但超 PageTextMaxLen 注入截断或获取侧截断
+	StatusTooLarge     = "too_large"     // 文件超内容大小上限
+	StatusNeedsAuth    = "needs_auth"    // 401/403：需要登录或访问权限
+	StatusNoText       = "no_text"       // 无可提取文本（扫描件/图片型 PDF）
+	StatusEncrypted    = "encrypted"     // 加密/密码保护
+	StatusInvalidURL   = "invalid_url"   // URL 非法或指向内网（SSRF 拦截）
 	StatusNetworkError = "network_error" // 网络/服务端/解析失败
 )
 

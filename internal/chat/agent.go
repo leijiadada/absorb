@@ -23,10 +23,10 @@ import (
 	"trpc.group/trpc-go/trpc-agent-go/session"
 	"trpc.group/trpc-go/trpc-agent-go/tool"
 
+	askuser "absorb-agent/tool/askuser"
 	expand "absorb-agent/tool/expand_context"
 	fetch "absorb-agent/tool/fetch_page"
 	recall "absorb-agent/tool/recall_history"
-	askuser "absorb-agent/tool/askuser"
 
 	"absorb-agent/internal/conf"
 	"absorb-agent/internal/errs"

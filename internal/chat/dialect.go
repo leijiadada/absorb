@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"absorb-agent/internal/kind"
+
 	openaigo "github.com/openai/openai-go"
 	"trpc.group/trpc-go/trpc-agent-go/model/openai"
 )

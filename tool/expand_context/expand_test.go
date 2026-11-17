@@ -9,7 +9,7 @@ import (
 
 	"trpc.group/trpc-go/trpc-agent-go/tool"
 
-	"absorb-agent/tool/pageretriever"
+	retriever "absorb-agent/tool/pageretriever"
 )
 
 // mustExtract 读本包 testdata fixture 并抽取结构化文本（TestRunExpand_AttemptLadder 用）

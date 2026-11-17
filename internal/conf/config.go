@@ -98,7 +98,7 @@ func (c SummaryConfig) Bool() bool { return c.Disabled != nil && *c.Disabled }
 type MemoryConfig struct {
 	Enabled      bool          `yaml:"enabled"`       // 总开关
 	DBPath       string        `yaml:"db_path"`       // 记忆库 SQLite 文件路径（独立于会话库）
-	PreloadLimit int `yaml:"preload_limit"` // 已废弃：框架预加载由 related_memories 尾部注入替代，恒为 0（字段保留兼容旧 yaml）
+	PreloadLimit int           `yaml:"preload_limit"` // 已废弃：框架预加载由 related_memories 尾部注入替代，恒为 0（字段保留兼容旧 yaml）
 	AsyncNum     int           `yaml:"async_num"`     // auto 提取并发 worker 数，0=默认 1
 	QueueSize    int           `yaml:"queue_size"`    // 提取任务队列长度（满则降级同步），0=默认 10
 	Profile      ProfileConfig `yaml:"profile"`       // L3 用户画像蒸馏（文件式，L1 之上周期蒸馏）
