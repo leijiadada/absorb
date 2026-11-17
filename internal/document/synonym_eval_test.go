@@ -15,6 +15,23 @@ package document_test
 // 当前 48 题 = 44 同义 + 4 对照（第一批 8+2，第二批 2026-11-15 扩 8+1，
 // 第三批 2026-11-15 扩到 40+：28+1）。
 //
+// ── 冻结规则（2026-11-17，v1.0）──────────────────────────────
+// 本集 48 题与判定口径自 v1.0 起冻结：增删题、改锚点、改判定口径任一变更，
+// 须 EvalSetVersion +1、重跑全量基线、并在本注释记录变更原因与新旧成绩对照。
+// 禁止就地修改——评测集是尺子，不是调参对象（doc2 §八「不让评测数据跟着
+// 模型调参变化」）。
+//
+// ── v1.0 基线（44 同义题；评测管线与生产同链路）──────────────
+//   词法基线（GSE+FTS5）：                         23% / 30% / MRR 0.20
+//   本地 bge-small-zh + 本地精排（CPU 11.7s/题）：  36% / 39% / MRR 0.37
+//   云 Qwen3-Embedding-4B + 云 Qwen3-Reranker-4B
+//   （topN=16，查询 ~500ms）—— 生产终版：          45% / 45% / MRR 0.34
+//
+// 噪声带：FTS5 bm25 同分 tie-break 使排名 8~10 的边缘题在多次运行间漂移
+// （实测同代码同库两轮 Recall@10 差 1 题），单次运行的指标波动带约 ±2pp。
+// 解读规则：两配置差异 <4pp 视为噪声内持平，≥4pp 方可下方向性结论；
+// 严格对比建议同配置跑 2~3 次取命中题并集/中位数。
+//
 // 外部测试包（document_test）：hybrid 评测需 import tool/search_document，
 // 该包反向 import internal/document，内部测试包会成环。
 //
@@ -22,10 +39,11 @@ package document_test
 //
 //	Copy-Item "$env:APPDATA\absorb-agent\data\sessions.db" "$env:TEMP\absorb-m1-check.db"
 //	go test ./internal/document/ -run TestSynonymRetrievalBaseline -v
-//	# hybrid 模式（本地 bge-small-zh sidecar）：
+//	# 云模式（生产终版口径，ABSORB_EMB_MODEL/ABSORB_RR_MODEL 可换模型）：
+//	$env:ABSORB_CLOUD_EMBED="1"; $env:ABSORB_EMB_API_KEY="<siliconflow key>"
+//	# 本地 sidecar 模式（离线兜底，模型资源需另行下载）：
 //	$env:ABSORB_LOCAL_EMBED="1"
 //	$env:ABSORB_LLAMA_EXE="...\llama-server.exe"; $env:ABSORB_LLAMA_GGUF="...\bge-small-zh-v1.5-f16.gguf"
-//	# 可选 Reranker 精排（第二 sidecar，8937 端口）：
 //	$env:ABSORB_RERANK_GGUF="...\bge-reranker-v2-m3-Q8_0.gguf"
 
 import (
@@ -45,6 +63,10 @@ import (
 )
 
 const synonymDBCopy = "absorb-m1-check.db"
+
+// EvalSetVersion 同义评测集版本：v1.0（2026-11-17）冻结 48 题 + 判定口径。
+// 变更规则见文件头「冻结规则」——改题必须升版本并重跑基线。
+const EvalSetVersion = 1
 
 type synonymCase struct {
 	name   string // 同义类型
@@ -242,14 +264,16 @@ func TestSynonymRetrievalBaseline(t *testing.T) {
 			t.Fatalf("评测集自检失败：锚点 %q 不在原文中（题目 %s）", c.anchor, c.name)
 		}
 	}
+	t.Logf("evalset v%d | %d 题 = %d 同义 + %d 对照（v1.0 冻结 2026-11-17）",
+		EvalSetVersion, len(synonymCases), len(synonymCases)-4, 4)
 
 	a := document.SharedAnalyzer()
 	type result struct {
-		name     string
-		rank     int // 1-based top10 排名；0=前 10 未命中
-		rankRaw  int // 原始召回（50）内排名；0=未召回
-		hits     int
-		durMs    int64
+		name    string
+		rank    int // 1-based top10 排名；0=前 10 未命中
+		rankRaw int // 原始召回（50）内排名；0=未召回
+		hits    int
+		durMs   int64
 	}
 	var (
 		synResults, ctlResults []result
