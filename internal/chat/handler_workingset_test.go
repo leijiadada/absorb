@@ -98,6 +98,31 @@ func TestWorkingSetL1Injection(t *testing.T) {
 		}
 	})
 
+	t.Run("超预算SSE报错且不调模型", func(t *testing.T) {
+		wsFn := func() conf.WorkingSetConfig {
+			return conf.WorkingSetConfig{L1MaxTokens: 10}
+		}
+		h, cap2, svc := setup(t, "openai", true, false, defaultOKStream, withWSFn(wsFn))
+		key := session.Key{AppName: AppName, UserID: "absorb-user", SessionID: "s-l1-budget"}
+		sess, err := svc.CreateSession(context.Background(), key, nil)
+		if err != nil {
+			t.Fatalf("CreateSession: %v", err)
+		}
+		long := strings.Repeat("这是一段很长的历史回答内容，用于撑爆极小的注入预算。", 20)
+		wsSeedRound(t, svc, sess, "A的问题", long, "https://a.com")
+
+		out := wsAsk(t, h, "s-l1-budget", "https://b.com", "懂了")
+		if !strings.Contains(out, `"type":"error"`) {
+			t.Fatalf("超预算应下发 SSE type:error，实际: %s", out)
+		}
+		if !strings.Contains(out, "预算") {
+			t.Errorf("报错应可读（含预算说明）: %s", out)
+		}
+		if reqBody := cap2.get(); len(reqBody) != 0 {
+			t.Errorf("超预算本轮不应调用模型，但假端点收到请求体: %.120s", reqBody)
+		}
+	})
+
 	t.Run("开关关闭回退单scope现状", func(t *testing.T) {
 		disabled := false
 		wsFn := func() conf.WorkingSetConfig {

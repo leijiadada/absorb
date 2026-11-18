@@ -50,12 +50,11 @@ type Embedder interface {
 // OpenAICompatEmbedder OpenAI 兼容 /v1/embeddings 客户端（硅基流动等）。
 // 复用升级链路的代理解析（ProxyResolver），保证全应用出网代理一致。
 type OpenAICompatEmbedder struct {
-	baseURL  string
-	apiKey   string
-	model    string
-	batch    int
-	maxChars int // 单条输入字符上限（0=不截断）
-	hc       *http.Client
+	baseURL string
+	apiKey  string
+	model   string
+	batch   int
+	hc      *http.Client
 }
 
 // NewOpenAICompatEmbedder 构建客户端。proxyFn 复用全局代理解析（可 nil=直连）。
@@ -64,7 +63,7 @@ func NewOpenAICompatEmbedder(baseURL, apiKey, model string, batchSize int, proxy
 		baseURL = "https://api.siliconflow.cn/v1"
 	}
 	if model == "" {
-		model = "BAAI/bge-m3"
+		model = "Qwen/Qwen3-Embedding-4B"
 	}
 	if batchSize <= 0 {
 		batchSize = 32
@@ -81,14 +80,6 @@ func NewOpenAICompatEmbedder(baseURL, apiKey, model string, batchSize int, proxy
 }
 
 func (e *OpenAICompatEmbedder) Model() string { return e.model }
-
-// WithMaxChars 单条输入字符级截断上限（链式）。bge-v1.5 系训练上下文 512 token
-// （中文 ≈1 token/字），超长部分本就无效；llama-server 对超 n_ctx 输入直接拒绝
-// 而非截断，local 模式由客户端截断兜底（云 API 有 truncate:"right"，双保险无害）。
-func (e *OpenAICompatEmbedder) WithMaxChars(n int) *OpenAICompatEmbedder {
-	e.maxChars = n
-	return e
-}
 
 // EmbedDocuments 分批调用 /v1/embeddings（input 数组）。批间失败快速上抛——
 // 调用方（BuildIndex）对失败整体降级词法，不做批级重试（限流场景由下次 prepare 重试）。
@@ -119,26 +110,13 @@ func (e *OpenAICompatEmbedder) EmbedQuery(ctx context.Context, text string) ([]f
 	return vecs[0], nil
 }
 
-// call 单批请求。注意：bge-*-v1.5 large 系对短查询建议加指令前缀
-// （"为这个句子生成表示以用于检索相关文章："），默认的 bge-m3 无此要求——
-// 若后续把默认模型换成 v1.5 系，EmbedQuery 需补前缀。
+// call 单批请求。
 func (e *OpenAICompatEmbedder) call(ctx context.Context, texts []string) ([][]float32, error) {
-	// 字符级截断（WithMaxChars）：bge-v1.5 系 512 token 训练上下文的客户端兜底
-	if e.maxChars > 0 {
-		trimmed := make([]string, len(texts))
-		for i, t := range texts {
-			if r := []rune(t); len(r) > e.maxChars {
-				t = string(r[:e.maxChars])
-			}
-			trimmed[i] = t
-		}
-		texts = trimmed
-	}
 	payload, err := json.Marshal(map[string]any{
 		"model":           e.model,
 		"input":           texts,
 		"encoding_format": "float",
-		"truncate":        "right", // 超模型上下文时右侧截断（防御：bge-m3 上限 8192 token，正常 chunk 远低于此）
+		"truncate":        "right", // 超模型上下文时右侧截断（防御；Qwen3-Embedding-4B 上限 32K token，正常 chunk 远低于此）
 	})
 	if err != nil {
 		return nil, err

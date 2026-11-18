@@ -122,8 +122,8 @@ func runCLI() {
 		log.Warnf("[Absorb] telemetry init failed (tracing disabled): %v", err)
 	}
 	defer obs.Close()
-	// M3 语义检索装配：local = llama-server 子进程（离线）；默认 = 云 API；
-	// 两者都未配置 = 禁用（纯词法）。失败降级词法，不阻断启动。
+	// M3 语义检索装配：云 API（bge 时代 local 子进程模式已移除）；
+	// 未配置 APIKey = 禁用（纯词法）。失败降级词法，不阻断启动。
 	setupEmbedding(cfg, func() string { return cfg.Proxy.URL })
 
 	r, sessionSvc, strategy, _ := startCore(cfg, cfgPath, func() string { return cfg.Proxy.URL })
@@ -190,63 +190,30 @@ func runCLI() {
 func newDocumentAPI(sessionSvc *store.SessionService, proxyFn func() string, maxBytesFn func() int64) *document.API {
 	return document.NewAPI(document.NewService(
 		sessionSvc.Storage(),
-		docextract.NewPDFExtractor(fetch_page.NewFetchPageService(proxyFn, maxBytesFn)),
+		docextract.NewPDFExtractor(fetch_page.NewFetchPageService(proxyFn, maxBytesFn), proxyFn, maxBytesFn),
 		chat.AppName, chat.UserID,
 	).WithEmbedder(retrieval.SharedEmbedder()))
 }
 
-// setupEmbedding 语义检索装配（M3）：按 provider 构造共享 Embedder（可选 Reranker）。
-// 返回 local 模式的子进程管理器列表（调用方负责 Stop；云模式返回空）。
-func setupEmbedding(cfg conf.Config, proxyFn func() string) []*retrieval.LocalEmbeddingServer {
+// setupEmbedding 语义检索装配（M3）：云 API 构造共享 Embedder（可选 Reranker）。
+// bge 时代的 local llama-server 子进程模式（LocalEmbeddingServer/WithMaxChars(500)）
+// 已随 bge 一并移除；未配置 APIKey = 禁用（纯词法）。
+func setupEmbedding(cfg conf.Config, proxyFn func() string) {
 	emb := cfg.Embedding
-	var servers []*retrieval.LocalEmbeddingServer
-	switch emb.Provider {
-	case "local":
-		srv := retrieval.NewLocalEmbeddingServer(emb.ServerExe, emb.ModelPath, emb.Port)
-		if err := srv.Start(context.Background()); err != nil {
-			log.Warnf("[Absorb] local embedding server failed (lexical-only): %v", err)
-			return nil
+	if strings.TrimSpace(emb.APIKey) == "" {
+		return // 未配置：纯词法
+	}
+	retrieval.SetSharedEmbedder(retrieval.NewOpenAICompatEmbedder(
+		emb.BaseURL, emb.APIKey, emb.Model, emb.BatchSize, proxyFn))
+	// 云精排（可选）：rerank_model 非空时复用云鉴权与 base_url（同款
+	// /v1/rerank 风格），延迟 <1s；失败降级融合序
+	if rrModel := strings.TrimSpace(emb.RerankModel); rrModel != "" {
+		rrBase := emb.BaseURL
+		if rrBase == "" {
+			rrBase = "https://api.siliconflow.cn/v1"
 		}
-		servers = append(servers, srv)
-		model := strings.TrimSuffix(filepath.Base(emb.ModelPath), filepath.Ext(emb.ModelPath))
-		// local 批上限 8：llama-server embeddings 不做跨请求切片，physical
-		// batch（8192）须覆盖单次请求 token 总和（8 条 × ~700 token ≈ 5600）
-		localBatch := emb.BatchSize
-		if localBatch <= 0 || localBatch > 8 {
-			localBatch = 8
-		}
-		retrieval.SetSharedEmbedder(retrieval.NewOpenAICompatEmbedder(srv.BaseURL(), "local", model, localBatch, nil).
-			WithMaxChars(500)) // bge-v1.5 系 512 token 上下文，llama-server 拒绝超长输入
-		// 精排（可选）：rerank_model_path 非空时起第二个 sidecar；失败只告警
-		// 降级融合序，不阻断语义检索
-		if rrPath := strings.TrimSpace(emb.RerankModelPath); rrPath != "" {
-			rr := retrieval.NewRerankServer(emb.ServerExe, rrPath, emb.RerankPort)
-			if err := rr.Start(context.Background()); err != nil {
-				log.Warnf("[Absorb] local rerank server failed (fusion-order only): %v", err)
-			} else {
-				servers = append(servers, rr)
-				retrieval.SetSharedReranker(retrieval.NewLlamaRerankClient(rr.BaseURL(), filepath.Base(rrPath), "", nil), emb.RerankTopN)
-				log.Infof("[Absorb] rerank enabled | candidates=%d", retrieval.SharedRerankTopN())
-			}
-		}
-		return servers
-	default:
-		if strings.TrimSpace(emb.APIKey) == "" {
-			return nil // 未配置：纯词法
-		}
-		retrieval.SetSharedEmbedder(retrieval.NewOpenAICompatEmbedder(
-			emb.BaseURL, emb.APIKey, emb.Model, emb.BatchSize, proxyFn))
-		// 云精排（可选）：rerank_model 非空时复用云鉴权与 base_url（同款
-		// /v1/rerank 风格），延迟 <1s；失败降级融合序
-		if rrModel := strings.TrimSpace(emb.RerankModel); rrModel != "" {
-			rrBase := emb.BaseURL
-			if rrBase == "" {
-				rrBase = "https://api.siliconflow.cn/v1"
-			}
-			retrieval.SetSharedReranker(retrieval.NewLlamaRerankClient(rrBase, rrModel, emb.APIKey, proxyFn), emb.RerankTopN)
-			log.Infof("[Absorb] cloud rerank enabled | model=%s candidates=%d", rrModel, retrieval.SharedRerankTopN())
-		}
-		return nil
+		retrieval.SetSharedReranker(retrieval.NewLlamaRerankClient(rrBase, rrModel, emb.APIKey, proxyFn), emb.RerankTopN)
+		log.Infof("[Absorb] cloud rerank enabled | model=%s candidates=%d", rrModel, retrieval.SharedRerankTopN())
 	}
 }
 
@@ -269,10 +236,8 @@ func runDesktop() {
 		log.Warnf("[Absorb] telemetry init failed (tracing disabled): %v", err)
 	}
 	defer obs.Close()
-	// M3 语义检索装配（同 CLI 分支）：local 子进程生命周期挂 app.shutdown
-	for _, srv := range setupEmbedding(cfg, func() string { return cfg.Proxy.URL }) {
-		defer srv.Stop()
-	}
+	// M3 语义检索装配（同 CLI 分支）：云 API，无需子进程生命周期管理
+	setupEmbedding(cfg, func() string { return cfg.Proxy.URL })
 
 	// 配置运行时句柄：设置页保存后经句柄更新，请求侧实时读取（热切换）
 	cfgH := conf.NewHandle(cfg)

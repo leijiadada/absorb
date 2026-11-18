@@ -185,3 +185,51 @@ func RerankCandidates(ctx context.Context, fused []storage.DocumentChunkHit, que
 	}
 	return append(out, fused[topN:]...), true
 }
+
+// RerankSeedTopN 扩池精排（F4b，design/5.md 2026-11-18 转正）的向量种子数：
+// autopsy 机制先验——P3 词汇不匹配桶锚点块的向量排名上限 36 + 名次漂移余量；
+// 业界常见区间（50 条）内保守取 40。
+const RerankSeedTopN = 40
+
+// RerankPoolCandidates 扩池精排（F4b）：池 = 融合榜 topN ∪ 向量种子 topK，
+// 按块去重（融合序在前、向量序在后），整池重排；池外融合尾保持原融合序
+// 缀后。融合榜本身不触碰（F4a 教训：union 逐块名次不减≠融合名次不减）。
+// 精排失败/未配置降级原融合榜，语义与 RerankCandidates 一致。
+func RerankPoolCandidates(ctx context.Context, fused, vecSeeds []storage.DocumentChunkHit, query string, r Reranker, topN, seedN int) ([]storage.DocumentChunkHit, bool) {
+	if r == nil || len(fused) == 0 {
+		return fused, false
+	}
+	if topN <= 0 || topN > len(fused) {
+		topN = len(fused)
+	}
+	pool := make([]storage.DocumentChunkHit, 0, topN+seedN)
+	keys := make(map[string]struct{}, topN+seedN)
+	add := func(list []storage.DocumentChunkHit) {
+		for _, h := range list {
+			k := h.DocumentID + "#" + itoa(h.ChunkIndex)
+			if _, ok := keys[k]; ok {
+				continue
+			}
+			keys[k] = struct{}{}
+			pool = append(pool, h)
+		}
+	}
+	add(fused[:topN])
+	if seedN > 0 {
+		if seedN > len(vecSeeds) {
+			seedN = len(vecSeeds)
+		}
+		add(vecSeeds[:seedN])
+	}
+	rr, applied := RerankCandidates(ctx, pool, query, r, len(pool))
+	if !applied {
+		return fused, false
+	}
+	tail := make([]storage.DocumentChunkHit, 0, len(fused))
+	for _, h := range fused[topN:] {
+		if _, ok := keys[h.DocumentID+"#"+itoa(h.ChunkIndex)]; !ok {
+			tail = append(tail, h)
+		}
+	}
+	return append(rr, tail...), true
+}

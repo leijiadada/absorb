@@ -26,7 +26,7 @@ import (
 
 // schemaVersion 本版本代码所支持的数据库 schema 版本。
 // 每次增改表结构或数据语义：migrations 追加一条，并把此常量 +1。
-const schemaVersion = 10
+const schemaVersion = 11
 
 // migration 一条前向迁移。Up 在单个事务内执行。
 type migration struct {
@@ -89,6 +89,29 @@ var migrations = []migration{
 		Name:    "document_vector_state",
 		Up:      migrateDocumentVectorState,
 	},
+	{
+		Version: 11,
+		Name:    "document_content_heading_marks",
+		Up:      migrateDocumentHeadingMarks,
+	},
+}
+
+// migrateDocumentHeadingMarks 0011：document_contents 增加章节标题元数据列
+// （F3a 结构进元数据）。heading_marks 存 []extract.HeadingMark 的 JSON（rune
+// 偏移+层级+标题+面包屑链），可空——旧文档空值 = 全链路行为不变。正文一个
+// 字节不动，结构只进元数据层；Marks 随正文落库（BuildIndex 只有文本无 PDF
+// 字节，docling 无法重算）。
+func migrateDocumentHeadingMarks(ctx context.Context, tx *sql.Tx) error {
+	var cols int
+	if err := tx.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM pragma_table_info('document_contents') WHERE name='heading_marks'`).Scan(&cols); err != nil {
+		return err
+	}
+	if cols > 0 {
+		return nil // 新库：DDL 已含该列
+	}
+	_, err := tx.ExecContext(ctx, `ALTER TABLE document_contents ADD COLUMN heading_marks TEXT`)
+	return err
 }
 
 // migrateDocumentVectorState 0010：词法与向量索引生命周期解耦（P0 修复）。

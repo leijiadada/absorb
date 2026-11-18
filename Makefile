@@ -29,7 +29,7 @@ ISCC ?= $(shell powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/
 EXE_PATH  := $(BIN_DIR)/$(APP).exe
 
 .DEFAULT_GOAL := build
-.PHONY: build build-cli build-eval build-web pack-assets sync-version ensure-iscc installer release test test-go test-web test-extension-e2e vet lint govuln eval fmt run run-cli clean
+.PHONY: build build-cli build-eval build-web pack-assets sync-version ensure-iscc installer release test test-go test-web test-visual test-extension-e2e vet lint govuln eval fmt run run-cli clean
 
 NM_STAMP := frontend/node_modules/.absorb-install-stamp
 $(NM_STAMP): frontend/package.json frontend/package-lock.json
@@ -40,10 +40,10 @@ $(E2E_STAMP): e2e/package.json e2e/package-lock.json
 	@$(PS) "cd e2e; npm ci; if (\$$LASTEXITCODE -ne 0) { exit 1 }; New-Item -ItemType File -Path 'node_modules\.absorb-install-stamp' -Force | Out-Null"
 
 build-web: $(NM_STAMP) ## 构建前端 dist
-	$(PS) "cd frontend; npm run build"
+	$(PS) "cd frontend; npm run build; if (\$$LASTEXITCODE -ne 0) { exit 1 }"
 
 pack-assets: build-web ## 打包内嵌资源：扩展 bundle zip（依赖前端 dist）
-	$(PS) "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/pack-extension.ps1"
+	@powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/pack-extension.ps1
 
 # 版本元数据同步：VERSION 是唯一权威，构建前写入各产物（wails.json 的 PE 版本资源 /
 # package.json / 扩展 manifest 的四段版本）。必须排在 pack-assets 之前——manifest 的
@@ -67,12 +67,15 @@ test-go: pack-assets ## 运行 Go 单元测试（禁用缓存，失败即停）
 	$(GO) test -count=1 -timeout 300s -failfast ./...
 
 test-web: $(NM_STAMP) ## 运行前端与扩展单元测试（vitest，tests/desktop + tests/extension）
-	$(PS) "cd frontend; npx vitest run"
+	$(PS) "cd frontend; npx vitest run; if (\$$LASTEXITCODE -ne 0) { exit 1 }"
 
 test-extension-e2e: $(E2E_STAMP) ## 扩展 E2E（Playwright 真实 Chromium；有头调试：先设 ABSORB_E2E_HEADED=1）
 	$(PS) "cd e2e; npx playwright test -c extension/playwright.config.ts"
 
-test: test-go test-web ## 运行全部测试（Go + 前端 + 扩展；E2E 慢，用 make test-extension-e2e 单独跑）
+test-visual: ## 运行 Visual Explanation 纯 JS 单测（node --test，tests/visual，零依赖免 npm install）
+	$(PS) "node --test 'tests/visual/*.test.mjs'; if (\$$LASTEXITCODE -ne 0) { exit 1 }"
+
+test: test-go test-web test-visual ## 运行全部测试（Go + 前端 + 扩展 + 可视化；E2E 慢，用 make test-extension-e2e 单独跑）
 
 vet: pack-assets ## 运行 Go 静态分析（go vet ./...）
 	$(GO) vet ./...

@@ -130,11 +130,13 @@ func NewSearchDocumentTool() tool.CallableTool {
 			}
 		}
 		fused := retrieval.FuseRRF(lexical, vectorHits, RawRecallLimit)
-		// 精排（M3 可选）：SharedReranker 非空时对融合候选 top-N 重排，失败降级
-		// 融合序。rerankState 供 span/日志观测：off=未配置 / applied=生效 /
-		// fallback=调用失败降级（降级时 RerankCandidates 内部已记 Warn 日志）
+		// 精排（M3 可选）：SharedReranker 非空时按 F4b 扩池口径重排——池 =
+		// 融合榜 topN ∪ 向量种子 top40（autopsy 机制先验，见 design/5.md），
+		// 整池重排、池外融合尾原序缀后，失败降级融合序。rerankState 供
+		// span/日志观测：off=未配置 / applied=生效 / fallback=调用失败降级
+		// （降级时内部已记 Warn 日志）
 		rr := retrieval.SharedReranker()
-		fused, rerankApplied := retrieval.RerankCandidates(ctx, fused, q, rr, retrieval.SharedRerankTopN())
+		fused, rerankApplied := retrieval.RerankPoolCandidates(ctx, fused, vectorHits, q, rr, retrieval.SharedRerankTopN(), retrieval.RerankSeedTopN)
 		rerankState := "off"
 		if rr != nil {
 			if rerankApplied {

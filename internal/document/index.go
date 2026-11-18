@@ -8,10 +8,13 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
+	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
 
+	"absorb-agent/internal/document/extract"
 	"absorb-agent/internal/log"
 	"absorb-agent/internal/retrieval"
 	"absorb-agent/internal/store/storage"
@@ -63,7 +66,7 @@ func (s *Service) BuildIndex(ctx context.Context, documentID string, dc *storage
 		ChunkerVersion:     ChunkerVersion,
 		TokenizerVersion:   TokenizerVersion,
 	}
-	chunks, err := s.buildChunks(dc.ContentText)
+	chunks, err := s.buildChunks(dc.ContentText, parseHeadingMarks(dc.HeadingMarks))
 	if err == nil {
 		state.ChunkCount = len(chunks)
 		state.IndexStatus = storage.IndexStatusReady
@@ -113,7 +116,7 @@ func (s *Service) embedChunks(ctx context.Context, documentID string, chunks []*
 	texts := make([]string, len(chunks))
 	rows := make([]*storage.ChunkVectorRow, len(chunks))
 	for i, c := range chunks {
-		texts[i] = c.Content
+		texts[i] = embeddingInput(c)
 		rows[i] = &storage.ChunkVectorRow{ChunkIndex: c.ChunkIndex}
 	}
 	vecs, err := s.embedder.EmbedDocuments(ctx, texts)
@@ -152,11 +155,26 @@ func (s *Service) markVectorState(ctx context.Context, documentID string, vs sto
 	}
 }
 
+// embeddingInput 索引期向量输入（F3c，2026-11-18）：纯正文。F3a 归因实证：
+// 面包屑前缀在 Qwen3-Embedding-4B 上稀释正文语义（48 题两轮稳定 -7pp
+// Recall@5，词法路逐题不变、伤害全走向量路）——向量吃纯正文，结构只走
+// FTS section_path 加权元数据层。v4 时代 HTML 面包屑前置（借鉴 WeKnora
+// ContextHeader）随同规则移除：正文内 # 标题已携带结构、前置冗余且从无
+// A/B 证据；统一规则使 re-embed 路径无需文档类型即可复现一致输入。
+func embeddingInput(c *storage.DocumentChunk) string {
+	return c.Content
+}
+
 // buildChunks 分块 + 分词 + 组装存储行。search_text 与 content 分离：原文供
 // LLM 与偏移回链，分词文本仅供 FTS 索引（换分词器无需动原文即可重建）。
-func (s *Service) buildChunks(text string) ([]*storage.DocumentChunk, error) {
+// SectionPath 为标题面包屑：HTML 路径来自 chunker v4（# 标题行分区）；PDF
+// 路径来自 marks 中点规则赋值（F3a/F3c 定稿形态——块边界与 plain 基线逐位
+// 一致，结构只进元数据层；F3b 软边界切块两轮评测 -5pp 未达标已回滚，
+// 见 design/5.md）。marks 为空时不赋值（HTML/旧文档不变）。
+func (s *Service) buildChunks(text string, marks []extract.HeadingMark) ([]*storage.DocumentChunk, error) {
 	a := SharedAnalyzer()
 	pieces := ChunkText(text)
+	assignMarkSectionPaths(pieces, marks)
 	out := make([]*storage.DocumentChunk, 0, len(pieces))
 	for i, p := range pieces {
 		trimmed := strings.TrimSpace(p.Content)
@@ -167,7 +185,7 @@ func (s *Service) buildChunks(text string) ([]*storage.DocumentChunk, error) {
 		out = append(out, &storage.DocumentChunk{
 			DocumentID:       "",
 			ChunkIndex:       i,
-			SectionPath:      "", // M1 无可靠章节结构，留空不强行造树
+			SectionPath:      p.SectionPath,
 			Content:          p.Content,
 			SearchText:       a.SearchText(trimmed),
 			StartOffset:      p.StartOffset,
@@ -179,4 +197,53 @@ func (s *Service) buildChunks(text string) ([]*storage.DocumentChunk, error) {
 		})
 	}
 	return out, nil
+}
+
+// parseHeadingMarks 解析落库的 heading_marks JSON（F3a）。空串（HTML 路径/
+// 旧文档）返回 nil，全链路行为不变；解析失败按无结构处理并告警（marks 是
+// 派生元数据，宁缺勿错，不阻塞索引构建）。Offset 升序排序保证赋值二分正确。
+func parseHeadingMarks(s string) []extract.HeadingMark {
+	if strings.TrimSpace(s) == "" {
+		return nil
+	}
+	var marks []extract.HeadingMark
+	if err := json.Unmarshal([]byte(s), &marks); err != nil {
+		log.Warnf("[Absorb] heading_marks parse failed (ignored): %v", err)
+		return nil
+	}
+	sort.SliceStable(marks, func(i, j int) bool { return marks[i].Offset < marks[j].Offset })
+	return marks
+}
+
+// assignMarkSectionPaths F3a/F3c 定稿形态（2026-11-18 评审契约）：chunk 的
+// SectionPath = 满足 mark.Offset ≤ chunk.Start + chunkLen/2 的最后一个 mark
+// 的面包屑——标题命名其后内容，取中点让「标题后内容占块多数」的块归新章节。
+// 只补元数据不动块边界：Content/StartOffset/EndOffset 均为 ChunkText 原样
+// 产物，与 plain 基线逐位一致。marks 为空不赋值（HTML 路径走 chunker v4）；
+// 中点在首个标题前（导语区）保持空面包屑。（F3b 软边界切块曾替代本函数，
+// 两轮 -5pp 未达标回滚——F3b 实验记录见 design/5.md。）
+func assignMarkSectionPaths(pieces []textChunk, marks []extract.HeadingMark) {
+	if len(pieces) == 0 || len(marks) == 0 {
+		return
+	}
+	for i := range pieces {
+		c := &pieces[i]
+		mid := c.StartOffset + (c.EndOffset-c.StartOffset)/2
+		j := sort.Search(len(marks), func(k int) bool { return marks[k].Offset > mid }) - 1
+		if j < 0 {
+			continue
+		}
+		c.SectionPath = markBreadcrumb(marks[j])
+	}
+}
+
+// markBreadcrumb mark 面包屑拼接：Path 链（含自身标题）逐级截断（v4 同款
+// 单级 40 rune）后以 " > " 连接，总长截断（v4 同款 96 rune 自最老一级丢弃，
+// 深层标题更具区分度）——与 HTML 路径 breadcrumbPaths 产物同形态。
+func markBreadcrumb(m extract.HeadingMark) string {
+	parts := make([]string, 0, len(m.Path))
+	for _, t := range m.Path {
+		parts = append(parts, truncateRunes(t, headingTitleMax))
+	}
+	return truncatePath(strings.Join(parts, " > "))
 }

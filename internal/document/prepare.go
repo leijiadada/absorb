@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -34,7 +35,21 @@ func NewService(st storage.Storage, ex extract.Extractor, app, user string) *Ser
 
 // extractionVersion 提取器版本：升级提取逻辑（如换 PDF 解析库）后 +1，
 // 配合 content_hash 支撑未来的按版本重提取。
-const extractionVersion = 1
+// v2（2026-11-17）：PDF 提取引入 poppler(pdftotext) 双跑择优（poppler.go），
+// 缺 ToUnicode 字体的书从拒绝入库变为完整可读。
+// v3（2026-11-17）：docling 结构叠加（structure.go）——章节树按页号模糊匹配
+// 回注 markdown 标题行，chunker v4 面包屑对 PDF 生效。
+// v4（2026-11-18）：择优打分器加入行内乱序项（rareBigramRate，P1 实验）——
+// dslipak 组装缺陷的行内交错文本现在会被识别并切到干净的 pdftotext 文本；
+// 结构叠加改为仅对主路保留文本生效（干净 poppler 文本上叠加稳定 -7pp）。
+// v5（2026-11-18）：目录页剥离（extract/toc.go，P5）——页级整删（poppler 分页
+// 文本密度判定）+ 行级条目行剥离，清掉目录块噪音命中/面包屑污染/向量空间浪费；
+// 主路书的叠加匹配也不再落目录页。落在结构叠加之后，保页号匹配窗口有效。
+// v6（2026-11-18）：结构进元数据（F3a）——docling 章节树不再注入正文，改为
+// HeadingMark 元数据（rune 偏移+层级+面包屑）随正文落库，BuildIndex 切块后
+// 按中点规则赋 SectionPath。正文一个字节不动：块边界/分词/块内容与 v5 产物
+// 逐位一致，结构只进元数据层（FTS section_path 加权 + 向量化前置面包屑）。
+const extractionVersion = 6
 
 // PrepareResult 准备结果：状态与元信息。不含正文——正文只落库，扩展端仅持
 // documentId 与状态，避免大文本经扩展消息对象/chrome.storage 往返。
@@ -110,6 +125,7 @@ func (s *Service) Prepare(ctx context.Context, rawURL, title string) (*PrepareRe
 		ExtractionStatus:  status,
 		ExtractionVersion: extractionVersion,
 		Truncated:         res.Truncated,
+		HeadingMarks:      encodeHeadingMarks(res.Marks),
 		FetchedAt:         time.Now(),
 	}
 	// documents 锚点（知识来源回链 / 未来 chunks 关联复用）+ 正文缓存；
@@ -135,4 +151,18 @@ func (s *Service) Prepare(ctx context.Context, rawURL, title string) (*PrepareRe
 	base.ByteSize = dc.ByteSize
 	base.Truncated = res.Truncated
 	return &base, nil
+}
+
+// encodeHeadingMarks 结构 marks 落库序列化（F3a）：空 = ""（HTML 路径/旧文档
+// 全链路行为不变）。序列化失败按无结构处理（marks 是派生元数据，宁缺勿错）。
+func encodeHeadingMarks(marks []extract.HeadingMark) string {
+	if len(marks) == 0 {
+		return ""
+	}
+	b, err := json.Marshal(marks)
+	if err != nil {
+		log.Warnf("[Absorb] heading_marks encode failed (ignored): %v", err)
+		return ""
+	}
+	return string(b)
 }

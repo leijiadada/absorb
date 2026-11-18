@@ -41,16 +41,11 @@ package document_test
 //	go test ./internal/document/ -run TestSynonymRetrievalBaseline -v
 //	# 云模式（生产终版口径，ABSORB_EMB_MODEL/ABSORB_RR_MODEL 可换模型）：
 //	$env:ABSORB_CLOUD_EMBED="1"; $env:ABSORB_EMB_API_KEY="<siliconflow key>"
-//	# 本地 sidecar 模式（离线兜底，模型资源需另行下载）：
-//	$env:ABSORB_LOCAL_EMBED="1"
-//	$env:ABSORB_LLAMA_EXE="...\llama-server.exe"; $env:ABSORB_LLAMA_GGUF="...\bge-small-zh-v1.5-f16.gguf"
-//	$env:ABSORB_RERANK_GGUF="...\bge-reranker-v2-m3-Q8_0.gguf"
 
 import (
 	"context"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -74,9 +69,8 @@ type synonymCase struct {
 	anchor string // 原文证据锚点（唯一短句，单行内）
 }
 
-// 本地 embedding sidecar（provider=local 的同款生产组件）环境变量门控：
-//   ABSORB_LOCAL_EMBED=1 启用；ABSORB_LLAMA_EXE / ABSORB_LLAMA_GGUF 指定本机路径。
-// 未启用时跑词法基线（M3 前基线 38%/50% 的口径）。
+// 云 embedding（ABSORB_CLOUD_EMBED=1，生产同款组件）；未启用时跑词法基线
+// （M3 前基线 38%/50% 的口径）。
 
 var synonymCases = []synonymCase{
 	// ---- 同义组（观察主体）----
@@ -166,13 +160,12 @@ func TestSynonymRetrievalBaseline(t *testing.T) {
 		t.Fatalf("index not ready: %+v", state)
 	}
 
-	// 语义路开关：ABSORB_CLOUD_EMBED=1（云 API，硅基流动）或
-	// ABSORB_LOCAL_EMBED=1（本地 llama-server sidecar）。评测走与
+	// 语义路开关：ABSORB_CLOUD_EMBED=1（云 API，硅基流动）。评测走与
 	// search_document 完全一致的生产管线（词法+余弦→RRF→[精排]→多样性）。
 	cloud := os.Getenv("ABSORB_CLOUD_EMBED") == "1"
-	hybrid := cloud || os.Getenv("ABSORB_LOCAL_EMBED") == "1"
+	hybrid := cloud
 	var emb retrieval.Embedder
-	var reranker retrieval.Reranker // 配置时启用精排（云模型或本地 sidecar）
+	var reranker retrieval.Reranker // 配置时启用精排（云模型）
 	rrTopN := 16                    // 精排候选数（ABSORB_RERANK_TOPN 可调）
 	var embModel string
 	if cloud {
@@ -182,57 +175,17 @@ func TestSynonymRetrievalBaseline(t *testing.T) {
 		}
 		embModel = os.Getenv("ABSORB_EMB_MODEL")
 		if embModel == "" {
-			embModel = "BAAI/bge-m3"
+			embModel = "Qwen/Qwen3-Embedding-4B"
 		}
 		emb = retrieval.NewOpenAICompatEmbedder("", embKey, embModel, 32, nil)
 		retrieval.SetSharedEmbedder(emb)
 		// 云精排：同 key 同域名 /v1/rerank（ABSORB_RR_MODEL 可换模型）
 		rrModel := os.Getenv("ABSORB_RR_MODEL")
 		if rrModel == "" {
-			rrModel = "BAAI/bge-reranker-v2-m3"
+			rrModel = "Qwen/Qwen3-Reranker-4B"
 		}
 		reranker = retrieval.NewLlamaRerankClient("https://api.siliconflow.cn/v1", rrModel, embKey, nil)
 		t.Logf("mode = HYBRID（云 %s + 云精排 %s，topN=%d）", embModel, rrModel, rrTopN)
-	} else if hybrid {
-		exe := os.Getenv("ABSORB_LLAMA_EXE")
-		gguf := os.Getenv("ABSORB_LLAMA_GGUF")
-		if exe == "" || gguf == "" {
-			t.Fatal("hybrid 需要 ABSORB_LLAMA_EXE / ABSORB_LLAMA_GGUF 指向 llama-server.exe 与 GGUF")
-		}
-		srv := retrieval.NewLocalEmbeddingServer(exe, gguf, 8936)
-		if err := srv.Start(ctx); err != nil {
-			t.Fatalf("local sidecar: %v", err)
-		}
-		defer srv.Stop()
-		// 模型可经 ABSORB_EMB_MODEL 切换（如 bge-m3），默认 bge-small-zh-v1.5；
-		// 模型名是向量入库 model 列与余弦查询过滤的标签，须与 GGUF 实际模型一致
-		embModel = os.Getenv("ABSORB_EMB_MODEL")
-		if embModel == "" {
-			embModel = "bge-small-zh-v1.5"
-		}
-		emb = retrieval.NewOpenAICompatEmbedder(srv.BaseURL(), "local", embModel, 8, nil).WithMaxChars(500)
-		retrieval.SetSharedEmbedder(emb)
-		// 本地 Reranker（可选）：ABSORB_RERANK_GGUF 配置时起第二个 sidecar
-		//（8937 端口），对融合候选 top-N 精排后再过多样性层
-		if rrGGUF := os.Getenv("ABSORB_RERANK_GGUF"); rrGGUF != "" {
-			rrExe := os.Getenv("ABSORB_RERANK_EXE")
-			if rrExe == "" {
-				rrExe = exe
-			}
-			rrSrv := retrieval.NewRerankServer(rrExe, rrGGUF, 8937)
-			if err := rrSrv.Start(ctx); err != nil {
-				t.Fatalf("rerank sidecar: %v", err)
-			}
-			defer rrSrv.Stop()
-			reranker = retrieval.NewLlamaRerankClient(rrSrv.BaseURL(), filepath.Base(rrGGUF), "", nil)
-			// 候选数可调（ABSORB_RERANK_TOPN，默认 16）：生产延迟-质量权衡用
-			if v := os.Getenv("ABSORB_RERANK_TOPN"); v != "" {
-				if n, nerr := strconv.Atoi(v); nerr == nil && n > 0 {
-					rrTopN = n
-				}
-			}
-			t.Logf("rerank topN=%d", rrTopN)
-		}
 	}
 	if hybrid {
 		// 分身 URL：强制全量重建（原 URL 词法幂等跳过，向量不会补齐）。
@@ -255,7 +208,7 @@ func TestSynonymRetrievalBaseline(t *testing.T) {
 			t.Logf("分身向量入库 rows=%d (model=%s)", len(vrows), emb.Model())
 		}
 	} else {
-		t.Log("mode = 词法基线（未启用 ABSORB_LOCAL_EMBED / ABSORB_CLOUD_EMBED）")
+		t.Log("mode = 词法基线（未启用 ABSORB_CLOUD_EMBED）")
 	}
 
 	// 锚点必须在原文中真实存在（评测集自检，防止锚点笔误造成假 miss）

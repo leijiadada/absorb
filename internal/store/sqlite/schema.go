@@ -245,6 +245,7 @@ CREATE TABLE IF NOT EXISTS document_contents (
 	extraction_status   TEXT NOT NULL DEFAULT '',
 	extraction_version  INTEGER NOT NULL DEFAULT 1,
 	truncated           INTEGER NOT NULL DEFAULT 0,
+	heading_marks       TEXT NOT NULL DEFAULT '',
 	fetched_at          INTEGER NOT NULL,
 	updated_at          INTEGER NOT NULL,
 	PRIMARY KEY (app_name, user_id, url)

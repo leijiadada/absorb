@@ -80,6 +80,11 @@ type Document struct {
 // 身份与 documents 同锚点（app,user,url）；ContentText 保存完整提取正文
 // （不受聊天上下文限制，注入时才截断）。失败状态（too_large/needs_auth 等）
 // 不落库，本表只有可复用正文；时间戳由存储层填充。
+// HeadingMarks（F3a）：PDF 章节标题元数据 JSON（[]extract.HeadingMark：rune
+// 偏移+层级+标题+面包屑链）——正文一个字节不动，结构只进元数据层。存储层
+// 持有不透明字符串（不引入 extract 依赖）；空串 = 无结构（HTML 路径/旧文档，
+// 全链路行为不变）。Marks 必须落库：BuildIndex 只有文本无 PDF 字节，docling
+// 无法重算。
 type DocumentContent struct {
 	URL               string    `json:"url"`
 	ContentText       string    `json:"contentText"`
@@ -90,6 +95,7 @@ type DocumentContent struct {
 	ExtractionStatus  string    `json:"extractionStatus"`
 	ExtractionVersion int       `json:"extractionVersion"`
 	Truncated         bool      `json:"truncated"`
+	HeadingMarks      string    `json:"headingMarks,omitempty"` // 章节标题元数据 JSON（F3a），空 = 无结构
 	FetchedAt         time.Time `json:"fetchedAt"`
 	UpdatedAt         time.Time `json:"updatedAt"`
 }

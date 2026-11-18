@@ -75,9 +75,11 @@ func main() {
 	urlFor := servePDFs(pdfPaths)
 
 	fmt.Printf("== Absorb M2 跨文档检索验证 ==\n文档 %d 份：\n", len(paths))
-	// 内容上限放宽到 200MB：技术书 PDF 常超生产默认 10MB，本地服务无风险
+	// 内容上限放宽到 200MB：技术书 PDF 常超生产默认 10MB，本地服务无风险；
+	// 代理直连、双跑择优参数与主路一致
 	ex := extract.NewPDFExtractor(fetch.NewFetchPageService(func() string { return "" },
-		func() int64 { return 200 << 20 }))
+		func() int64 { return 200 << 20 }), func() string { return "" },
+		func() int64 { return 200 << 20 })
 	svc := document.NewService(st, ex, verifyApp, verifyUser)
 	for _, p := range paths {
 		start := time.Now()

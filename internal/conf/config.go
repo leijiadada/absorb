@@ -40,34 +40,21 @@ type Config struct {
 	Telemetry  TelemetryConfig  `yaml:"telemetry"`
 }
 
-// EmbeddingConfig 语义向量检索配置（M3 混合检索）。api_key 为空且 provider
-// 非 local = 整体禁用，检索链路自动降级为纯词法（FTS5+BM25）。
-// 两种 provider：
-//   - ""（默认）：OpenAI 兼容 /v1/embeddings 云 API（硅基流动 bge-m3 等）；
-//   - "local"：本机 llama-server 子进程（--embeddings 模式，GGUF 模型，
-//     CPU 推理，离线零 API 成本），server_exe/model_path 指向本机文件。
+// EmbeddingConfig 语义向量检索配置（M3 混合检索）。api_key 为空 = 整体禁用，
+// 检索链路自动降级为纯词法（FTS5+BM25）。云 OpenAI 兼容 /v1/embeddings API
+// （Qwen3-Embedding-4B 等；bge 时代 local llama-server 子进程模式已移除）。
 type EmbeddingConfig struct {
-	APIKey    string `yaml:"api_key"`    // 云 provider 的密钥；local 模式忽略
-	BaseURL   string `yaml:"base_url"`   // 云 provider 地址，空 = https://api.siliconflow.cn/v1
+	APIKey    string `yaml:"api_key"`    // 云密钥
+	BaseURL   string `yaml:"base_url"`   // 云地址，空 = https://api.siliconflow.cn/v1
 	Model     string `yaml:"model"`      // 空 = BAAI/bge-m3
 	BatchSize int    `yaml:"batch_size"` // 索引期单批文本数，0 = 默认 32
 
-	Provider  string `yaml:"provider"`   // 空 = 云 API；"local" = llama-server 子进程
-	ServerExe string `yaml:"server_exe"` // local：llama-server.exe 绝对路径
-	ModelPath string `yaml:"model_path"` // local：GGUF 模型文件绝对路径
-	Port      int    `yaml:"port"`       // local：监听端口，0 = 默认 8935
-
 	// 精排（Reranker）：对 RRF 融合候选 top-N 按查询-文档相关度重排后再进
-	// 多样性层。两种形态：
-	//   - 云：rerank_model 为云模型名（如 BAAI/bge-reranker-v2-m3），鉴权与
-	//     base_url 复用上方 api_key / base_url（硅基流动同款 /v1/rerank 风格）；
-	//   - local：rerank_model_path 为 GGUF 绝对路径，由 provider=local 的
-	//     server_exe 拉起第二个 llama-server 子进程。
-	// 两者都空 = 禁用精排（纯融合序）。云 rerank 延迟 <1s，local CPU 每候选约 0.7s。
-	RerankModel     string `yaml:"rerank_model"`      // 云 rerank 模型名，空 = 不用云精排
-	RerankModelPath string `yaml:"rerank_model_path"` // local：reranker GGUF 绝对路径
-	RerankPort      int    `yaml:"rerank_port"`       // local：监听端口，0 = 默认 8937
-	RerankTopN      int    `yaml:"rerank_top_n"`      // 精排候选数，0 = 默认 8
+	// 多样性层。rerank_model 为云模型名（如 Qwen/Qwen3-Reranker-4B），鉴权与
+	// base_url 复用上方 api_key / base_url（硅基流动同款 /v1/rerank 风格）。
+	// 空 = 禁用精排（纯融合序），延迟 <1s。
+	RerankModel string `yaml:"rerank_model"` // 云 rerank 模型名，空 = 不用精排
+	RerankTopN  int    `yaml:"rerank_top_n"` // 精排候选数，0 = 默认 8
 }
 
 // TelemetryConfig 生产可观测性（框架链路追踪）配置（默认关闭）。
