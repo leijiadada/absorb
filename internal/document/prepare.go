@@ -141,8 +141,8 @@ func (s *Service) Prepare(ctx context.Context, rawURL, title string) (*PrepareRe
 	// M1：构建检索索引（分块+分词+FTS）。索引是派生数据，失败只标 failed
 	// 不影响本次准备结果；重建由下次读取或 index_state 调度触发。
 	s.BuildIndex(ctx, base.DocumentID, dc)
-	log.Infof("[Absorb] document prepared | url=%q status=%s type=%q chars=%d bytes=%d dur=%s",
-		url, status, res.ContentType, charCount, dc.ByteSize, time.Since(start).Round(time.Millisecond))
+	log.Infof("[Absorb] document prepared | url=%q status=%s type=%q chars=%d bytes=%d dur=%s extract{%s}",
+		url, status, res.ContentType, charCount, dc.ByteSize, time.Since(start).Round(time.Millisecond), res.Diagnostics)
 
 	base.FinalURL = res.FinalURL
 	base.ContentType = res.ContentType

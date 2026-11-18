@@ -46,9 +46,14 @@ func pdftotextBin() string {
 
 // PopplerText 用 pdftotext -enc UTF-8 提取 PDF 字节文本，出参已过
 // CollapsePDFSpacing（与主路提取同一后处理管线）。bin 为 pdftotext 路径。
-func PopplerText(bin string, data []byte) (string, error) {
+// ctx 为父请求上下文：客户端断开/取消时立即终止 pdftotext 子进程，避免孤儿
+// 进程空转至 popplerTimeout；ctx 取消优先于 60s 兜底超时。
+func PopplerText(ctx context.Context, bin string, data []byte) (string, error) {
 	if bin == "" || len(data) == 0 {
 		return "", errors.New("poppler: pdftotext 未配置或输入为空")
+	}
+	if ctx == nil {
+		ctx = context.Background()
 	}
 	tmp, err := os.CreateTemp("", "absorb-poppler-*.pdf")
 	if err != nil {
@@ -65,10 +70,10 @@ func PopplerText(bin string, data []byte) (string, error) {
 	if err := tmp.Close(); err != nil {
 		return "", err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), popplerTimeout)
+	runCtx, cancel := context.WithTimeout(ctx, popplerTimeout)
 	defer cancel()
 	// 输出文件为 "-" = 写 stdout；stderr 的进度/告警不进入文本
-	out, err := exec.CommandContext(ctx, bin, "-enc", "UTF-8", tmpPath, "-").Output()
+	out, err := exec.CommandContext(runCtx, bin, "-enc", "UTF-8", tmpPath, "-").Output()
 	if err != nil {
 		return "", fmt.Errorf("poppler: pdftotext 执行失败: %w", err)
 	}

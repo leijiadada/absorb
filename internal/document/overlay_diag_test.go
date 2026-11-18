@@ -117,7 +117,7 @@ func TestOverlayAttributionDiag(t *testing.T) {
 	if err != nil {
 		t.Skipf("下载语料失败: %v", err)
 	}
-	popplerText, err := extract.PopplerText(bin, data)
+	popplerText, err := extract.PopplerText(context.Background(), bin, data)
 	if err != nil {
 		t.Fatalf("PopplerText: %v", err)
 	}

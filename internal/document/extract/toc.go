@@ -52,11 +52,19 @@ const (
 // stripTOC 目录剥离主入口（F3a marks 感知）：页级（有分页符时）+ 行级，
 // 返回剥离后文本与偏移修正后的 marks。
 func stripTOC(content string, marks []HeadingMark) (string, []HeadingMark) {
+	out, outMarks, _, _ := stripTOCWithStats(content, marks)
+	return out, outMarks
+}
+
+// stripTOCWithStats 同 stripTOC，额外返回删除页数与删除行数供生产日志观测。
+func stripTOCWithStats(content string, marks []HeadingMark) (string, []HeadingMark, int, int) {
+	pagesDropped := 0
 	if strings.Contains(content, "\f") {
-		content, marks, _ = dropTOCPagesMarks(content, marks)
+		content, marks, pagesDropped = dropTOCPagesMarks(content, marks)
 	}
-	content, marks, _ = stripTOCLinesMarks(content, marks)
-	return content, marks
+	var linesDropped int
+	content, marks, linesDropped = stripTOCLinesMarks(content, marks)
+	return content, marks, pagesDropped, linesDropped
 }
 
 // stripTOCDiag 带统计版（测试与诊断用）：返回剥离后文本、删除页数、删除行数。

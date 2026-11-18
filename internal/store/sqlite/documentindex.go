@@ -95,7 +95,11 @@ func (ss *sqliteStore) ReplaceDocumentIndex(ctx context.Context, app, user, docu
 			}
 		}
 	}
-	if err := upsertIndexState(ctx, tx, app, user, documentID, state); err != nil {
+	// chunks=nil（构建失败标记）路径不覆盖向量域四列：向量表数据未删除，若把
+	// vector_status/model/count 清零会造成「数据仍在、状态显示未建」，下次
+	// BuildIndex 误判为需重建而重复 embed。仅 chunks 实际替换（旧向量已随事务
+	// 删除）时才由新 state 重置向量域，交给 embedChunks 重建。
+	if err := upsertIndexState(ctx, tx, app, user, documentID, state, len(chunks) > 0); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -240,30 +244,45 @@ func selectChunkIDs(ctx context.Context, tx *sql.Tx, app, user, documentID strin
 	return ids, rows.Err()
 }
 
-// upsertIndexState 覆盖写索引状态（事务内调用，含向量域四列——chunks 替换或
-// 失败标记均重置向量域，由 embedChunks 补建后经 UpdateDocumentVectorState 更新）。
-func upsertIndexState(ctx context.Context, tx *sql.Tx, app, user, documentID string, st *storage.DocumentIndexState) error {
-	_, err := tx.ExecContext(ctx,
-		`INSERT INTO document_index_state
-			(app_name, user_id, document_id, indexed_content_hash, index_status,
-			 chunker_version, tokenizer_version, chunk_count, indexed_at, error_message,
-			 vector_model, vector_status, vector_count, vector_error)
-		 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-		 ON CONFLICT(app_name, user_id, document_id) DO UPDATE SET
+// upsertIndexState 覆盖写索引状态（事务内调用）。writeVector=true 时连同向量域
+// 四列一起写（chunks 已替换、旧向量已删，交给 embedChunks 重建）；false 时只写
+// 词法域列、保留既有向量状态（构建失败标记路径，向量表数据未动）。
+func upsertIndexState(ctx context.Context, tx *sql.Tx, app, user, documentID string, st *storage.DocumentIndexState, writeVector bool) error {
+	lexArgs := []any{
+		app, user, documentID, st.IndexedContentHash, st.IndexStatus,
+		st.ChunkerVersion, st.TokenizerVersion, st.ChunkCount,
+		st.IndexedAt.Unix(), st.ErrorMessage,
+	}
+	updateTail := ` ON CONFLICT(app_name, user_id, document_id) DO UPDATE SET
 			indexed_content_hash=excluded.indexed_content_hash,
 			index_status=excluded.index_status,
 			chunker_version=excluded.chunker_version,
 			tokenizer_version=excluded.tokenizer_version,
 			chunk_count=excluded.chunk_count,
 			indexed_at=excluded.indexed_at,
-			error_message=excluded.error_message,
+			error_message=excluded.error_message`
+
+	if !writeVector {
+		// 失败标记路径：只写词法域，ON CONFLICT 不触碰向量列 → 既有向量状态保留。
+		sqlText := `INSERT INTO document_index_state
+			(app_name, user_id, document_id, indexed_content_hash, index_status,
+			 chunker_version, tokenizer_version, chunk_count, indexed_at, error_message)
+		 VALUES (?,?,?,?,?,?,?,?,?,?)` + updateTail
+		_, err := tx.ExecContext(ctx, sqlText, lexArgs...)
+		return err
+	}
+
+	// chunks 已替换路径：向量域随事务重置，由 embedChunks 重建。
+	sqlText := `INSERT INTO document_index_state
+			(app_name, user_id, document_id, indexed_content_hash, index_status,
+			 chunker_version, tokenizer_version, chunk_count, indexed_at, error_message,
+			 vector_model, vector_status, vector_count, vector_error)
+		 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)` + updateTail + `,
 			vector_model=excluded.vector_model,
 			vector_status=excluded.vector_status,
 			vector_count=excluded.vector_count,
-			vector_error=excluded.vector_error`,
-		app, user, documentID, st.IndexedContentHash, st.IndexStatus,
-		st.ChunkerVersion, st.TokenizerVersion, st.ChunkCount,
-		st.IndexedAt.Unix(), st.ErrorMessage,
-		st.VectorModel, st.VectorStatus, st.VectorCount, st.VectorError)
+			vector_error=excluded.vector_error`
+	args := append(lexArgs, st.VectorModel, st.VectorStatus, st.VectorCount, st.VectorError)
+	_, err := tx.ExecContext(ctx, sqlText, args...)
 	return err
 }

@@ -15,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"absorb-agent/internal/log"
 	fetch_page "absorb-agent/tool/fetch_page"
 )
 
@@ -53,6 +54,7 @@ type Result struct {
 	FinalURL    string        // 重定向后最终地址（登录页误判排查用）
 	Truncated   bool          // 获取侧静默截断（HTML/text 达上限；PDF 超限直接报错不走此标记）
 	Marks       []HeadingMark // 章节标题元数据（rune 偏移+层级+标题+面包屑链），见 structure.go
+	Diagnostics string        // 提取决策摘要（择优切换/TOC 删除量/marks 数/引擎失败原因），供 prepare 日志打印
 }
 
 // Extractor 文档正文提取器（格式接缝）：获取 URL 并提取完整正文。
@@ -105,9 +107,10 @@ func (p *PDFExtractor) Extract(ctx context.Context, url string) (*Result, error)
 	// 负面结果源自标题行注入扰动块边界，F3a 正文不动后是否撤门控由评测决定，
 	// 评审契约先保守沿用）。poppler 未运行（无字节）时同样跳过。
 	var marks []HeadingMark
+	marksHit := 0
 	if data != nil && !switched {
 		secs, docPages := doclingSections(data)
-		marks, _ = overlayMarks(content, secs, docPages)
+		marks, marksHit = overlayMarks(content, secs, docPages)
 	}
 	if currentBad {
 		return nil, &Error{Status: StatusNoText, Message: "文本无法解码（PDF 字体缺少 Unicode 映射，可能是扫描件或特殊编码）"}
@@ -116,7 +119,10 @@ func (p *PDFExtractor) Extract(ctx context.Context, url string) (*Result, error)
 	// 放在结构匹配之后——页级删除会移除分页符使页号前移，匹配的 ±2 页窗口
 	// 依赖原始分页；剥离 mark 感知（F3a）：删目录页/行时丢弃对应 marks、
 	// 其余偏移前移修正，维持「text[offset:] 以 Title 开头」不变式
-	content, marks = stripTOC(content, marks)
+	var tocPages, tocLines int
+	content, marks, tocPages, tocLines = stripTOCWithStats(content, marks)
+	diagnostics := fmt.Sprintf("marks=%d tocPages=%d tocLines=%d popplerSwitched=%t",
+		marksHit, tocPages, tocLines, switched)
 	// PDF 文本层的逐字符空格化修复（CID 字体常见现象，实测《Go 程序设计
 	// 语言》中文版整本 "最 早 参 与"——不分词不可用、原文呈现不可读）
 	return &Result{
@@ -125,6 +131,7 @@ func (p *PDFExtractor) Extract(ctx context.Context, url string) (*Result, error)
 		FinalURL:    doc.FinalURL,
 		Truncated:   doc.Truncated,
 		Marks:       marks,
+		Diagnostics: diagnostics,
 	}, nil
 }
 
@@ -142,8 +149,11 @@ func (p *PDFExtractor) betterPopplerText(ctx context.Context, url, contentType, 
 	if err != nil || len(data) == 0 {
 		return "", nil, false
 	}
-	alt, err := PopplerText(bin, data)
+	alt, err := PopplerText(ctx, bin, data)
 	if err != nil {
+		if ctx.Err() == nil { // 请求取消是预期行为，不刷屏
+			log.Warnf("[Absorb] poppler extract failed (url=%s): %v", url, err)
+		}
 		return "", data, false
 	}
 	best, switched := pickBetterText(current, currentBad, alt)

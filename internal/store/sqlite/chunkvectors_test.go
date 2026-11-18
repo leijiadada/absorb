@@ -155,11 +155,18 @@ func TestUpdateDocumentVectorState(t *testing.T) {
 		t.Fatalf("ready state mismatch: %+v", state)
 	}
 
-	// chunks=nil 的状态覆盖（失败标记路径）重置向量域
+	// chunks=nil 的状态覆盖（失败标记路径）保留向量域：向量表数据未删除，
+	// 若清空 vector_* 会造成「数据仍在、状态显示未建」，下次 BuildIndex 误判
+	// 为需重建而重复 embed（词法构建失败本就少见，但仍需状态自洽）。
 	st.ReplaceDocumentIndex(ctx, "app", "user", doc.ID, nil, &storage.DocumentIndexState{
 		DocumentID: doc.ID, IndexStatus: storage.IndexStatusFailed, ErrorMessage: "boom",
 	})
-	if state, _ = st.LoadDocumentIndexState(ctx, "app", "user", doc.ID); state.VectorStatus != "" || state.VectorModel != "" {
-		t.Fatalf("state-only overwrite must reset vector domain: %+v", state)
+	if state, _ = st.LoadDocumentIndexState(ctx, "app", "user", doc.ID); state.VectorStatus != storage.VectorStatusReady ||
+		state.VectorModel != "m1" || state.VectorCount != 2 {
+		t.Fatalf("state-only overwrite must preserve vector domain: %+v", state)
+	}
+	if state, _ = st.LoadDocumentIndexState(ctx, "app", "user", doc.ID); state.IndexStatus != storage.IndexStatusFailed ||
+		state.ErrorMessage != "boom" {
+		t.Fatalf("state-only overwrite must still mark lexical failure: %+v", state)
 	}
 }

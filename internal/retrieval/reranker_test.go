@@ -95,4 +95,15 @@ func TestRerankPoolCandidates(t *testing.T) {
 		t.Fatal("applied=false")
 	}
 	assertOrder(t, ids(out), 3, 2, 1, 0, 4, 5)
+
+	// 5) 全哨兵分数（云端空 results 的兜底）按失败降级融合序，applied=false
+	allMissing := make([]float64, 6)
+	for i := range allMissing {
+		allMissing[i] = rerankMissingScore
+	}
+	out, applied = RerankPoolCandidates(ctx, fused, seeds, "q", stubReranker{scores: allMissing}, 4, 3)
+	if applied {
+		t.Fatal("全哨兵分数不应 applied")
+	}
+	assertOrder(t, ids(out), 0, 1, 2, 3, 4, 5)
 }

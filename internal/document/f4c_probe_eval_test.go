@@ -62,17 +62,20 @@ type f4cCaseResult struct {
 }
 
 // f4cRunCase 单题两腿：共享词法/向量/融合榜，只差精排池向量种子（40 vs 80）。
-func f4cRunCase(ctx context.Context, env *f4cEnv, name, query, anchor string) f4cCaseResult {
+// 词法检索/查询向量化失败直接 Fatal：云抖动记成 rank=0 会污染「零丢失」与
+// 可救候选 R 的判定（与 rerank_pool_eval_test.go 同类错误处理一致）。
+func f4cRunCase(t *testing.T, ctx context.Context, env *f4cEnv, name, query, anchor string) f4cCaseResult {
+	t.Helper()
 	out := f4cCaseResult{name: name}
 	a := document.SharedAnalyzer()
 
 	lex, err := env.st.SearchDocumentChunks(ctx, env.app, env.user, a.QueryExpression(query), []string{env.docID}, 50)
 	if err != nil {
-		return out
+		t.Fatalf("f4c lex search failed (case=%s): %v", name, err)
 	}
 	qv, qerr := env.emb.EmbedQuery(ctx, query)
 	if qerr != nil {
-		return out
+		t.Fatalf("f4c embed query failed (case=%s): %v", name, qerr)
 	}
 	vec50 := retrieval.TopKByCosine(env.vhits, env.vrows, qv, 50)
 	vec80 := retrieval.TopKByCosine(env.vhits, env.vrows, qv, 80)
@@ -133,7 +136,7 @@ func f4cRunSuite(t *testing.T, label string, env *f4cEnv, cases []book2Case) {
 	t.Logf("%s | %d 题 | 池 = 融合 top%d ∪ 向量 top40 vs top80", label, len(cases), rrTopN)
 	t.Logf("%-20s %-10s %-10s %-8s %s", "题目", "F4b", "F4c", "vec80", "msB/msC")
 	for _, c := range cases {
-		r := f4cRunCase(context.Background(), env, c.name, c.query, c.anchor)
+		r := f4cRunCase(t, context.Background(), env, c.name, c.query, c.anchor)
 		results = append(results, r)
 		t.Logf("%-20s %-10s %-10s %-8d %d/%d",
 			r.name, rankLabel(r.rankF4b), rankLabel(r.rankF4c), r.vecRank80, r.msF4b, r.msF4c)

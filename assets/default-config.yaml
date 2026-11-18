@@ -28,7 +28,7 @@ embedding:
 
   # 精排（可选）：rerank_model 为云模型名（复用上方 api_key/base_url，/v1/rerank）
   # rerank_model: ""  # 如 BAAI/bge-reranker-v2-m3；空 = 禁用精排
-  # rerank_top_n: 8   # 精排候选数
+  # rerank_top_n: 16  # 精排候选数（F4b 验证口径：融合 top16 ∪ 向量 top40）
 
   # 本地语义检索（离线，provider: local）：llama-server 子进程，零 API 成本
   # provider: "local"

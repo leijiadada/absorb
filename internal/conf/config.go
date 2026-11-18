@@ -54,7 +54,7 @@ type EmbeddingConfig struct {
 	// base_url 复用上方 api_key / base_url（硅基流动同款 /v1/rerank 风格）。
 	// 空 = 禁用精排（纯融合序），延迟 <1s。
 	RerankModel string `yaml:"rerank_model"` // 云 rerank 模型名，空 = 不用精排
-	RerankTopN  int    `yaml:"rerank_top_n"` // 精排候选数，0 = 默认 8
+	RerankTopN  int    `yaml:"rerank_top_n"` // 精排候选数，0 = 默认 16（F4b 验证口径）
 }
 
 // TelemetryConfig 生产可观测性（框架链路追踪）配置（默认关闭）。

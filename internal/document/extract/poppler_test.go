@@ -4,6 +4,7 @@ package extract
 // 提取冒烟（bin 缺失自动 Skip，不进常规 CI 硬门槛）。
 
 import (
+	"context"
 	"os"
 	"strings"
 	"testing"
@@ -118,7 +119,7 @@ func TestPopplerTextReal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read: %v", err)
 	}
-	text, err := PopplerText(bin, data)
+	text, err := PopplerText(context.Background(), bin, data)
 	if err != nil {
 		t.Fatalf("PopplerText: %v", err)
 	}

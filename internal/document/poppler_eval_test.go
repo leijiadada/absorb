@@ -164,7 +164,7 @@ func TestPopplerRescueBooks(t *testing.T) {
 		if err != nil {
 			t.Fatalf("read %s: %v", book.file, err)
 		}
-		text, err := extract.PopplerText(bin, data)
+		text, err := extract.PopplerText(context.Background(), bin, data)
 		if err != nil {
 			t.Fatalf("PopplerText %s: %v", book.file, err)
 		}
@@ -257,7 +257,7 @@ func TestSynonymRetrievalPopplerAB(t *testing.T) {
 	if err != nil {
 		t.Skipf("下载语料失败（网络不可达），跳过: %v", err)
 	}
-	popplerText, err := extract.PopplerText(bin, data)
+	popplerText, err := extract.PopplerText(context.Background(), bin, data)
 	if err != nil {
 		t.Fatalf("PopplerText: %v", err)
 	}
@@ -589,7 +589,7 @@ func TestSynonymRetrievalMarksAB(t *testing.T) {
 	if err != nil {
 		t.Skipf("下载语料失败（网络不可达），跳过: %v", err)
 	}
-	popplerText, err := extract.PopplerText(bin, data)
+	popplerText, err := extract.PopplerText(context.Background(), bin, data)
 	if err != nil {
 		t.Fatalf("PopplerText: %v", err)
 	}

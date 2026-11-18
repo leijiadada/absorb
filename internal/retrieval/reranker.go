@@ -27,21 +27,27 @@ type Reranker interface {
 
 // 共享实例（与 SharedEmbedder 同模式）：装配层启动时 Set 一次，检索链路取用；
 // 未设置 = 禁用精排（RRF 融合序直接进多样性层）。
+// defaultRerankTopN 精排候选数默认值：F4b 验证口径（融合 top16 ∪ 向量 top40）
+// 的融合榜 head 宽度。config.yaml 未显式配置 rerank_top_n 时取此值，避免
+// 新安装/配置丢失静默降级到旧的 8 而与已验证水位脱钩。
+const defaultRerankTopN = 16
+
+// rerankMissingScore 未返回分数的文档位置的哨兵值（排序时必然沉底）。
+const rerankMissingScore = -1e9
+
 var (
 	sharedRerankMu   sync.RWMutex
 	sharedReranker   Reranker
-	sharedRerankTopN = 8
-	sharedRerankSetN bool
+	sharedRerankTopN = defaultRerankTopN
 )
 
-// SetSharedReranker 装配层注入共享精排器；candidates 指定精排候选数（<=0 取默认 8）。
+// SetSharedReranker 装配层注入共享精排器；candidates 指定精排候选数（<=0 取默认 16）。
 func SetSharedReranker(r Reranker, candidates int) {
 	sharedRerankMu.Lock()
 	defer sharedRerankMu.Unlock()
 	sharedReranker = r
 	if candidates > 0 {
 		sharedRerankTopN = candidates
-		sharedRerankSetN = true
 	}
 }
 
@@ -56,9 +62,6 @@ func SharedReranker() Reranker {
 func SharedRerankTopN() int {
 	sharedRerankMu.RLock()
 	defer sharedRerankMu.RUnlock()
-	if sharedReranker == nil && !sharedRerankSetN {
-		return sharedRerankTopN
-	}
 	return sharedRerankTopN
 }
 
@@ -132,12 +135,21 @@ func (c *LlamaRerankClient) Rerank(ctx context.Context, query string, docs []str
 	// 响应按分数降序，还原回输入顺序；未返回的位置视为最低分
 	out := make([]float64, len(docs))
 	for i := range out {
-		out[i] = -1e9
+		out[i] = rerankMissingScore
 	}
+	filled := 0
 	for _, r := range parsed.Results {
 		if r.Index >= 0 && r.Index < len(out) {
 			out[r.Index] = r.RelevanceScore
+			filled++
 		}
+	}
+	// 云端点异常（限流/模型故障）可能返回空 results 或全部越界 index：若被当作
+	// 成功，全哨兵分数经稳定排序后保持融合序，但 span 会误记 rerank=applied，
+	// 让评测口径与告警失真。视为失败，交给 RerankCandidates 降级融合序。
+	if filled == 0 {
+		return nil, fmt.Errorf("rerank api returned no usable scores (model=%s, docs=%d, results=%d)",
+			c.model, len(docs), len(parsed.Results))
 	}
 	return out, nil
 }
@@ -172,6 +184,20 @@ func RerankCandidates(ctx context.Context, fused []storage.DocumentChunkHit, que
 	if len(scores) != topN {
 		log.Warnf("[Absorb] rerank score count mismatch (%d != %d), fallback to fusion order (q=%q)",
 			len(scores), topN, query)
+		return fused, false
+	}
+	// 全哨兵 = 没有任何文档拿到有效分（上游返回空 results 的兜底，覆盖所有
+	// Reranker 实现）。此时稳定排序保持原序却标记 applied=true，会污染观测与
+	// 评测口径，按失败降级。
+	allMissing := true
+	for _, s := range scores {
+		if s != rerankMissingScore {
+			allMissing = false
+			break
+		}
+	}
+	if allMissing {
+		log.Warnf("[Absorb] rerank returned all-missing scores, fallback to fusion order (q=%q)", query)
 		return fused, false
 	}
 	ord := make([]int, topN)
