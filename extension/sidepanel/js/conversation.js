@@ -74,7 +74,7 @@ async function getActivePage() {
         documentId: await readyDocumentId(tab.url)
       };
     }
-    const page = { url: tab.url, title: tab.title || '', pageMd: '' };
+    const page = { url: tab.url, title: tab.title || '', pageMd: '', contentStatus: '' };
     try {
       const results = await chrome.scripting.executeScript({
         target: { tabId: tab.id },
@@ -82,6 +82,7 @@ async function getActivePage() {
       });
       const r = results && results[0] && results[0].result;
       if (r && r.pageMd) page.pageMd = r.pageMd;
+      if (r && r.contentStatus) page.contentStatus = r.contentStatus;
     } catch (e) {
       console.warn('[Absorb] 无划词页面采集失败，回退 fetch_page:', e);
     }

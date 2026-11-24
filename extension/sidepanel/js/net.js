@@ -154,13 +154,15 @@ export async function callAgent(sendQ, ctxQuotes, sessionId, onToken, onReasonin
     paragraph: quotes[0].paragraph || '',
     pageContext: quotes[0].pageContext || '',
     url: quotes[0].url,
-    pageMd: quotes[0].pageMd || ''
+    pageMd: quotes[0].pageMd || '',
+    contentStatus: quotes[0].contentStatus || ''
   } : (page && page.pageMd ? {
     text: '',
     paragraph: '',
     pageContext: '',
     url: page.url,
-    pageMd: page.pageMd
+    pageMd: page.pageMd,
+    contentStatus: page.contentStatus || ''
   } : null);
   // 多条引用时把各标签全文以编号拼到问题前，供模型一次看到全部引用
   const material = quotes.length > 1

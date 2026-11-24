@@ -49,6 +49,7 @@ export async function handleMenuClick(info, tab, skipPanelOpen = false) {
     pageContext: '',
     url: tab?.url || '',
     pageMd: '',
+    contentStatus: '',
     isComplete: true
   };
   try {
