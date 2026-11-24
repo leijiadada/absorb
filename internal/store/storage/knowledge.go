@@ -178,6 +178,7 @@ type DocumentChunkHit struct {
 	Content     string  `json:"content"`
 	StartOffset int     `json:"startOffset"`
 	EndOffset   int     `json:"endOffset"`
+	Page        int     `json:"page,omitempty"` // 页号（工具层按正文 \f 边界填充；0 = 无分页信息）
 	Score       float64 `json:"score"`
 }
 

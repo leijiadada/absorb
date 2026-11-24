@@ -69,28 +69,28 @@ func TestRerankPoolCandidates(t *testing.T) {
 	}
 
 	// 1) 池构成 + 整池重排 + 池外融合尾缀后
-	out, applied := RerankPoolCandidates(ctx, fused, seeds, "q", stubReranker{scores: asc(6)}, 4, 3)
+	out, applied := RerankPoolCandidates(ctx, fused, seeds, nil, "q", stubReranker{scores: asc(6)}, RerankPoolSpec{TopN: 4, VecSeed: 3})
 	if !applied {
 		t.Fatal("applied=false")
 	}
 	assertOrder(t, ids(out), 7, 6, 3, 2, 1, 0, 4, 5)
 
 	// 2) 精排失败降级原融合榜
-	out, applied = RerankPoolCandidates(ctx, fused, seeds, "q", stubReranker{err: errors.New("boom")}, 4, 3)
+	out, applied = RerankPoolCandidates(ctx, fused, seeds, nil, "q", stubReranker{err: errors.New("boom")}, RerankPoolSpec{TopN: 4, VecSeed: 3})
 	if applied {
 		t.Fatal("失败不应 applied")
 	}
 	assertOrder(t, ids(out), 0, 1, 2, 3, 4, 5)
 
 	// 3) 未配置精排器
-	out, applied = RerankPoolCandidates(ctx, fused, seeds, "q", nil, 4, 3)
+	out, applied = RerankPoolCandidates(ctx, fused, seeds, nil, "q", nil, RerankPoolSpec{TopN: 4, VecSeed: 3})
 	if applied {
 		t.Fatal("nil reranker 不应 applied")
 	}
 	assertOrder(t, ids(out), 0, 1, 2, 3, 4, 5)
 
 	// 4) seedN=0 退化为 RerankCandidates（只重排融合头）
-	out, applied = RerankPoolCandidates(ctx, fused, seeds, "q", stubReranker{scores: asc(4)}, 4, 0)
+	out, applied = RerankPoolCandidates(ctx, fused, seeds, nil, "q", stubReranker{scores: asc(4)}, RerankPoolSpec{TopN: 4, VecSeed: 0})
 	if !applied {
 		t.Fatal("applied=false")
 	}
@@ -101,9 +101,18 @@ func TestRerankPoolCandidates(t *testing.T) {
 	for i := range allMissing {
 		allMissing[i] = rerankMissingScore
 	}
-	out, applied = RerankPoolCandidates(ctx, fused, seeds, "q", stubReranker{scores: allMissing}, 4, 3)
+	out, applied = RerankPoolCandidates(ctx, fused, seeds, nil, "q", stubReranker{scores: allMissing}, RerankPoolSpec{TopN: 4, VecSeed: 3})
 	if applied {
 		t.Fatal("全哨兵分数不应 applied")
 	}
 	assertOrder(t, ids(out), 0, 1, 2, 3, 4, 5)
+
+	// 6) 词法种子（F11）：池 = 融合 top4 ∪ vec3 ∪ lex2（F5 与融合重叠自动去重，
+	// 词法序缀尾）；池 8 条 → 倒置后 [F8,F5,S7,S6,F3,F2,F1,F0]，池外融合尾 [F4]
+	lexSeeds := []storage.DocumentChunkHit{mkHit(5), mkHit(8)}
+	out, applied = RerankPoolCandidates(ctx, fused, seeds, lexSeeds, "q", stubReranker{scores: asc(8)}, RerankPoolSpec{TopN: 4, VecSeed: 3, LexSeed: 2})
+	if !applied {
+		t.Fatal("applied=false")
+	}
+	assertOrder(t, ids(out), 8, 5, 7, 6, 3, 2, 1, 0, 4)
 }

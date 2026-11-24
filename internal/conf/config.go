@@ -50,11 +50,16 @@ type EmbeddingConfig struct {
 	BatchSize int    `yaml:"batch_size"` // 索引期单批文本数，0 = 默认 32
 
 	// 精排（Reranker）：对 RRF 融合候选 top-N 按查询-文档相关度重排后再进
-	// 多样性层。rerank_model 为云模型名（如 Qwen/Qwen3-Reranker-4B），鉴权与
+	// 多样性层。rerank_model 为云模型名（如 Qwen/Qwen3-Reranker-8B），鉴权与
 	// base_url 复用上方 api_key / base_url（硅基流动同款 /v1/rerank 风格）。
 	// 空 = 禁用精排（纯融合序），延迟 <1s。
 	RerankModel string `yaml:"rerank_model"` // 云 rerank 模型名，空 = 不用精排
 	RerankTopN  int    `yaml:"rerank_top_n"` // 精排候选数，0 = 默认 16（F4b 验证口径）
+
+	// 精排池词法种子数（F11，design/5.md 2026-11-20 转正）：BM25 榜头并入精排池，
+	// 救「词法可见、embedding 盲」条目。0/未配置 = 默认 25（A 档，两书两轮转正
+	// 口径），50 = B 档（增益更大、池/延迟更大）。
+	RerankLexSeed int `yaml:"rerank_lex_seed"`
 }
 
 // TelemetryConfig 生产可观测性（框架链路追踪）配置（默认关闭）。

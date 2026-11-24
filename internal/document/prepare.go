@@ -48,8 +48,20 @@ func NewService(st storage.Storage, ex extract.Extractor, app, user string) *Ser
 // v6（2026-11-18）：结构进元数据（F3a）——docling 章节树不再注入正文，改为
 // HeadingMark 元数据（rune 偏移+层级+面包屑）随正文落库，BuildIndex 切块后
 // 按中点规则赋 SectionPath。正文一个字节不动：块边界/分词/块内容与 v5 产物
-// 逐位一致，结构只进元数据层（FTS section_path 加权 + 向量化前置面包屑）。
-const extractionVersion = 6
+// 逐位一致，结构只进元数据层（FTS section_path 加权 + 展示/回链；向量纯正文见 F3c）。
+// v7（2026-11-19）：撤销 marks 门控——切 poppler 干净文本的书也生成 HeadingMark，
+// 章节导航全 PDF 覆盖。正文/块边界/向量均不变，仅 SectionPath 元数据层变化；存量
+// 文档在下次 prepare 时靠「重算面包屑 vs 库内现存」比对原地刷新（不 re-embed）。
+// v8（2026-11-19，F8）：书签树 hybrid——用 PDF 原生 /Outlines 的完整标题/层级
+// 修正 docling Path（断行/错配），只改 Path 文案，Offset/Title/正文/向量不变。
+// v9（2026-11-21）：docling 升级 v1.6.3（上游 #9/#10，leijiadada 报告）——伪字符
+// 独立解码确认、中文合成字距抑制、同位置重绘去除、坏字/碎行标题过滤、可选
+// Poppler 回退。缺 ToUnicode 书（人月神话）标题恢复可读、iTextSharp 逐字 span
+// 书（Go 程序设计语言）伪标题不再泛滥；存量文档重 prepare 时经 content_hash
+// 变化自动重建索引。
+// v10（2026-11-23）：版式家具过滤（furniture.go）——pdftotext 分页文本上按
+// 邻接指纹剔除页眉/页脚重复行；主路连续文本（无 \f）跳过。
+const extractionVersion = 10
 
 // PrepareResult 准备结果：状态与元信息。不含正文——正文只落库，扩展端仅持
 // documentId 与状态，避免大文本经扩展消息对象/chrome.storage 往返。
@@ -64,6 +76,10 @@ type PrepareResult struct {
 	ByteSize    int64  `json:"byteSize"`
 	Truncated   bool   `json:"truncated"`
 	Message     string `json:"message,omitempty"`
+	// Suggestions 动态建议提问（doc-suggestions-design.md）：章节树双通道
+	// 直出的成句问题，ready/partial 才产出；无素材不产出字段（扩展不渲染
+	// 建议提问小节）。
+	Suggestions []string `json:"suggestions,omitempty"`
 }
 
 // Prepare 准备文档。ready/partial 时正文完整落库（partial 仅表示获取侧截断，
@@ -150,6 +166,9 @@ func (s *Service) Prepare(ctx context.Context, rawURL, title string) (*PrepareRe
 	base.CharCount = charCount
 	base.ByteSize = dc.ByteSize
 	base.Truncated = res.Truncated
+	// 动态建议提问（doc-suggestions）：BuildIndex 已同步完成（或幂等快路径
+	// chunks 已在库），双通道素材在此时点可查；失败/为空不产出字段。
+	base.Suggestions = buildSuggestions(ctx, s.app, s.user, base.DocumentID, dc, s.st.LoadDocumentSections)
 	return &base, nil
 }
 

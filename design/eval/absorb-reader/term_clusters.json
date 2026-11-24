@@ -1,0 +1,8247 @@
+[
+  {
+    "canonical": "渐进式披露",
+    "aliases": [
+      "渐进披露",
+      "逐步展开",
+      "渐进式披",
+      "逐步披露",
+      "progressive disclosure",
+      "进式披露",
+      "分层披露",
+      "按需披露",
+      "渐进式展开",
+      "渐进式",
+      "渐进式信息展示"
+    ],
+    "brief": "交互设计"
+  },
+  {
+    "canonical": "隧道视野",
+    "aliases": [
+      "视野狭窄",
+      "局部聚焦",
+      "局部视野",
+      "tunnel vision",
+      "管窥效应",
+      "隧道视",
+      "局部最优陷阱"
+    ],
+    "brief": "认知偏差"
+  },
+  {
+    "canonical": "银弹",
+    "aliases": [
+      "万能方案",
+      "一劳永逸方案",
+      "万能药",
+      "silver bullet"
+    ],
+    "brief": "软件工程"
+  },
+  {
+    "canonical": "任务简报",
+    "aliases": [
+      "任务说明",
+      "任务描述",
+      "任务简介",
+      "任务书",
+      "briefing",
+      "简报",
+      "task brief"
+    ],
+    "brief": "智能体协作"
+  },
+  {
+    "canonical": "决议记录",
+    "aliases": [
+      "决策记录",
+      "ADR"
+    ],
+    "brief": "架构文档"
+  },
+  {
+    "canonical": "咨询请求包",
+    "aliases": [
+      "咨询包",
+      "请求包"
+    ],
+    "brief": "智能体协作"
+  },
+  {
+    "canonical": "合并就绪包",
+    "aliases": [
+      "合并包",
+      "就绪包",
+      "就绪合并包",
+      "合并就绪",
+      "merge-ready包",
+      "MR就绪包",
+      "可合并包",
+      "merge-ready package"
+    ],
+    "brief": "代码集成"
+  },
+  {
+    "canonical": "概率性指导",
+    "aliases": [
+      "概率指导",
+      "随机性引导",
+      "用概率性指导",
+      "概率引导"
+    ],
+    "brief": "智能体方法"
+  },
+  {
+    "canonical": "随机性贡献者",
+    "aliases": [
+      "随机因素",
+      "不确定性来源"
+    ],
+    "brief": "智能体方法"
+  },
+  {
+    "canonical": "概念性计划",
+    "aliases": [
+      "概念计划",
+      "初步计划"
+    ],
+    "brief": "项目管理"
+  },
+  {
+    "canonical": "验收标准",
+    "aliases": [
+      "接受标准",
+      "完成标准",
+      "acceptance criteria",
+      "验收准则",
+      "验收标准和验"
+    ],
+    "brief": "质量管理"
+  },
+  {
+    "canonical": "静态分析",
+    "aliases": [
+      "静态代码分析",
+      "代码静态检查"
+    ],
+    "brief": "代码质量"
+  },
+  {
+    "canonical": "沙箱",
+    "aliases": [
+      "隔离环境",
+      "安全沙箱"
+    ],
+    "brief": "安全机制"
+  },
+  {
+    "canonical": "副驾驶",
+    "aliases": [
+      "Copilot",
+      "AI助手"
+    ],
+    "brief": "AI工具"
+  },
+  {
+    "canonical": "四大支柱",
+    "aliases": [
+      "四支柱",
+      "四大基础"
+    ],
+    "brief": "方法论"
+  },
+  {
+    "canonical": "控制措施",
+    "aliases": [
+      "管控措施",
+      "控制手段"
+    ],
+    "brief": "风险管理"
+  },
+  {
+    "canonical": "指导方针",
+    "aliases": [
+      "指南",
+      "准则"
+    ],
+    "brief": "规范"
+  },
+  {
+    "canonical": "基础设施",
+    "aliases": [
+      "基础架构",
+      "Infra"
+    ],
+    "brief": "系统工程"
+  },
+  {
+    "canonical": "软件工程",
+    "aliases": [
+      "软件工程学",
+      "SE"
+    ],
+    "brief": "学科"
+  },
+  {
+    "canonical": "布鲁克斯",
+    "aliases": [
+      "Brooks",
+      "布鲁克斯法则"
+    ],
+    "brief": "人物"
+  },
+  {
+    "canonical": "玻姆",
+    "aliases": [
+      "Boehm",
+      "玻姆曲线"
+    ],
+    "brief": "人物"
+  },
+  {
+    "canonical": "萨顿",
+    "aliases": [
+      "Sutton",
+      "萨顿法则"
+    ],
+    "brief": "人物"
+  },
+  {
+    "canonical": "红色药丸",
+    "aliases": [
+      "红药丸",
+      "觉醒选择"
+    ],
+    "brief": "隐喻"
+  },
+  {
+    "canonical": "愚人的天堂",
+    "aliases": [
+      "愚人天堂",
+      "虚假安逸"
+    ],
+    "brief": "隐喻"
+  },
+  {
+    "canonical": "英雄壮举",
+    "aliases": [
+      "英雄主义",
+      "个人英雄"
+    ],
+    "brief": "反模式"
+  },
+  {
+    "canonical": "纸上谈兵",
+    "aliases": [
+      "空谈",
+      "理论脱离实际"
+    ],
+    "brief": "反模式"
+  },
+  {
+    "canonical": "官僚",
+    "aliases": [
+      "官僚主义",
+      "繁文缛节"
+    ],
+    "brief": "组织问题"
+  },
+  {
+    "canonical": "扯皮",
+    "aliases": [
+      "推诿",
+      "踢皮球"
+    ],
+    "brief": "组织问题"
+  },
+  {
+    "canonical": "瓶颈",
+    "aliases": [
+      "约束点",
+      "卡点"
+    ],
+    "brief": "性能"
+  },
+  {
+    "canonical": "漂移",
+    "aliases": [
+      "配置漂移",
+      "偏离"
+    ],
+    "brief": "运维"
+  },
+  {
+    "canonical": "冗余",
+    "aliases": [
+      "备份冗余",
+      "重复"
+    ],
+    "brief": "可靠性"
+  },
+  {
+    "canonical": "故障",
+    "aliases": [
+      "失效",
+      "failure"
+    ],
+    "brief": "可靠性"
+  },
+  {
+    "canonical": "漏洞",
+    "aliases": [
+      "缺陷",
+      "安全漏洞"
+    ],
+    "brief": "安全"
+  },
+  {
+    "canonical": "隔离",
+    "aliases": [
+      "隔离机制",
+      "分离"
+    ],
+    "brief": "安全"
+  },
+  {
+    "canonical": "委托",
+    "aliases": [
+      "委派",
+      "代理"
+    ],
+    "brief": "智能体协作"
+  },
+  {
+    "canonical": "强制执行",
+    "aliases": [
+      "强制实施",
+      "硬性约束"
+    ],
+    "brief": "治理"
+  },
+  {
+    "canonical": "透明度撬",
+    "aliases": [
+      "透明度杠杆",
+      "透明化"
+    ],
+    "brief": "治理"
+  },
+  {
+    "canonical": "杠杆",
+    "aliases": [
+      "杠杆点",
+      "着力点"
+    ],
+    "brief": "系统思维"
+  },
+  {
+    "canonical": "摩擦",
+    "aliases": [
+      "阻力",
+      "摩擦成本"
+    ],
+    "brief": "流程"
+  },
+  {
+    "canonical": "膨胀",
+    "aliases": [
+      "膨胀问题",
+      "规模膨胀"
+    ],
+    "brief": "反模式"
+  },
+  {
+    "canonical": "污染",
+    "aliases": [
+      "上下文污染",
+      "数据污染"
+    ],
+    "brief": "数据质量"
+  },
+  {
+    "canonical": "压缩",
+    "aliases": [
+      "上下文压缩",
+      "信息压缩"
+    ],
+    "brief": "上下文工程"
+  },
+  {
+    "canonical": "捕捉",
+    "aliases": [
+      "捕获",
+      "记录"
+    ],
+    "brief": "知识管理"
+  },
+  {
+    "canonical": "枚举",
+    "aliases": [
+      "列举",
+      "枚举法"
+    ],
+    "brief": "方法"
+  },
+  {
+    "canonical": "抽象",
+    "aliases": [
+      "抽象化",
+      "abstraction"
+    ],
+    "brief": "设计"
+  },
+  {
+    "canonical": "映射",
+    "aliases": [
+      "对应关系",
+      "mapping"
+    ],
+    "brief": "设计"
+  },
+  {
+    "canonical": "挂钩",
+    "aliases": [
+      "钩子",
+      "hook"
+    ],
+    "brief": "扩展机制"
+  },
+  {
+    "canonical": "密钥",
+    "aliases": [
+      "秘钥",
+      "key"
+    ],
+    "brief": "安全"
+  },
+  {
+    "canonical": "轨迹",
+    "aliases": [
+      "执行轨迹",
+      "trace"
+    ],
+    "brief": "可观测性"
+  },
+  {
+    "canonical": "覆盖",
+    "aliases": [
+      "覆盖率",
+      "覆盖度"
+    ],
+    "brief": "测试"
+  },
+  {
+    "canonical": "聚焦",
+    "aliases": [
+      "聚焦点",
+      "关注点"
+    ],
+    "brief": "方法"
+  },
+  {
+    "canonical": "探索",
+    "aliases": [
+      "探索性",
+      "exploration"
+    ],
+    "brief": "方法"
+  },
+  {
+    "canonical": "驾驭",
+    "aliases": [
+      "掌控",
+      "驾驭能力"
+    ],
+    "brief": "能力"
+  },
+  {
+    "canonical": "伙伴",
+    "aliases": [
+      "协作伙伴",
+      "搭档"
+    ],
+    "brief": "协作"
+  },
+  {
+    "canonical": "角色",
+    "aliases": [
+      "角色定义",
+      "role"
+    ],
+    "brief": "智能体"
+  },
+  {
+    "canonical": "阶段",
+    "aliases": [
+      "阶段划分",
+      "phase"
+    ],
+    "brief": "流程"
+  },
+  {
+    "canonical": "组织",
+    "aliases": [
+      "组织结构",
+      "团队"
+    ],
+    "brief": "管理"
+  },
+  {
+    "canonical": "依赖",
+    "aliases": [
+      "依赖关系",
+      "dependency"
+    ],
+    "brief": "工程"
+  },
+  {
+    "canonical": "挑战",
+    "aliases": [
+      "难点",
+      "挑战点"
+    ],
+    "brief": "问题"
+  },
+  {
+    "canonical": "历史",
+    "aliases": [
+      "历史记录",
+      "history"
+    ],
+    "brief": "记录"
+  },
+  {
+    "canonical": "自主权边界",
+    "aliases": [
+      "自主边界",
+      "权限边界"
+    ],
+    "brief": "智能体治理"
+  },
+  {
+    "canonical": "心智模型",
+    "aliases": [
+      "认知模型",
+      "思维模型"
+    ],
+    "brief": "认知概念"
+  },
+  {
+    "canonical": "认知负荷",
+    "aliases": [
+      "认知负担",
+      "心智负担",
+      "cognitive load"
+    ],
+    "brief": "认知概念"
+  },
+  {
+    "canonical": "爆炸半径",
+    "aliases": [
+      "影响半径",
+      "故障影响范围",
+      "blast radius",
+      "影响范围",
+      "炸半径"
+    ],
+    "brief": "风险控制"
+  },
+  {
+    "canonical": "风险分级",
+    "aliases": [
+      "风险分级管理",
+      "风险等级划分"
+    ],
+    "brief": "风险管理"
+  },
+  {
+    "canonical": "护栏",
+    "aliases": [
+      "安全护栏",
+      "防护栏",
+      "guardrail"
+    ],
+    "brief": "安全机制"
+  },
+  {
+    "canonical": "运行手册",
+    "aliases": [
+      "运维手册",
+      "runbook",
+      "操作手册"
+    ],
+    "brief": "运维实践"
+  },
+  {
+    "canonical": "回滚",
+    "aliases": [
+      "回退",
+      "rollback",
+      "部署回滚"
+    ],
+    "brief": "发布运维"
+  },
+  {
+    "canonical": "冲突管理器",
+    "aliases": [
+      "冲突管理",
+      "冲突解决器"
+    ],
+    "brief": "协作机制"
+  },
+  {
+    "canonical": "连续性数据包",
+    "aliases": [
+      "连续性包",
+      "上下文数据包"
+    ],
+    "brief": "上下文管理"
+  },
+  {
+    "canonical": "康威定律",
+    "aliases": [
+      "Conway定律",
+      "康威法则"
+    ],
+    "brief": "组织架构"
+  },
+  {
+    "canonical": "四元律速览",
+    "aliases": [
+      "四元律",
+      "四元法则"
+    ],
+    "brief": "方法论"
+  },
+  {
+    "canonical": "端到端",
+    "aliases": [
+      "端到端流程",
+      "end-to-end"
+    ],
+    "brief": "流程模式"
+  },
+  {
+    "canonical": "角色扮演",
+    "aliases": [
+      "角色模拟",
+      "role-play",
+      "role play",
+      "色扮演",
+      "色扮"
+    ],
+    "brief": "智能体方法"
+  },
+  {
+    "canonical": "持续改进",
+    "aliases": [
+      "持续优化",
+      "迭代改进"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "稀缺资源",
+    "aliases": [
+      "稀缺性资源",
+      "有限资源"
+    ],
+    "brief": "资源管理"
+  },
+  {
+    "canonical": "反对意见",
+    "aliases": [
+      "异议",
+      "反对观点"
+    ],
+    "brief": "决策协作"
+  },
+  {
+    "canonical": "陷阱",
+    "aliases": [
+      "常见陷阱",
+      "坑",
+      "反模式"
+    ],
+    "brief": "风险模式"
+  },
+  {
+    "canonical": "迁移",
+    "aliases": [
+      "迁移升级",
+      "数据迁移"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "退役",
+    "aliases": [
+      "下线",
+      "废弃",
+      "retire"
+    ],
+    "brief": "生命周期"
+  },
+  {
+    "canonical": "撤销",
+    "aliases": [
+      "取消",
+      "undo",
+      "撤回"
+    ],
+    "brief": "操作机制"
+  },
+  {
+    "canonical": "日志",
+    "aliases": [
+      "运行日志",
+      "log"
+    ],
+    "brief": "可观测性"
+  },
+  {
+    "canonical": "追踪",
+    "aliases": [
+      "链路追踪",
+      "trace",
+      "跟踪"
+    ],
+    "brief": "可观测性"
+  },
+  {
+    "canonical": "框架",
+    "aliases": [
+      "技术框架",
+      "framework"
+    ],
+    "brief": "技术架构"
+  },
+  {
+    "canonical": "约束",
+    "aliases": [
+      "限制条件",
+      "constraint"
+    ],
+    "brief": "系统设计"
+  },
+  {
+    "canonical": "边界",
+    "aliases": [
+      "系统边界",
+      "范围边界"
+    ],
+    "brief": "系统设计"
+  },
+  {
+    "canonical": "测试",
+    "aliases": [
+      "软件测试",
+      "testing"
+    ],
+    "brief": "质量保障"
+  },
+  {
+    "canonical": "错误",
+    "aliases": [
+      "报错",
+      "error",
+      "故障"
+    ],
+    "brief": "质量保障"
+  },
+  {
+    "canonical": "失败",
+    "aliases": [
+      "故障",
+      "failure"
+    ],
+    "brief": "质量保障"
+  },
+  {
+    "canonical": "升级",
+    "aliases": [
+      "版本升级",
+      "upgrade"
+    ],
+    "brief": "发布运维"
+  },
+  {
+    "canonical": "仓库",
+    "aliases": [
+      "代码仓库",
+      "repository",
+      "repo"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "命令",
+    "aliases": [
+      "指令",
+      "command"
+    ],
+    "brief": "交互机制"
+  },
+  {
+    "canonical": "默认",
+    "aliases": [
+      "默认值",
+      "default"
+    ],
+    "brief": "配置管理"
+  },
+  {
+    "canonical": "状态",
+    "aliases": [
+      "系统状态",
+      "state"
+    ],
+    "brief": "系统设计"
+  },
+  {
+    "canonical": "循环",
+    "aliases": [
+      "反馈循环",
+      "loop",
+      "迭代循环"
+    ],
+    "brief": "系统设计"
+  },
+  {
+    "canonical": "环境",
+    "aliases": [
+      "运行环境",
+      "environment"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "决策",
+    "aliases": [
+      "决策过程",
+      "decision"
+    ],
+    "brief": "智能体能力"
+  },
+  {
+    "canonical": "观察",
+    "aliases": [
+      "观测",
+      "observation"
+    ],
+    "brief": "智能体能力"
+  },
+  {
+    "canonical": "思考",
+    "aliases": [
+      "推理",
+      "reasoning",
+      "thinking"
+    ],
+    "brief": "智能体能力"
+  },
+  {
+    "canonical": "学习",
+    "aliases": [
+      "机器学习",
+      "learning"
+    ],
+    "brief": "AI能力"
+  },
+  {
+    "canonical": "训练",
+    "aliases": [
+      "模型训练",
+      "training"
+    ],
+    "brief": "AI能力"
+  },
+  {
+    "canonical": "激励",
+    "aliases": [
+      "激励机制",
+      "incentive"
+    ],
+    "brief": "智能体方法"
+  },
+  {
+    "canonical": "奖励",
+    "aliases": [
+      "奖励信号",
+      "reward"
+    ],
+    "brief": "智能体方法"
+  },
+  {
+    "canonical": "捕获",
+    "aliases": [
+      "捕获异常",
+      "catch"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "丢弃",
+    "aliases": [
+      "丢弃数据",
+      "drop"
+    ],
+    "brief": "数据处理"
+  },
+  {
+    "canonical": "扫描",
+    "aliases": [
+      "扫描检测",
+      "scan"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "匹配",
+    "aliases": [
+      "模式匹配",
+      "match"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "扩展",
+    "aliases": [
+      "可扩展",
+      "扩展性",
+      "extend"
+    ],
+    "brief": "系统设计"
+  },
+  {
+    "canonical": "维护",
+    "aliases": [
+      "可维护性",
+      "maintenance"
+    ],
+    "brief": "生命周期"
+  },
+  {
+    "canonical": "解决方案",
+    "aliases": [
+      "方案",
+      "solution"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "敏捷",
+    "aliases": [
+      "敏捷开发",
+      "agile"
+    ],
+    "brief": "开发方法"
+  },
+  {
+    "canonical": "咨询",
+    "aliases": [
+      "咨询模式",
+      "consult"
+    ],
+    "brief": "交互模式"
+  },
+  {
+    "canonical": "聊天",
+    "aliases": [
+      "对话",
+      "chat",
+      "聊天模式"
+    ],
+    "brief": "交互模式"
+  },
+  {
+    "canonical": "辅助",
+    "aliases": [
+      "辅助模式",
+      "assist"
+    ],
+    "brief": "交互模式"
+  },
+  {
+    "canonical": "选择",
+    "aliases": [
+      "选项",
+      "selection"
+    ],
+    "brief": "交互机制"
+  },
+  {
+    "canonical": "暂停",
+    "aliases": [
+      "暂停执行",
+      "pause"
+    ],
+    "brief": "操作机制"
+  },
+  {
+    "canonical": "授予",
+    "aliases": [
+      "授权",
+      "grant"
+    ],
+    "brief": "权限管理"
+  },
+  {
+    "canonical": "阻尼",
+    "aliases": [
+      "阻尼机制",
+      "damping"
+    ],
+    "brief": "控制机制"
+  },
+  {
+    "canonical": "合并就绪",
+    "aliases": [
+      "合并就绪包",
+      "可合并状态",
+      "就绪合并"
+    ],
+    "brief": "交付状态"
+  },
+  {
+    "canonical": "分层就绪",
+    "aliases": [
+      "分层就绪检查",
+      "就绪分层"
+    ],
+    "brief": "交付状态"
+  },
+  {
+    "canonical": "金丝雀",
+    "aliases": [
+      "金丝雀发布",
+      "灰度发布",
+      "灰度部署",
+      "回滚止损",
+      "金丝雀计划",
+      "回滚"
+    ],
+    "brief": "部署策略"
+  },
+  {
+    "canonical": "计划台账",
+    "aliases": [
+      "任务台账",
+      "计划清单",
+      "工作台账"
+    ],
+    "brief": "项目管理"
+  },
+  {
+    "canonical": "机器可读清单",
+    "aliases": [
+      "机器可读列表",
+      "结构化清单",
+      "机器可读检查清单",
+      "可读清单"
+    ],
+    "brief": "工程产物"
+  },
+  {
+    "canonical": "物料清单",
+    "aliases": [
+      "BOM",
+      "物料列表"
+    ],
+    "brief": "工程产物"
+  },
+  {
+    "canonical": "强制性程序",
+    "aliases": [
+      "强制流程",
+      "强制程序"
+    ],
+    "brief": "流程规范"
+  },
+  {
+    "canonical": "停止规则",
+    "aliases": [
+      "终止条件",
+      "停止条件"
+    ],
+    "brief": "控制机制"
+  },
+  {
+    "canonical": "手动调度",
+    "aliases": [
+      "人工调度",
+      "手动编排"
+    ],
+    "brief": "调度方式"
+  },
+  {
+    "canonical": "溜溜球式委托",
+    "aliases": [
+      "反复委托",
+      "来回委托",
+      "溜溜球式委派"
+    ],
+    "brief": "委派模式"
+  },
+  {
+    "canonical": "委派",
+    "aliases": [
+      "任务委派",
+      "委托",
+      "代理委派"
+    ],
+    "brief": "协作模式"
+  },
+  {
+    "canonical": "意图对齐",
+    "aliases": [
+      "目标对齐",
+      "意图一致性"
+    ],
+    "brief": "对齐机制"
+  },
+  {
+    "canonical": "认知策略",
+    "aliases": [
+      "认知方法",
+      "思维策略",
+      "认知策略化",
+      "cognitive strategy"
+    ],
+    "brief": "认知方法"
+  },
+  {
+    "canonical": "反馈循环",
+    "aliases": [
+      "反馈回路",
+      "闭环反馈"
+    ],
+    "brief": "控制机制"
+  },
+  {
+    "canonical": "事后分析",
+    "aliases": [
+      "复盘",
+      "事后复盘",
+      "postmortem"
+    ],
+    "brief": "复盘方法"
+  },
+  {
+    "canonical": "外部认知",
+    "aliases": [
+      "外部认知工具",
+      "外化认知"
+    ],
+    "brief": "认知方法"
+  },
+  {
+    "canonical": "群体思维",
+    "aliases": [
+      "团体迷思",
+      "群体迷思",
+      "groupthink",
+      "群体思"
+    ],
+    "brief": "认知偏差"
+  },
+  {
+    "canonical": "假设和未知项",
+    "aliases": [
+      "假设与未知",
+      "未知项清单"
+    ],
+    "brief": "需求管理"
+  },
+  {
+    "canonical": "稳定的标识符",
+    "aliases": [
+      "稳定标识符",
+      "稳定ID"
+    ],
+    "brief": "工程规范"
+  },
+  {
+    "canonical": "寻址的内联",
+    "aliases": [
+      "内联寻址",
+      "寻址内联"
+    ],
+    "brief": "工程规范"
+  },
+  {
+    "canonical": "两套环境",
+    "aliases": [
+      "双环境",
+      "环境隔离"
+    ],
+    "brief": "环境管理"
+  },
+  {
+    "canonical": "风险等级",
+    "aliases": [
+      "风险级别",
+      "风险分级"
+    ],
+    "brief": "风险管理"
+  },
+  {
+    "canonical": "影响范围",
+    "aliases": [
+      "影响面",
+      "波及范围"
+    ],
+    "brief": "风险管理"
+  },
+  {
+    "canonical": "主要构建模块",
+    "aliases": [
+      "核心构建块",
+      "主要构件"
+    ],
+    "brief": "架构概念"
+  },
+  {
+    "canonical": "元律速览",
+    "aliases": [
+      "元规则速览",
+      "元律概览"
+    ],
+    "brief": "方法论"
+  },
+  {
+    "canonical": "参考表格",
+    "aliases": [
+      "参考表",
+      "对照表"
+    ],
+    "brief": "工程产物"
+  },
+  {
+    "canonical": "当前状态",
+    "aliases": [
+      "现状",
+      "当前进展"
+    ],
+    "brief": "状态管理"
+  },
+  {
+    "canonical": "以机器速度",
+    "aliases": [
+      "机器速度",
+      "机器级速度"
+    ],
+    "brief": "性能概念"
+  },
+  {
+    "canonical": "杠杆效应",
+    "aliases": [
+      "杠杆作用",
+      "杠杆点"
+    ],
+    "brief": "方法论"
+  },
+  {
+    "canonical": "利益相关者",
+    "aliases": [
+      "干系人",
+      "stakeholder",
+      "益相关者",
+      "利益相"
+    ],
+    "brief": "项目管理"
+  },
+  {
+    "canonical": "吞吐量",
+    "aliases": [
+      "throughput",
+      "处理吞吐"
+    ],
+    "brief": "性能指标"
+  },
+  {
+    "canonical": "流水线",
+    "aliases": [
+      "pipeline",
+      "CI流水线",
+      "构建流水线"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "脚手架",
+    "aliases": [
+      "scaffold",
+      "脚手架代码",
+      "项目脚手架"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "契约",
+    "aliases": [
+      "接口契约",
+      "contract",
+      "约定"
+    ],
+    "brief": "架构概念"
+  },
+  {
+    "canonical": "缺陷",
+    "aliases": [
+      "bug",
+      "缺陷管理"
+    ],
+    "brief": "质量管理"
+  },
+  {
+    "canonical": "校准",
+    "aliases": [
+      "calibration",
+      "对齐校准"
+    ],
+    "brief": "评估方法"
+  },
+  {
+    "canonical": "收敛",
+    "aliases": [
+      "收敛性",
+      "convergence"
+    ],
+    "brief": "算法概念"
+  },
+  {
+    "canonical": "智能体",
+    "aliases": [
+      "agent",
+      "AI智能体",
+      "代理"
+    ],
+    "brief": "核心概念"
+  },
+  {
+    "canonical": "上下文",
+    "aliases": [
+      "context",
+      "上下文窗口"
+    ],
+    "brief": "核心概念"
+  },
+  {
+    "canonical": "记忆",
+    "aliases": [
+      "memory",
+      "智能体记忆"
+    ],
+    "brief": "核心概念"
+  },
+  {
+    "canonical": "编程语言",
+    "aliases": [
+      "程序设计语言",
+      "语言"
+    ],
+    "brief": "技术概念"
+  },
+  {
+    "canonical": "部署",
+    "aliases": [
+      "deployment",
+      "上线部署"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "交付",
+    "aliases": [
+      "delivery",
+      "交付物"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "路径",
+    "aliases": [
+      "path",
+      "执行路径"
+    ],
+    "brief": "工程概念"
+  },
+  {
+    "canonical": "场景",
+    "aliases": [
+      "用例场景",
+      "scenario"
+    ],
+    "brief": "需求概念"
+  },
+  {
+    "canonical": "平台",
+    "aliases": [
+      "platform",
+      "智能体平台"
+    ],
+    "brief": "技术概念"
+  },
+  {
+    "canonical": "生态系统",
+    "aliases": [
+      "生态",
+      "ecosystem"
+    ],
+    "brief": "技术概念"
+  },
+  {
+    "canonical": "黑客",
+    "aliases": [
+      "hacker",
+      "黑客攻击"
+    ],
+    "brief": "安全概念"
+  },
+  {
+    "canonical": "灾难",
+    "aliases": [
+      "灾难恢复",
+      "disaster"
+    ],
+    "brief": "风险管理"
+  },
+  {
+    "canonical": "恢复",
+    "aliases": [
+      "recovery",
+      "故障恢复"
+    ],
+    "brief": "运维概念"
+  },
+  {
+    "canonical": "检查",
+    "aliases": [
+      "check",
+      "检查项"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "跟踪",
+    "aliases": [
+      "tracking",
+      "追踪"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "汇总",
+    "aliases": [
+      "聚合",
+      "汇总统计"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "修订",
+    "aliases": [
+      "revision",
+      "修订版"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "节奏",
+    "aliases": [
+      "cadence",
+      "迭代节奏"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "阶梯",
+    "aliases": [
+      "阶梯式",
+      "分级阶梯"
+    ],
+    "brief": "方法论"
+  },
+  {
+    "canonical": "核心",
+    "aliases": [
+      "core",
+      "核心模块",
+      "核心理念"
+    ],
+    "brief": "架构概念"
+  },
+  {
+    "canonical": "基础",
+    "aliases": [
+      "foundation",
+      "基础设施"
+    ],
+    "brief": "架构概念"
+  },
+  {
+    "canonical": "设计",
+    "aliases": [
+      "design",
+      "系统设计"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "策略",
+    "aliases": [
+      "strategy",
+      "策略模式"
+    ],
+    "brief": "方法论"
+  },
+  {
+    "canonical": "上下文工程",
+    "aliases": [
+      "上下文设计",
+      "上下文管理",
+      "context engineering",
+      "上下文构建"
+    ],
+    "brief": "AI工程"
+  },
+  {
+    "canonical": "氛围编程",
+    "aliases": [
+      "vibe coding",
+      "氛围式编程"
+    ],
+    "brief": "AI编程"
+  },
+  {
+    "canonical": "信任债务",
+    "aliases": [
+      "信任赤字",
+      "信任欠账"
+    ],
+    "brief": "技术债务"
+  },
+  {
+    "canonical": "技术债务",
+    "aliases": [
+      "技术债",
+      "tech debt"
+    ],
+    "brief": "工程管理"
+  },
+  {
+    "canonical": "利特尔定律",
+    "aliases": [
+      "Little定律",
+      "利特尔法则"
+    ],
+    "brief": "排队理论"
+  },
+  {
+    "canonical": "玻姆的风险驱动",
+    "aliases": [
+      "玻姆螺旋模型",
+      "风险驱动方法"
+    ],
+    "brief": "软件过程"
+  },
+  {
+    "canonical": "差异优先审查",
+    "aliases": [
+      "diff优先审查",
+      "差异审查",
+      "差异优先审",
+      "变更优先审查"
+    ],
+    "brief": "代码评审"
+  },
+  {
+    "canonical": "判别性检查",
+    "aliases": [
+      "区分性检查",
+      "判别检查",
+      "判别性检验"
+    ],
+    "brief": "质量验证"
+  },
+  {
+    "canonical": "稳定标识符",
+    "aliases": [
+      "稳定ID",
+      "持久标识符"
+    ],
+    "brief": "数据设计"
+  },
+  {
+    "canonical": "内存安全",
+    "aliases": [
+      "内存安全性",
+      "memory safety"
+    ],
+    "brief": "系统安全"
+  },
+  {
+    "canonical": "访问控制",
+    "aliases": [
+      "权限控制",
+      "访问权限"
+    ],
+    "brief": "安全机制"
+  },
+  {
+    "canonical": "合规性验证",
+    "aliases": [
+      "合规验证",
+      "合规检查",
+      "合规校验",
+      "compliance检查"
+    ],
+    "brief": "合规管理"
+  },
+  {
+    "canonical": "机器可读",
+    "aliases": [
+      "机器可解析",
+      "machine-readable"
+    ],
+    "brief": "数据格式"
+  },
+  {
+    "canonical": "拉取请求",
+    "aliases": [
+      "PR",
+      "pull request",
+      "合并请求",
+      "Pull Request"
+    ],
+    "brief": "协作流程"
+  },
+  {
+    "canonical": "示例交互",
+    "aliases": [
+      "交互示例",
+      "样例对话"
+    ],
+    "brief": "交互设计"
+  },
+  {
+    "canonical": "咨询请求",
+    "aliases": [
+      "咨询式请求",
+      "询问请求"
+    ],
+    "brief": "交互模式"
+  },
+  {
+    "canonical": "集成调度",
+    "aliases": [
+      "集成编排",
+      "调度集成"
+    ],
+    "brief": "系统集成"
+  },
+  {
+    "canonical": "社会技术",
+    "aliases": [
+      "社会技术系统",
+      "sociotechnical"
+    ],
+    "brief": "系统工程"
+  },
+  {
+    "canonical": "随机性贡献",
+    "aliases": [
+      "随机贡献",
+      "随机性来源"
+    ],
+    "brief": "AI特性"
+  },
+  {
+    "canonical": "劳动力经济",
+    "aliases": [
+      "劳动经济",
+      "人力经济",
+      "劳动力经济学"
+    ],
+    "brief": "经济分析"
+  },
+  {
+    "canonical": "社交摩擦",
+    "aliases": [
+      "协作摩擦",
+      "沟通摩擦"
+    ],
+    "brief": "团队协作"
+  },
+  {
+    "canonical": "边缘情况",
+    "aliases": [
+      "边界情况",
+      "edge case",
+      "边缘情",
+      "边界条件"
+    ],
+    "brief": "测试设计"
+  },
+  {
+    "canonical": "依赖关系",
+    "aliases": [
+      "依赖",
+      "dependency"
+    ],
+    "brief": "系统设计"
+  },
+  {
+    "canonical": "基准测试",
+    "aliases": [
+      "benchmark",
+      "基准评测"
+    ],
+    "brief": "性能评估"
+  },
+  {
+    "canonical": "开放问题",
+    "aliases": [
+      "未决问题",
+      "open question"
+    ],
+    "brief": "研究议题"
+  },
+  {
+    "canonical": "控制手段",
+    "aliases": [
+      "控制措施",
+      "管控手段"
+    ],
+    "brief": "工程管理"
+  },
+  {
+    "canonical": "替代方案",
+    "aliases": [
+      "备选方案",
+      "替代选择"
+    ],
+    "brief": "方案设计"
+  },
+  {
+    "canonical": "混合方案",
+    "aliases": [
+      "混合策略",
+      "混合方法"
+    ],
+    "brief": "方案设计"
+  },
+  {
+    "canonical": "生命周期",
+    "aliases": [
+      "lifecycle",
+      "生存周期",
+      "生命周期状态"
+    ],
+    "brief": "过程管理"
+  },
+  {
+    "canonical": "偶然复杂",
+    "aliases": [
+      "偶然复杂性",
+      "accidental complexity"
+    ],
+    "brief": "软件复杂性"
+  },
+  {
+    "canonical": "殷勤悖论",
+    "aliases": [
+      "过度殷勤悖论",
+      "讨好悖论",
+      "殷勤悖",
+      "过度服务悖论"
+    ],
+    "brief": "AI行为"
+  },
+  {
+    "canonical": "铁律",
+    "aliases": [
+      "硬性规则",
+      "铁则"
+    ],
+    "brief": "工程原则"
+  },
+  {
+    "canonical": "补丁",
+    "aliases": [
+      "patch",
+      "修补"
+    ],
+    "brief": "代码维护"
+  },
+  {
+    "canonical": "死胡同",
+    "aliases": [
+      "死路",
+      "走入死胡同",
+      "dead end"
+    ],
+    "brief": "问题诊断"
+  },
+  {
+    "canonical": "澄清",
+    "aliases": [
+      "澄清问题",
+      "需求澄清"
+    ],
+    "brief": "需求沟通"
+  },
+  {
+    "canonical": "评审",
+    "aliases": [
+      "review",
+      "审查评审"
+    ],
+    "brief": "质量活动"
+  },
+  {
+    "canonical": "治理",
+    "aliases": [
+      "governance",
+      "治理机制"
+    ],
+    "brief": "工程治理"
+  },
+  {
+    "canonical": "迭代",
+    "aliases": [
+      "iteration",
+      "迭代开发"
+    ],
+    "brief": "开发过程"
+  },
+  {
+    "canonical": "假设",
+    "aliases": [
+      "assumption",
+      "前提假设"
+    ],
+    "brief": "工程推理"
+  },
+  {
+    "canonical": "追溯",
+    "aliases": [
+      "可追溯",
+      "追溯性"
+    ],
+    "brief": "需求管理"
+  },
+  {
+    "canonical": "文档",
+    "aliases": [
+      "documentation",
+      "技术文档"
+    ],
+    "brief": "工程产出"
+  },
+  {
+    "canonical": "评估",
+    "aliases": [
+      "evaluation",
+      "评测"
+    ],
+    "brief": "质量活动"
+  },
+  {
+    "canonical": "协调",
+    "aliases": [
+      "coordination",
+      "协同"
+    ],
+    "brief": "团队协作"
+  },
+  {
+    "canonical": "悖论",
+    "aliases": [
+      "paradox",
+      "矛盾现象"
+    ],
+    "brief": "工程现象"
+  },
+  {
+    "canonical": "疲劳",
+    "aliases": [
+      "倦怠",
+      "疲劳感"
+    ],
+    "brief": "团队状态"
+  },
+  {
+    "canonical": "警告",
+    "aliases": [
+      "warning",
+      "告警"
+    ],
+    "brief": "系统提示"
+  },
+  {
+    "canonical": "延迟",
+    "aliases": [
+      "latency",
+      "时延"
+    ],
+    "brief": "性能指标"
+  },
+  {
+    "canonical": "截止日期",
+    "aliases": [
+      "deadline",
+      "交付期限"
+    ],
+    "brief": "项目管理"
+  },
+  {
+    "canonical": "搜索",
+    "aliases": [
+      "search",
+      "检索"
+    ],
+    "brief": "信息获取"
+  },
+  {
+    "canonical": "输出",
+    "aliases": [
+      "output",
+      "产出"
+    ],
+    "brief": "系统行为"
+  },
+  {
+    "canonical": "构建",
+    "aliases": [
+      "build",
+      "构建过程"
+    ],
+    "brief": "开发流程"
+  },
+  {
+    "canonical": "删除",
+    "aliases": [
+      "delete",
+      "移除"
+    ],
+    "brief": "数据操作"
+  },
+  {
+    "canonical": "访问",
+    "aliases": [
+      "access",
+      "存取"
+    ],
+    "brief": "系统操作"
+  },
+  {
+    "canonical": "操作",
+    "aliases": [
+      "operation",
+      "运维操作"
+    ],
+    "brief": "系统行为"
+  },
+  {
+    "canonical": "真相来源",
+    "aliases": [
+      "单一事实来源",
+      "source of truth"
+    ],
+    "brief": "数据治理"
+  },
+  {
+    "canonical": "验证",
+    "aliases": [
+      "校验",
+      "verification"
+    ],
+    "brief": "质量保障"
+  },
+  {
+    "canonical": "独立验证",
+    "aliases": [
+      "交叉验证",
+      "第三方验证"
+    ],
+    "brief": "质量保障"
+  },
+  {
+    "canonical": "版本控制",
+    "aliases": [
+      "版本管理",
+      "VCS",
+      "进行版本控制",
+      "version control"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "路由元数据",
+    "aliases": [
+      "路由信息",
+      "routing metadata"
+    ],
+    "brief": "智能体架构"
+  },
+  {
+    "canonical": "触发器",
+    "aliases": [
+      "触发条件",
+      "trigger"
+    ],
+    "brief": "自动化机制"
+  },
+  {
+    "canonical": "静默压缩",
+    "aliases": [
+      "上下文压缩",
+      "silent compaction"
+    ],
+    "brief": "上下文工程"
+  },
+  {
+    "canonical": "部落知识",
+    "aliases": [
+      "隐性知识",
+      "团队经验",
+      "部落知",
+      "tribal knowledge"
+    ],
+    "brief": "知识管理"
+  },
+  {
+    "canonical": "自主权",
+    "aliases": [
+      "自主性",
+      "autonomy"
+    ],
+    "brief": "智能体能力"
+  },
+  {
+    "canonical": "能力工程",
+    "aliases": [
+      "capability engineering"
+    ],
+    "brief": "工程方法"
+  },
+  {
+    "canonical": "信任工程",
+    "aliases": [
+      "trust engineering",
+      "信任设计",
+      "信任机制",
+      "信任构建"
+    ],
+    "brief": "工程方法"
+  },
+  {
+    "canonical": "基于证据",
+    "aliases": [
+      "证据驱动",
+      "evidence-based"
+    ],
+    "brief": "工程方法"
+  },
+  {
+    "canonical": "基于证据委",
+    "aliases": [
+      "基于证据委托",
+      "evidence-based delegation"
+    ],
+    "brief": "协作模式"
+  },
+  {
+    "canonical": "机器速度",
+    "aliases": [
+      "machine speed",
+      "机器速率"
+    ],
+    "brief": "协作节奏"
+  },
+  {
+    "canonical": "原型泄漏",
+    "aliases": [
+      "原型污染",
+      "prototype leakage",
+      "和原型泄漏"
+    ],
+    "brief": "风险模式"
+  },
+  {
+    "canonical": "草率输入",
+    "aliases": [
+      "垃圾输入",
+      "garbage in"
+    ],
+    "brief": "风险模式"
+  },
+  {
+    "canonical": "幻觉",
+    "aliases": [
+      "hallucination",
+      "模型幻觉"
+    ],
+    "brief": "模型缺陷"
+  },
+  {
+    "canonical": "过度自信",
+    "aliases": [
+      "overconfidence"
+    ],
+    "brief": "模型缺陷"
+  },
+  {
+    "canonical": "集成窗口",
+    "aliases": [
+      "合并窗口",
+      "integration window"
+    ],
+    "brief": "协作流程"
+  },
+  {
+    "canonical": "钩子",
+    "aliases": [
+      "hook",
+      "回调钩子"
+    ],
+    "brief": "扩展机制"
+  },
+  {
+    "canonical": "测试用例",
+    "aliases": [
+      "test case",
+      "用例"
+    ],
+    "brief": "质量保障"
+  },
+  {
+    "canonical": "自我报告",
+    "aliases": [
+      "self-report"
+    ],
+    "brief": "评估机制"
+  },
+  {
+    "canonical": "稳定的接口",
+    "aliases": [
+      "稳定接口",
+      "stable interface"
+    ],
+    "brief": "架构设计"
+  },
+  {
+    "canonical": "特尔定律",
+    "aliases": [
+      "Amdahl定律",
+      "阿姆达尔定律"
+    ],
+    "brief": "性能理论"
+  },
+  {
+    "canonical": "收敛与记录",
+    "aliases": [
+      "收敛记录",
+      "converge and record"
+    ],
+    "brief": "协作流程"
+  },
+  {
+    "canonical": "机制与意图",
+    "aliases": [
+      "机制意图分离",
+      "mechanism vs intent"
+    ],
+    "brief": "设计原则"
+  },
+  {
+    "canonical": "溜球式委托",
+    "aliases": [
+      "甩锅式委托",
+      "推诿式委托"
+    ],
+    "brief": "反模式"
+  },
+  {
+    "canonical": "聊天日志",
+    "aliases": [
+      "对话日志",
+      "chat log"
+    ],
+    "brief": "可观测性"
+  },
+  {
+    "canonical": "讨论串",
+    "aliases": [
+      "线程",
+      "thread"
+    ],
+    "brief": "协作沟通"
+  },
+  {
+    "canonical": "默认设置",
+    "aliases": [
+      "默认配置",
+      "default settings"
+    ],
+    "brief": "配置管理"
+  },
+  {
+    "canonical": "尝试次数",
+    "aliases": [
+      "重试次数",
+      "retry count"
+    ],
+    "brief": "可靠性"
+  },
+  {
+    "canonical": "短的方差条",
+    "aliases": [
+      "方差条",
+      "variance bar"
+    ],
+    "brief": "度量指标"
+  },
+  {
+    "canonical": "起作用的原",
+    "aliases": [
+      "起作用的原则",
+      "有效原则"
+    ],
+    "brief": "设计原则"
+  },
+  {
+    "canonical": "释自主性的三",
+    "aliases": [
+      "自主性三要素",
+      "自主性释放"
+    ],
+    "brief": "智能体能力"
+  },
+  {
+    "canonical": "跨越双重模块",
+    "aliases": [
+      "双重模块跨越",
+      "跨模块"
+    ],
+    "brief": "架构设计"
+  },
+  {
+    "canonical": "块性的沟",
+    "aliases": [
+      "模块性鸿沟",
+      "模块鸿沟"
+    ],
+    "brief": "架构设计"
+  },
+  {
+    "canonical": "势与交互",
+    "aliases": [
+      "趋势与交互",
+      "趋势交互"
+    ],
+    "brief": "智能体架构"
+  },
+  {
+    "canonical": "互模式为核",
+    "aliases": [
+      "交互模式为核心",
+      "交互模式"
+    ],
+    "brief": "智能体架构"
+  },
+  {
+    "canonical": "群中的交互",
+    "aliases": [
+      "群体交互",
+      "多智能体交互"
+    ],
+    "brief": "多智能体"
+  },
+  {
+    "canonical": "教育者与研究",
+    "aliases": [
+      "教育者与研究者",
+      "教研人员"
+    ],
+    "brief": "目标读者"
+  },
+  {
+    "canonical": "技术领导者",
+    "aliases": [
+      "技术负责人",
+      "tech lead",
+      "技术领导"
+    ],
+    "brief": "目标读者"
+  },
+  {
+    "canonical": "初级开发者",
+    "aliases": [
+      "初级工程师",
+      "junior developer"
+    ],
+    "brief": "目标读者"
+  },
+  {
+    "canonical": "命名",
+    "aliases": [
+      "命名规范",
+      "naming"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "排序",
+    "aliases": [
+      "排序算法",
+      "sorting"
+    ],
+    "brief": "算法"
+  },
+  {
+    "canonical": "编码",
+    "aliases": [
+      "编程",
+      "coding"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "加载",
+    "aliases": [
+      "载入",
+      "loading"
+    ],
+    "brief": "系统机制"
+  },
+  {
+    "canonical": "标签",
+    "aliases": [
+      "tag",
+      "标记"
+    ],
+    "brief": "数据管理"
+  },
+  {
+    "canonical": "引擎",
+    "aliases": [
+      "engine",
+      "执行引擎"
+    ],
+    "brief": "系统组件"
+  },
+  {
+    "canonical": "供应商",
+    "aliases": [
+      "厂商",
+      "vendor"
+    ],
+    "brief": "生态角色"
+  },
+  {
+    "canonical": "鸿沟",
+    "aliases": [
+      "差距",
+      "gap"
+    ],
+    "brief": "概念隐喻"
+  },
+  {
+    "canonical": "愿景",
+    "aliases": [
+      "vision",
+      "产品愿景"
+    ],
+    "brief": "规划"
+  },
+  {
+    "canonical": "支柱",
+    "aliases": [
+      "pillar",
+      "支撑要素"
+    ],
+    "brief": "架构设计"
+  },
+  {
+    "canonical": "防御",
+    "aliases": [
+      "防御性",
+      "defense"
+    ],
+    "brief": "安全"
+  },
+  {
+    "canonical": "容忍",
+    "aliases": [
+      "容错",
+      "tolerance"
+    ],
+    "brief": "可靠性"
+  },
+  {
+    "canonical": "偏离",
+    "aliases": [
+      "偏差",
+      "drift"
+    ],
+    "brief": "风险控制"
+  },
+  {
+    "canonical": "精炼",
+    "aliases": [
+      "提炼",
+      "refine"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "收尾",
+    "aliases": [
+      "收尾阶段",
+      "wrap-up"
+    ],
+    "brief": "流程阶段"
+  },
+  {
+    "canonical": "批准",
+    "aliases": [
+      "审批",
+      "approval"
+    ],
+    "brief": "流程管控"
+  },
+  {
+    "canonical": "渐进式委托",
+    "aliases": [
+      "渐进式披露",
+      "渐进式授权",
+      "进式委托",
+      "渐进委托"
+    ],
+    "brief": "协作模式"
+  },
+  {
+    "canonical": "四元律",
+    "aliases": [
+      "智能体四元律"
+    ],
+    "brief": "设计原则"
+  },
+  {
+    "canonical": "审批点",
+    "aliases": [
+      "人工审批点",
+      "审批关卡"
+    ],
+    "brief": "流程控制"
+  },
+  {
+    "canonical": "确定性脚本",
+    "aliases": [
+      "确定性脚本化",
+      "脚本化执行",
+      "确定性代码",
+      "脚本化流程"
+    ],
+    "brief": "执行方式"
+  },
+  {
+    "canonical": "最小权限",
+    "aliases": [
+      "最小权限原则",
+      "least privilege"
+    ],
+    "brief": "安全原则"
+  },
+  {
+    "canonical": "热切悖论",
+    "aliases": [
+      "热切性悖论"
+    ],
+    "brief": "设计悖论"
+  },
+  {
+    "canonical": "集成就绪",
+    "aliases": [
+      "合并就绪包",
+      "集成就绪包",
+      "合并就绪"
+    ],
+    "brief": "交付物"
+  },
+  {
+    "canonical": "遥测",
+    "aliases": [
+      "遥测数据",
+      "telemetry"
+    ],
+    "brief": "可观测性"
+  },
+  {
+    "canonical": "事实来源",
+    "aliases": [
+      "单一事实来源",
+      "source of truth"
+    ],
+    "brief": "数据治理"
+  },
+  {
+    "canonical": "测试套件",
+    "aliases": [
+      "测试集",
+      "test suite"
+    ],
+    "brief": "测试"
+  },
+  {
+    "canonical": "覆盖率",
+    "aliases": [
+      "测试覆盖率",
+      "代码覆盖率"
+    ],
+    "brief": "测试"
+  },
+  {
+    "canonical": "按需加载",
+    "aliases": [
+      "懒加载",
+      "lazy loading"
+    ],
+    "brief": "加载策略"
+  },
+  {
+    "canonical": "世界知识",
+    "aliases": [
+      "先验知识",
+      "背景知识"
+    ],
+    "brief": "知识"
+  },
+  {
+    "canonical": "形式化方法",
+    "aliases": [
+      "形式化验证",
+      "formal methods"
+    ],
+    "brief": "方法"
+  },
+  {
+    "canonical": "协调开销",
+    "aliases": [
+      "协作开销",
+      "通信开销"
+    ],
+    "brief": "成本"
+  },
+  {
+    "canonical": "随机性行动者",
+    "aliases": [
+      "随机行动者",
+      "stochastic actor"
+    ],
+    "brief": "智能体"
+  },
+  {
+    "canonical": "交互模式",
+    "aliases": [
+      "交互范式",
+      "交互方式"
+    ],
+    "brief": "模式"
+  },
+  {
+    "canonical": "行为偏好",
+    "aliases": [
+      "偏好行为",
+      "行为倾向"
+    ],
+    "brief": "对齐"
+  },
+  {
+    "canonical": "参数空间",
+    "aliases": [
+      "参数域",
+      "parameter space",
+      "Parameter Space"
+    ],
+    "brief": "模型"
+  },
+  {
+    "canonical": "技术栈",
+    "aliases": [
+      "技术堆栈",
+      "tech stack"
+    ],
+    "brief": "架构"
+  },
+  {
+    "canonical": "故障处理",
+    "aliases": [
+      "故障恢复",
+      "容错处理"
+    ],
+    "brief": "可靠性"
+  },
+  {
+    "canonical": "信息过载",
+    "aliases": [
+      "信息超载"
+    ],
+    "brief": "认知"
+  },
+  {
+    "canonical": "学习曲线",
+    "aliases": [
+      "上手曲线"
+    ],
+    "brief": "认知"
+  },
+  {
+    "canonical": "副驾",
+    "aliases": [
+      "副驾驶",
+      "copilot"
+    ],
+    "brief": "协作模式"
+  },
+  {
+    "canonical": "领骑",
+    "aliases": [
+      "领骑者",
+      "pacer"
+    ],
+    "brief": "协作模式"
+  },
+  {
+    "canonical": "吞吐",
+    "aliases": [
+      "吞吐量",
+      "throughput"
+    ],
+    "brief": "性能"
+  },
+  {
+    "canonical": "负载",
+    "aliases": [
+      "负载量",
+      "workload"
+    ],
+    "brief": "性能"
+  },
+  {
+    "canonical": "语义",
+    "aliases": [
+      "语义层",
+      "semantics"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "路由",
+    "aliases": [
+      "路由分发",
+      "routing"
+    ],
+    "brief": "架构"
+  },
+  {
+    "canonical": "配置",
+    "aliases": [
+      "配置项",
+      "configuration"
+    ],
+    "brief": "工程"
+  },
+  {
+    "canonical": "函数",
+    "aliases": [
+      "函数调用",
+      "function"
+    ],
+    "brief": "编程"
+  },
+  {
+    "canonical": "收敛并记录",
+    "aliases": [
+      "收敛记录",
+      "收敛归档"
+    ],
+    "brief": "流程"
+  },
+  {
+    "canonical": "订立契约",
+    "aliases": [
+      "契约订立",
+      "接口契约"
+    ],
+    "brief": "协作"
+  },
+  {
+    "canonical": "透明度",
+    "aliases": [
+      "可解释性",
+      "transparency",
+      "可见性"
+    ],
+    "brief": "治理"
+  },
+  {
+    "canonical": "不确定性",
+    "aliases": [
+      "不确定性管理",
+      "uncertainty"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "跃迁",
+    "aliases": [
+      "能力跃迁",
+      "范式跃迁"
+    ],
+    "brief": "演进"
+  },
+  {
+    "canonical": "冲刺",
+    "aliases": [
+      "迭代冲刺",
+      "sprint"
+    ],
+    "brief": "敏捷"
+  },
+  {
+    "canonical": "待办",
+    "aliases": [
+      "待办事项",
+      "backlog"
+    ],
+    "brief": "敏捷"
+  },
+  {
+    "canonical": "诊断",
+    "aliases": [
+      "故障诊断",
+      "diagnosis"
+    ],
+    "brief": "运维"
+  },
+  {
+    "canonical": "差异对比",
+    "aliases": [
+      "diff对比",
+      "差异分析"
+    ],
+    "brief": "工程"
+  },
+  {
+    "canonical": "原始日志",
+    "aliases": [
+      "原始日志数据",
+      "raw log"
+    ],
+    "brief": "可观测性"
+  },
+  {
+    "canonical": "命周期状态",
+    "aliases": [
+      "生命周期状态",
+      "lifecycle state"
+    ],
+    "brief": "工程"
+  },
+  {
+    "canonical": "单向条形",
+    "aliases": [
+      "单向条",
+      "单向门"
+    ],
+    "brief": "决策"
+  },
+  {
+    "canonical": "弃式赌注",
+    "aliases": [
+      "可弃式赌注",
+      "可逆赌注"
+    ],
+    "brief": "决策"
+  },
+  {
+    "canonical": "社会摩擦",
+    "aliases": [
+      "协作摩擦",
+      "组织摩擦"
+    ],
+    "brief": "组织"
+  },
+  {
+    "canonical": "补偿",
+    "aliases": [
+      "补偿机制",
+      "compensation"
+    ],
+    "brief": "可靠性"
+  },
+  {
+    "canonical": "爆炸式增长",
+    "aliases": [
+      "爆炸增长",
+      "指数增长"
+    ],
+    "brief": "趋势"
+  },
+  {
+    "canonical": "堆积",
+    "aliases": [
+      "积压",
+      "堆积如山"
+    ],
+    "brief": "流程"
+  },
+  {
+    "canonical": "囤积",
+    "aliases": [
+      "囤积行为",
+      "hoarding"
+    ],
+    "brief": "行为"
+  },
+  {
+    "canonical": "干扰",
+    "aliases": [
+      "相互干扰",
+      "interference"
+    ],
+    "brief": "协作"
+  },
+  {
+    "canonical": "盲目",
+    "aliases": [
+      "盲目执行",
+      "盲从"
+    ],
+    "brief": "行为"
+  },
+  {
+    "canonical": "机械",
+    "aliases": [
+      "机械化",
+      "机械式"
+    ],
+    "brief": "行为"
+  },
+  {
+    "canonical": "乐观",
+    "aliases": [
+      "乐观策略",
+      "optimistic"
+    ],
+    "brief": "策略"
+  },
+  {
+    "canonical": "敏感",
+    "aliases": [
+      "敏感性",
+      "sensitive"
+    ],
+    "brief": "属性"
+  },
+  {
+    "canonical": "学习悖论",
+    "aliases": [
+      "学习曲线悖论"
+    ],
+    "brief": "认知模型"
+  },
+  {
+    "canonical": "四个悖论",
+    "aliases": [
+      "悖论四重奏"
+    ],
+    "brief": "认知模型"
+  },
+  {
+    "canonical": "厄运循环",
+    "aliases": [
+      "恶性循环",
+      "死亡螺旋",
+      "Doom Loop"
+    ],
+    "brief": "失败模式"
+  },
+  {
+    "canonical": "魔鬼代言",
+    "aliases": [
+      "魔鬼代言人",
+      "唱反调角色"
+    ],
+    "brief": "协作机制"
+  },
+  {
+    "canonical": "上下文卡片",
+    "aliases": [
+      "上下文卡",
+      "任务上下文卡",
+      "context卡片"
+    ],
+    "brief": "上下文工程"
+  },
+  {
+    "canonical": "简报新鲜度",
+    "aliases": [
+      "简报时效",
+      "上下文新鲜度",
+      "任务简报新鲜度"
+    ],
+    "brief": "上下文工程"
+  },
+  {
+    "canonical": "指挥平面",
+    "aliases": [
+      "控制平面",
+      "指挥层"
+    ],
+    "brief": "架构模式"
+  },
+  {
+    "canonical": "手动编排",
+    "aliases": [
+      "人工编排",
+      "手工编排"
+    ],
+    "brief": "编排模式"
+  },
+  {
+    "canonical": "包的异步协调",
+    "aliases": [
+      "异步协调",
+      "异步编排"
+    ],
+    "brief": "编排模式"
+  },
+  {
+    "canonical": "升级路径",
+    "aliases": [
+      "升级轨道",
+      "升级通道"
+    ],
+    "brief": "运维流程"
+  },
+  {
+    "canonical": "事件响应",
+    "aliases": [
+      "事故响应",
+      "应急响应"
+    ],
+    "brief": "运维流程"
+  },
+  {
+    "canonical": "证据义务",
+    "aliases": [
+      "举证义务",
+      "证据责任"
+    ],
+    "brief": "治理机制"
+  },
+  {
+    "canonical": "概念完整性",
+    "aliases": [
+      "概念一致性"
+    ],
+    "brief": "设计原则"
+  },
+  {
+    "canonical": "局部优化",
+    "aliases": [
+      "局部最优"
+    ],
+    "brief": "系统思维"
+  },
+  {
+    "canonical": "内存不安全",
+    "aliases": [
+      "内存安全漏洞",
+      "不安全内存"
+    ],
+    "brief": "安全概念"
+  },
+  {
+    "canonical": "野生数据",
+    "aliases": [
+      "非受控数据",
+      "野外数据",
+      "野生数"
+    ],
+    "brief": "数据概念"
+  },
+  {
+    "canonical": "稳定标识",
+    "aliases": [
+      "稳定ID",
+      "持久标识"
+    ],
+    "brief": "数据概念"
+  },
+  {
+    "canonical": "命令环境",
+    "aliases": [
+      "命令执行环境",
+      "shell环境"
+    ],
+    "brief": "运行环境"
+  },
+  {
+    "canonical": "人类注意力",
+    "aliases": [
+      "注意力预算",
+      "认知注意力"
+    ],
+    "brief": "认知模型"
+  },
+  {
+    "canonical": "周期时间",
+    "aliases": [
+      "循环时间",
+      "交付周期"
+    ],
+    "brief": "度量指标"
+  },
+  {
+    "canonical": "运行长度",
+    "aliases": [
+      "运行时长",
+      "执行长度"
+    ],
+    "brief": "度量指标"
+  },
+  {
+    "canonical": "安全扫描",
+    "aliases": [
+      "安全检测",
+      "漏洞扫描"
+    ],
+    "brief": "安全实践"
+  },
+  {
+    "canonical": "资格认证",
+    "aliases": [
+      "认证",
+      "资质认证"
+    ],
+    "brief": "治理机制"
+  },
+  {
+    "canonical": "分布式系统",
+    "aliases": [
+      "分布式架构",
+      "distributed system",
+      "分布式系"
+    ],
+    "brief": "系统架构"
+  },
+  {
+    "canonical": "构建块",
+    "aliases": [
+      "构件",
+      "基本单元"
+    ],
+    "brief": "系统架构"
+  },
+  {
+    "canonical": "收件箱",
+    "aliases": [
+      "任务收件箱",
+      "inbox"
+    ],
+    "brief": "协作机制"
+  },
+  {
+    "canonical": "导师指导",
+    "aliases": [
+      "导师制",
+      "mentorship"
+    ],
+    "brief": "协作机制"
+  },
+  {
+    "canonical": "团队规模",
+    "aliases": [
+      "团队大小",
+      "团队人数"
+    ],
+    "brief": "组织管理"
+  },
+  {
+    "canonical": "升级轨道",
+    "aliases": [
+      "升级路径",
+      "晋升轨道"
+    ],
+    "brief": "组织管理"
+  },
+  {
+    "canonical": "故障类别",
+    "aliases": [
+      "故障类型",
+      "失效分类"
+    ],
+    "brief": "可靠性"
+  },
+  {
+    "canonical": "隐藏的假设",
+    "aliases": [
+      "隐含假设",
+      "未言明假设",
+      "隐性假设"
+    ],
+    "brief": "认知模型"
+  },
+  {
+    "canonical": "自相矛盾",
+    "aliases": [
+      "内在矛盾"
+    ],
+    "brief": "认知模型"
+  },
+  {
+    "canonical": "权衡取舍",
+    "aliases": [
+      "权衡",
+      "取舍"
+    ],
+    "brief": "决策方法"
+  },
+  {
+    "canonical": "限定范围",
+    "aliases": [
+      "范围限定",
+      "划定范围"
+    ],
+    "brief": "决策方法"
+  },
+  {
+    "canonical": "驱动的改进循环",
+    "aliases": [
+      "改进循环",
+      "反馈改进环"
+    ],
+    "brief": "流程方法"
+  },
+  {
+    "canonical": "结构化",
+    "aliases": [
+      "结构化处理"
+    ],
+    "brief": "方法特征"
+  },
+  {
+    "canonical": "自动化",
+    "aliases": [
+      "自动执行"
+    ],
+    "brief": "方法特征"
+  },
+  {
+    "canonical": "编排",
+    "aliases": [
+      "编排调度",
+      "orchestration"
+    ],
+    "brief": "方法特征"
+  },
+  {
+    "canonical": "编译器",
+    "aliases": [
+      "编译程序"
+    ],
+    "brief": "技术组件"
+  },
+  {
+    "canonical": "接口",
+    "aliases": [
+      "API",
+      "接口定义"
+    ],
+    "brief": "技术组件"
+  },
+  {
+    "canonical": "架构",
+    "aliases": [
+      "系统架构",
+      "体系结构"
+    ],
+    "brief": "技术组件"
+  },
+  {
+    "canonical": "版本",
+    "aliases": [
+      "版本号",
+      "版本管理"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "发布",
+    "aliases": [
+      "上线",
+      "release"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "捷径",
+    "aliases": [
+      "抄近路",
+      "shortcut"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "稀缺",
+    "aliases": [
+      "资源稀缺",
+      "稀缺性"
+    ],
+    "brief": "经济学"
+  },
+  {
+    "canonical": "经济学",
+    "aliases": [
+      "软件经济学"
+    ],
+    "brief": "经济学"
+  },
+  {
+    "canonical": "注意力",
+    "aliases": [
+      "注意力机制"
+    ],
+    "brief": "认知模型"
+  },
+  {
+    "canonical": "交接",
+    "aliases": [
+      "工作交接",
+      "handoff"
+    ],
+    "brief": "协作机制"
+  },
+  {
+    "canonical": "异议",
+    "aliases": [
+      "反对意见",
+      "分歧"
+    ],
+    "brief": "协作机制"
+  },
+  {
+    "canonical": "沟通",
+    "aliases": [
+      "交流",
+      "信息沟通"
+    ],
+    "brief": "协作机制"
+  },
+  {
+    "canonical": "信任",
+    "aliases": [
+      "信任关系",
+      "可信度"
+    ],
+    "brief": "协作机制"
+  },
+  {
+    "canonical": "偏好",
+    "aliases": [
+      "偏好设置",
+      "倾向"
+    ],
+    "brief": "认知模型"
+  },
+  {
+    "canonical": "信号",
+    "aliases": [
+      "反馈信号",
+      "指标信号"
+    ],
+    "brief": "度量指标"
+  },
+  {
+    "canonical": "速度",
+    "aliases": [
+      "交付速度",
+      "速率"
+    ],
+    "brief": "度量指标"
+  },
+  {
+    "canonical": "标准",
+    "aliases": [
+      "规范",
+      "准则"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "实践",
+    "aliases": [
+      "工程实践",
+      "最佳实践"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "指南",
+    "aliases": [
+      "指导手册",
+      "规范指南"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "参考",
+    "aliases": [
+      "参考资料",
+      "参照"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "故障模式",
+    "aliases": [
+      "失效模式",
+      "failure mode"
+    ],
+    "brief": "可靠性"
+  },
+  {
+    "canonical": "接缝",
+    "aliases": [
+      "seam",
+      "可替换点"
+    ],
+    "brief": "架构设计"
+  },
+  {
+    "canonical": "局部推理",
+    "aliases": [
+      "局部化推理",
+      "local reasoning"
+    ],
+    "brief": "代码理解"
+  },
+  {
+    "canonical": "理由链接",
+    "aliases": [
+      "推理链",
+      "reasoning chain"
+    ],
+    "brief": "智能体推理"
+  },
+  {
+    "canonical": "阶段转换",
+    "aliases": [
+      "阶段切换",
+      "phase transition"
+    ],
+    "brief": "流程管理"
+  },
+  {
+    "canonical": "属性覆盖率",
+    "aliases": [
+      "特性覆盖率",
+      "feature coverage"
+    ],
+    "brief": "测试度量"
+  },
+  {
+    "canonical": "闭环",
+    "aliases": [
+      "反馈闭环",
+      "closed loop"
+    ],
+    "brief": "控制机制"
+  },
+  {
+    "canonical": "可观测性",
+    "aliases": [
+      "observability",
+      "可观察性"
+    ],
+    "brief": "运维监控"
+  },
+  {
+    "canonical": "预设的审批点",
+    "aliases": [
+      "审批检查点",
+      "human approval gate"
+    ],
+    "brief": "人机协作"
+  },
+  {
+    "canonical": "语言组合拳",
+    "aliases": [
+      "多语言组合",
+      "语言组合策略"
+    ],
+    "brief": "技术策略"
+  },
+  {
+    "canonical": "未能合并率",
+    "aliases": [
+      "合并失败率",
+      "non-merge rate"
+    ],
+    "brief": "代码度量"
+  },
+  {
+    "canonical": "并行分解",
+    "aliases": [
+      "并行任务分解",
+      "parallel decomposition"
+    ],
+    "brief": "任务规划"
+  },
+  {
+    "canonical": "委托边界",
+    "aliases": [
+      "委派边界",
+      "delegation boundary"
+    ],
+    "brief": "智能体协作"
+  },
+  {
+    "canonical": "再现率",
+    "aliases": [
+      "复现率",
+      "reproduction rate"
+    ],
+    "brief": "质量度量"
+  },
+  {
+    "canonical": "隧道视野悖论",
+    "aliases": [
+      "隧道视野",
+      "tunnel vision",
+      "视野悖论"
+    ],
+    "brief": "认知偏差"
+  },
+  {
+    "canonical": "智能体时代",
+    "aliases": [
+      "agent era",
+      "AI智能体时代",
+      "Agent时代",
+      "智能体纪元"
+    ],
+    "brief": "时代背景"
+  },
+  {
+    "canonical": "构造安全",
+    "aliases": [
+      "安全构造",
+      "secure by construction"
+    ],
+    "brief": "安全设计"
+  },
+  {
+    "canonical": "基于证据的监",
+    "aliases": [
+      "基于证据的监督",
+      "evidence-based oversight"
+    ],
+    "brief": "监督机制"
+  },
+  {
+    "canonical": "提示词",
+    "aliases": [
+      "prompt",
+      "提示语"
+    ],
+    "brief": "智能体输入"
+  },
+  {
+    "canonical": "版本历史",
+    "aliases": [
+      "version history",
+      "变更历史"
+    ],
+    "brief": "版本管理"
+  },
+  {
+    "canonical": "代码库",
+    "aliases": [
+      "codebase",
+      "代码仓库"
+    ],
+    "brief": "软件资产"
+  },
+  {
+    "canonical": "连续性数",
+    "aliases": [
+      "连续性数据",
+      "continuity data"
+    ],
+    "brief": "上下文管理"
+  },
+  {
+    "canonical": "传统控制手段",
+    "aliases": [
+      "传统控制方法",
+      "traditional control"
+    ],
+    "brief": "管理方法"
+  },
+  {
+    "canonical": "舰队",
+    "aliases": [
+      "智能体舰队",
+      "agent fleet"
+    ],
+    "brief": "多智能体"
+  },
+  {
+    "canonical": "器可读清单",
+    "aliases": [
+      "机器可读清单",
+      "machine-readable checklist"
+    ],
+    "brief": "智能体接口"
+  },
+  {
+    "canonical": "策略违规",
+    "aliases": [
+      "policy violation",
+      "策略违背"
+    ],
+    "brief": "合规治理"
+  },
+  {
+    "canonical": "耦合",
+    "aliases": [
+      "coupling",
+      "耦合度"
+    ],
+    "brief": "架构设计"
+  },
+  {
+    "canonical": "请求包与决议",
+    "aliases": [
+      "请求与决议包",
+      "request and decision packet"
+    ],
+    "brief": "协作协议"
+  },
+  {
+    "canonical": "操作边界",
+    "aliases": [
+      "operational boundary",
+      "操作范围"
+    ],
+    "brief": "权限治理"
+  },
+  {
+    "canonical": "委派校准",
+    "aliases": [
+      "delegation calibration",
+      "委派对齐",
+      "delegation校准"
+    ],
+    "brief": "智能体协作"
+  },
+  {
+    "canonical": "风险及应",
+    "aliases": [
+      "风险与应对",
+      "risk and response"
+    ],
+    "brief": "风险管理"
+  },
+  {
+    "canonical": "复制成本近乎",
+    "aliases": [
+      "复制成本近零",
+      "near-zero copy cost"
+    ],
+    "brief": "经济特性"
+  },
+  {
+    "canonical": "优势与交互",
+    "aliases": [
+      "优势与交互作用",
+      "advantage and interaction"
+    ],
+    "brief": "分析框架"
+  },
+  {
+    "canonical": "认知",
+    "aliases": [
+      "认知负荷",
+      "cognition"
+    ],
+    "brief": "认知科学"
+  },
+  {
+    "canonical": "清单",
+    "aliases": [
+      "checklist",
+      "检查清单"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "简报",
+    "aliases": [
+      "任务简报",
+      "briefing"
+    ],
+    "brief": "任务沟通"
+  },
+  {
+    "canonical": "共享表面",
+    "aliases": [
+      "共享界面",
+      "shared surface"
+    ],
+    "brief": "协作机制"
+  },
+  {
+    "canonical": "内联评论",
+    "aliases": [
+      "inline comment",
+      "行内评论"
+    ],
+    "brief": "代码评审"
+  },
+  {
+    "canonical": "生产环境",
+    "aliases": [
+      "production",
+      "线上环境"
+    ],
+    "brief": "部署运维"
+  },
+  {
+    "canonical": "默认配置",
+    "aliases": [
+      "default config",
+      "缺省配置"
+    ],
+    "brief": "系统配置"
+  },
+  {
+    "canonical": "稳定的标识",
+    "aliases": [
+      "稳定标识符",
+      "stable identifier"
+    ],
+    "brief": "系统设计"
+  },
+  {
+    "canonical": "劳动力经济学",
+    "aliases": [
+      "labor economics",
+      "人力经济学"
+    ],
+    "brief": "经济分析"
+  },
+  {
+    "canonical": "根本原因",
+    "aliases": [
+      "root cause",
+      "根因"
+    ],
+    "brief": "问题分析"
+  },
+  {
+    "canonical": "冻结",
+    "aliases": [
+      "代码冻结",
+      "freeze"
+    ],
+    "brief": "变更管理"
+  },
+  {
+    "canonical": "集成",
+    "aliases": [
+      "integration",
+      "整合"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "权限",
+    "aliases": [
+      "permission",
+      "授权"
+    ],
+    "brief": "安全治理"
+  },
+  {
+    "canonical": "多个行动者",
+    "aliases": [
+      "多行动者",
+      "multi-actor"
+    ],
+    "brief": "多智能体"
+  },
+  {
+    "canonical": "底层技术",
+    "aliases": [
+      "underlying technology",
+      "基础技术"
+    ],
+    "brief": "技术架构"
+  },
+  {
+    "canonical": "打补丁",
+    "aliases": [
+      "patch",
+      "修补"
+    ],
+    "brief": "维护实践"
+  },
+  {
+    "canonical": "即兴",
+    "aliases": [
+      "即兴发挥",
+      "improvisation"
+    ],
+    "brief": "智能体行为"
+  },
+  {
+    "canonical": "按风险等级",
+    "aliases": [
+      "风险分级",
+      "risk-tiered"
+    ],
+    "brief": "风险管理"
+  },
+  {
+    "canonical": "复制粘贴",
+    "aliases": [
+      "copy-paste",
+      "复制粘贴编程"
+    ],
+    "brief": "反模式"
+  },
+  {
+    "canonical": "项目",
+    "aliases": [
+      "project",
+      "工程项目"
+    ],
+    "brief": "工程管理"
+  },
+  {
+    "canonical": "模型",
+    "aliases": [
+      "model",
+      "大模型"
+    ],
+    "brief": "AI基础"
+  },
+  {
+    "canonical": "规则",
+    "aliases": [
+      "rule",
+      "规则集"
+    ],
+    "brief": "治理机制"
+  },
+  {
+    "canonical": "干预",
+    "aliases": [
+      "intervention",
+      "人工干预"
+    ],
+    "brief": "人机协作"
+  },
+  {
+    "canonical": "预算",
+    "aliases": [
+      "budget",
+      "成本预算"
+    ],
+    "brief": "资源管理"
+  },
+  {
+    "canonical": "大规模",
+    "aliases": [
+      "at scale",
+      "规模化"
+    ],
+    "brief": "工程规模"
+  },
+  {
+    "canonical": "学科",
+    "aliases": [
+      "discipline",
+      "研究领域"
+    ],
+    "brief": "学科定位"
+  },
+  {
+    "canonical": "意图不匹配",
+    "aliases": [
+      "需求误解",
+      "意图偏差",
+      "意图不匹"
+    ],
+    "brief": "需求问题"
+  },
+  {
+    "canonical": "上下文预算",
+    "aliases": [
+      "上下文窗口预算",
+      "token预算"
+    ],
+    "brief": "上下文管理"
+  },
+  {
+    "canonical": "交接契约",
+    "aliases": [
+      "交接协议",
+      "handoff契约",
+      "handoff contract"
+    ],
+    "brief": "协作机制"
+  },
+  {
+    "canonical": "基于证据委托",
+    "aliases": [
+      "证据驱动委托",
+      "证据式委派",
+      "于证据委托"
+    ],
+    "brief": "委托模式"
+  },
+  {
+    "canonical": "策略即代码",
+    "aliases": [
+      "policy as code",
+      "策略代码化",
+      "略即代码"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "本质复杂性",
+    "aliases": [
+      "固有复杂性",
+      "essential complexity",
+      "本质复杂度"
+    ],
+    "brief": "复杂性理论"
+  },
+  {
+    "canonical": "向后兼容",
+    "aliases": [
+      "向后兼容性",
+      "backward compatibility",
+      "向后兼",
+      "向下兼容"
+    ],
+    "brief": "兼容性"
+  },
+  {
+    "canonical": "事件学习循环",
+    "aliases": [
+      "事件驱动学习",
+      "学习循环",
+      "事件学习",
+      "经验回环"
+    ],
+    "brief": "学习机制"
+  },
+  {
+    "canonical": "编码认知策略",
+    "aliases": [
+      "认知编码策略",
+      "认知策略",
+      "编码认知方法",
+      "coding认知策略"
+    ],
+    "brief": "认知方法"
+  },
+  {
+    "canonical": "四元律速",
+    "aliases": [
+      "四元律",
+      "四要素律"
+    ],
+    "brief": "方法论"
+  },
+  {
+    "canonical": "四重奏",
+    "aliases": [
+      "四重协作",
+      "四角色协作"
+    ],
+    "brief": "协作模式"
+  },
+  {
+    "canonical": "复制粘贴循环",
+    "aliases": [
+      "复制粘贴开发",
+      "copy-paste循环",
+      "复制粘贴循环模式",
+      "复制循环"
+    ],
+    "brief": "反模式"
+  },
+  {
+    "canonical": "安全论证",
+    "aliases": [
+      "安全案例",
+      "safety case"
+    ],
+    "brief": "安全工程"
+  },
+  {
+    "canonical": "简报修订",
+    "aliases": [
+      "任务简报更新",
+      "简报迭代"
+    ],
+    "brief": "任务管理"
+  },
+  {
+    "canonical": "请求包",
+    "aliases": [
+      "询请求包",
+      "request包"
+    ],
+    "brief": "通信单元"
+  },
+  {
+    "canonical": "数据包",
+    "aliases": [
+      "数据单元",
+      "packet"
+    ],
+    "brief": "通信单元"
+  },
+  {
+    "canonical": "连续性数据",
+    "aliases": [
+      "连续性信息",
+      "continuity数据"
+    ],
+    "brief": "数据类别"
+  },
+  {
+    "canonical": "社会校准",
+    "aliases": [
+      "社会对齐",
+      "social calibration"
+    ],
+    "brief": "对齐机制"
+  },
+  {
+    "canonical": "英语意图",
+    "aliases": [
+      "英文意图",
+      "English intent"
+    ],
+    "brief": "意图表达"
+  },
+  {
+    "canonical": "需求模糊",
+    "aliases": [
+      "模糊需求",
+      "需求含糊"
+    ],
+    "brief": "需求问题"
+  },
+  {
+    "canonical": "假设和未知",
+    "aliases": [
+      "假设与未知",
+      "未知项管理"
+    ],
+    "brief": "需求分析"
+  },
+  {
+    "canonical": "风险及应对方法",
+    "aliases": [
+      "风险应对",
+      "风险与缓解"
+    ],
+    "brief": "风险管理"
+  },
+  {
+    "canonical": "系统性改进",
+    "aliases": [
+      "系统改进",
+      "系统性优化",
+      "systematic改进"
+    ],
+    "brief": "改进方法"
+  },
+  {
+    "canonical": "一等公民",
+    "aliases": [
+      "first-class citizen",
+      "一等对象"
+    ],
+    "brief": "设计原则"
+  },
+  {
+    "canonical": "构建模块",
+    "aliases": [
+      "构建块",
+      "building block"
+    ],
+    "brief": "架构概念"
+  },
+  {
+    "canonical": "主要构建",
+    "aliases": [
+      "主构建",
+      "primary build"
+    ],
+    "brief": "构建流程"
+  },
+  {
+    "canonical": "错误处理",
+    "aliases": [
+      "异常处理",
+      "error handling"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "二进制文件",
+    "aliases": [
+      "binary文件",
+      "二进制产物",
+      "binary artifact"
+    ],
+    "brief": "文件类型"
+  },
+  {
+    "canonical": "语言选择",
+    "aliases": [
+      "编程语言选型",
+      "语言选型"
+    ],
+    "brief": "技术决策"
+  },
+  {
+    "canonical": "指挥中心",
+    "aliases": [
+      "控制中心",
+      "command center"
+    ],
+    "brief": "架构组件"
+  },
+  {
+    "canonical": "轻量级",
+    "aliases": [
+      "轻量",
+      "lightweight"
+    ],
+    "brief": "架构属性"
+  },
+  {
+    "canonical": "可缩放综合",
+    "aliases": [
+      "可扩展综合",
+      "scalable synthesis"
+    ],
+    "brief": "能力属性"
+  },
+  {
+    "canonical": "财务审计",
+    "aliases": [
+      "财务审查",
+      "financial audit"
+    ],
+    "brief": "审计类型"
+  },
+  {
+    "canonical": "自我防卫",
+    "aliases": [
+      "自我保护",
+      "self-defense"
+    ],
+    "brief": "行为模式"
+  },
+  {
+    "canonical": "造轮子",
+    "aliases": [
+      "重复造轮子",
+      "reinvent wheel"
+    ],
+    "brief": "反模式"
+  },
+  {
+    "canonical": "写一旦廉价",
+    "aliases": [
+      "写一次廉价",
+      "write-once廉价"
+    ],
+    "brief": "成本概念"
+  },
+  {
+    "canonical": "威定律",
+    "aliases": [
+      "威氏定律",
+      "Weyl定律"
+    ],
+    "brief": "定律"
+  },
+  {
+    "canonical": "尔定律",
+    "aliases": [
+      "尔氏定律",
+      "定律"
+    ],
+    "brief": "定律"
+  },
+  {
+    "canonical": "玉律",
+    "aliases": [
+      "黄金法则",
+      "golden rule"
+    ],
+    "brief": "原则"
+  },
+  {
+    "canonical": "四大学科",
+    "aliases": [
+      "四大领域",
+      "四学科"
+    ],
+    "brief": "学科分类"
+  },
+  {
+    "canonical": "起作用的原理",
+    "aliases": [
+      "作用原理",
+      "工作原理"
+    ],
+    "brief": "原理概念"
+  },
+  {
+    "canonical": "最终抉择",
+    "aliases": [
+      "最终决策",
+      "final decision"
+    ],
+    "brief": "决策概念"
+  },
+  {
+    "canonical": "复述标准",
+    "aliases": [
+      "复述规范",
+      "标准复述"
+    ],
+    "brief": "沟通规范"
+  },
+  {
+    "canonical": "交接成功",
+    "aliases": [
+      "交接完成",
+      "handoff成功"
+    ],
+    "brief": "协作结果"
+  },
+  {
+    "canonical": "底层基础",
+    "aliases": [
+      "底层基石",
+      "基础层"
+    ],
+    "brief": "架构概念"
+  },
+  {
+    "canonical": "舰队的平台",
+    "aliases": [
+      "舰队平台",
+      "fleet平台"
+    ],
+    "brief": "平台概念"
+  },
+  {
+    "canonical": "广阔的世界",
+    "aliases": [
+      "广阔世界",
+      "wide world"
+    ],
+    "brief": "概念隐喻"
+  },
+  {
+    "canonical": "困难的部分",
+    "aliases": [
+      "难点",
+      "hard part"
+    ],
+    "brief": "问题描述"
+  },
+  {
+    "canonical": "核心思想",
+    "aliases": [
+      "核心理念",
+      "core idea"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "经典",
+    "aliases": [
+      "经典案例",
+      "classic"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "回归",
+    "aliases": [
+      "回归测试",
+      "regression"
+    ],
+    "brief": "测试概念"
+  },
+  {
+    "canonical": "基础模型",
+    "aliases": [
+      "基座模型",
+      "大模型底座"
+    ],
+    "brief": "模型概念"
+  },
+  {
+    "canonical": "未遂事件率",
+    "aliases": [
+      "near-miss率",
+      "险兆事件率"
+    ],
+    "brief": "安全度量"
+  },
+  {
+    "canonical": "交接成功率",
+    "aliases": [
+      "handoff成功率",
+      "任务交接成功率"
+    ],
+    "brief": "协作度量"
+  },
+  {
+    "canonical": "路由元数",
+    "aliases": [
+      "路由元数据",
+      "路由元信息"
+    ],
+    "brief": "路由机制"
+  },
+  {
+    "canonical": "校准自主权边界",
+    "aliases": [
+      "自主权边界校准",
+      "自主边界校准"
+    ],
+    "brief": "权限治理"
+  },
+  {
+    "canonical": "人月神话",
+    "aliases": [
+      "The Mythical Man-Month",
+      "人月神话书"
+    ],
+    "brief": "经典著作"
+  },
+  {
+    "canonical": "最小工作集",
+    "aliases": [
+      "最小上下文集",
+      "最小任务集"
+    ],
+    "brief": "上下文管理"
+  },
+  {
+    "canonical": "链成熟度",
+    "aliases": [
+      "工具链成熟度",
+      "链路成熟度"
+    ],
+    "brief": "成熟度评估"
+  },
+  {
+    "canonical": "认证套件",
+    "aliases": [
+      "资质认证套件",
+      "认证测试套件"
+    ],
+    "brief": "认证机制"
+  },
+  {
+    "canonical": "审计追踪",
+    "aliases": [
+      "审计日志",
+      "审计轨迹"
+    ],
+    "brief": "可审计性"
+  },
+  {
+    "canonical": "自动化检查",
+    "aliases": [
+      "自动检查",
+      "自动化校验"
+    ],
+    "brief": "质量保障"
+  },
+  {
+    "canonical": "重建上下文",
+    "aliases": [
+      "上下文重建",
+      "恢复上下文",
+      "重建上下"
+    ],
+    "brief": "上下文管理"
+  },
+  {
+    "canonical": "流程运行手册",
+    "aliases": [
+      "运行手册",
+      "runbook",
+      "操作手册"
+    ],
+    "brief": "运维文档"
+  },
+  {
+    "canonical": "负载量表",
+    "aliases": [
+      "负载表",
+      "容量量表"
+    ],
+    "brief": "容量规划"
+  },
+  {
+    "canonical": "智能体工具链",
+    "aliases": [
+      "Agent工具链",
+      "智能体工具集"
+    ],
+    "brief": "工具生态"
+  },
+  {
+    "canonical": "包与决议记录",
+    "aliases": [
+      "包决议记录",
+      "决议记录"
+    ],
+    "brief": "协作工件"
+  },
+  {
+    "canonical": "资质认证包",
+    "aliases": [
+      "认证包",
+      "资质包"
+    ],
+    "brief": "认证工件"
+  },
+  {
+    "canonical": "门禁",
+    "aliases": [
+      "质量门禁",
+      "准入检查",
+      "gate"
+    ],
+    "brief": "质量管控"
+  },
+  {
+    "canonical": "集成队列",
+    "aliases": [
+      "合并队列",
+      "integration queue"
+    ],
+    "brief": "集成机制"
+  },
+  {
+    "canonical": "信息隐藏原则",
+    "aliases": [
+      "信息隐藏",
+      "封装原则"
+    ],
+    "brief": "设计原则"
+  },
+  {
+    "canonical": "异步协调",
+    "aliases": [
+      "异步协作",
+      "异步协同"
+    ],
+    "brief": "协作模式"
+  },
+  {
+    "canonical": "隐式交接",
+    "aliases": [
+      "隐性交接",
+      "隐式handoff"
+    ],
+    "brief": "协作模式"
+  },
+  {
+    "canonical": "身份感知",
+    "aliases": [
+      "身份识别",
+      "身份感知能力"
+    ],
+    "brief": "安全机制"
+  },
+  {
+    "canonical": "利特尔法则",
+    "aliases": [
+      "Little定律",
+      "Little's Law"
+    ],
+    "brief": "排队理论"
+  },
+  {
+    "canonical": "可追溯性",
+    "aliases": [
+      "可追踪性",
+      "traceability"
+    ],
+    "brief": "质量属性"
+  },
+  {
+    "canonical": "人机贡献者",
+    "aliases": [
+      "机性贡献者",
+      "人机协作者"
+    ],
+    "brief": "角色概念"
+  },
+  {
+    "canonical": "技术负责人",
+    "aliases": [
+      "tech lead",
+      "技术主管"
+    ],
+    "brief": "角色概念"
+  },
+  {
+    "canonical": "设定时间盒",
+    "aliases": [
+      "时间盒",
+      "timebox",
+      "时间箱"
+    ],
+    "brief": "时间管理"
+  },
+  {
+    "canonical": "关注点",
+    "aliases": [
+      "关注点分离",
+      "concern"
+    ],
+    "brief": "设计原则"
+  },
+  {
+    "canonical": "保真度",
+    "aliases": [
+      "fidelity",
+      "还原度"
+    ],
+    "brief": "质量属性"
+  },
+  {
+    "canonical": "成功标准",
+    "aliases": [
+      "验收标准",
+      "完成标准"
+    ],
+    "brief": "任务定义"
+  },
+  {
+    "canonical": "确定性强制",
+    "aliases": [
+      "确定性约束",
+      "确定性执行"
+    ],
+    "brief": "执行机制"
+  },
+  {
+    "canonical": "自动加载",
+    "aliases": [
+      "自动载入",
+      "auto-load"
+    ],
+    "brief": "上下文机制"
+  },
+  {
+    "canonical": "解决集成冲突",
+    "aliases": [
+      "集成冲突解决",
+      "合并冲突处理"
+    ],
+    "brief": "集成实践"
+  },
+  {
+    "canonical": "全有或全无",
+    "aliases": [
+      "全有全无",
+      "all-or-nothing"
+    ],
+    "brief": "事务语义"
+  },
+  {
+    "canonical": "推倒重来",
+    "aliases": [
+      "重写",
+      "rewrite"
+    ],
+    "brief": "工程决策"
+  },
+  {
+    "canonical": "证据支撑",
+    "aliases": [
+      "证据驱动",
+      "evidence-based"
+    ],
+    "brief": "决策方法"
+  },
+  {
+    "canonical": "四个维度",
+    "aliases": [
+      "四维度",
+      "四维框架"
+    ],
+    "brief": "分析框架"
+  },
+  {
+    "canonical": "初级开发",
+    "aliases": [
+      "初级开发者",
+      "junior developer"
+    ],
+    "brief": "角色概念"
+  },
+  {
+    "canonical": "业务高管",
+    "aliases": [
+      "业务领导者",
+      "业务负责人"
+    ],
+    "brief": "角色概念"
+  },
+  {
+    "canonical": "对抗",
+    "aliases": [
+      "对抗性",
+      "adversarial"
+    ],
+    "brief": "安全属性"
+  },
+  {
+    "canonical": "轮换",
+    "aliases": [
+      "密钥轮换",
+      "rotation"
+    ],
+    "brief": "安全实践"
+  },
+  {
+    "canonical": "分叉",
+    "aliases": [
+      "fork",
+      "分支分叉"
+    ],
+    "brief": "版本管理"
+  },
+  {
+    "canonical": "遏制",
+    "aliases": [
+      "containment",
+      "隔离控制"
+    ],
+    "brief": "安全控制"
+  },
+  {
+    "canonical": "兼容",
+    "aliases": [
+      "兼容性",
+      "compatibility"
+    ],
+    "brief": "质量属性"
+  },
+  {
+    "canonical": "授权",
+    "aliases": [
+      "authorization",
+      "权限授予"
+    ],
+    "brief": "安全机制"
+  },
+  {
+    "canonical": "切换",
+    "aliases": [
+      "switchover",
+      "切换操作"
+    ],
+    "brief": "运维操作"
+  },
+  {
+    "canonical": "叙事",
+    "aliases": [
+      "narrative",
+      "故事叙述"
+    ],
+    "brief": "沟通方法"
+  },
+  {
+    "canonical": "片段",
+    "aliases": [
+      "fragment",
+      "上下文片段"
+    ],
+    "brief": "上下文管理"
+  },
+  {
+    "canonical": "取舍",
+    "aliases": [
+      "权衡",
+      "trade-off"
+    ],
+    "brief": "决策方法"
+  },
+  {
+    "canonical": "截止日",
+    "aliases": [
+      "deadline",
+      "截止期限"
+    ],
+    "brief": "时间管理"
+  },
+  {
+    "canonical": "里程碑",
+    "aliases": [
+      "milestone",
+      "阶段里程碑"
+    ],
+    "brief": "项目管理"
+  },
+  {
+    "canonical": "工作台工程",
+    "aliases": [
+      "工作台",
+      "工作台设计"
+    ],
+    "brief": "工程方法"
+  },
+  {
+    "canonical": "协调工程",
+    "aliases": [
+      "协调机制",
+      "协作工程",
+      "协调工程学"
+    ],
+    "brief": "工程方法"
+  },
+  {
+    "canonical": "智能体软件",
+    "aliases": [
+      "智能体软件工程",
+      "Agent软件"
+    ],
+    "brief": "领域概念"
+  },
+  {
+    "canonical": "魔鬼代言人",
+    "aliases": [
+      "反方角色",
+      "唱反调"
+    ],
+    "brief": "协作角色"
+  },
+  {
+    "canonical": "没有银弹",
+    "aliases": [
+      "银弹",
+      "无银弹"
+    ],
+    "brief": "软件工程"
+  },
+  {
+    "canonical": "检查清单",
+    "aliases": [
+      "核对清单",
+      "checklist"
+    ],
+    "brief": "实践工具"
+  },
+  {
+    "canonical": "示例交互流",
+    "aliases": [
+      "交互流示例",
+      "交互示例"
+    ],
+    "brief": "设计文档"
+  },
+  {
+    "canonical": "断路器",
+    "aliases": [
+      "熔断器",
+      "熔断机制"
+    ],
+    "brief": "可靠性模式"
+  },
+  {
+    "canonical": "快照",
+    "aliases": [
+      "状态快照",
+      "snapshot"
+    ],
+    "brief": "技术机制"
+  },
+  {
+    "canonical": "确定性触发",
+    "aliases": [
+      "确定性触发条件",
+      "触发规则"
+    ],
+    "brief": "技术机制"
+  },
+  {
+    "canonical": "固定不变量",
+    "aliases": [
+      "不变量",
+      "固定约束"
+    ],
+    "brief": "技术概念"
+  },
+  {
+    "canonical": "偶然复杂性",
+    "aliases": [
+      "偶然复杂度",
+      "accidental complexity"
+    ],
+    "brief": "软件工程"
+  },
+  {
+    "canonical": "社会技术系统",
+    "aliases": [
+      "社会技术",
+      "sociotechnical"
+    ],
+    "brief": "系统概念"
+  },
+  {
+    "canonical": "交易成本",
+    "aliases": [
+      "协作成本",
+      "沟通成本"
+    ],
+    "brief": "经济学概念"
+  },
+  {
+    "canonical": "动力经济学",
+    "aliases": [
+      "激励经济学",
+      "动力机制"
+    ],
+    "brief": "经济学概念"
+  },
+  {
+    "canonical": "舰队规模",
+    "aliases": [
+      "舰队",
+      "集群规模"
+    ],
+    "brief": "运维概念"
+  },
+  {
+    "canonical": "集群中的交互",
+    "aliases": [
+      "集群交互",
+      "集群协作"
+    ],
+    "brief": "运维概念"
+  },
+  {
+    "canonical": "基于风险分级",
+    "aliases": [
+      "风险分级",
+      "风险分级控制",
+      "risk-based triage"
+    ],
+    "brief": "治理方法"
+  },
+  {
+    "canonical": "风险及应对",
+    "aliases": [
+      "风险应对",
+      "风险与对策"
+    ],
+    "brief": "治理方法"
+  },
+  {
+    "canonical": "差异优先",
+    "aliases": [
+      "差异优先审查",
+      "diff优先"
+    ],
+    "brief": "审查方法"
+  },
+  {
+    "canonical": "自动化证据捕获",
+    "aliases": [
+      "证据捕获",
+      "自动取证",
+      "证据自动采集",
+      "自动化取证"
+    ],
+    "brief": "审计方法"
+  },
+  {
+    "canonical": "证据驱动",
+    "aliases": [
+      "证据驱动决策",
+      "由证据驱动"
+    ],
+    "brief": "决策方法"
+  },
+  {
+    "canonical": "重新认证",
+    "aliases": [
+      "再认证",
+      "重新验证"
+    ],
+    "brief": "治理流程"
+  },
+  {
+    "canonical": "问责",
+    "aliases": [
+      "问责制",
+      "责任归属"
+    ],
+    "brief": "治理概念"
+  },
+  {
+    "canonical": "审计",
+    "aliases": [
+      "审计追踪",
+      "审计日志"
+    ],
+    "brief": "治理概念"
+  },
+  {
+    "canonical": "监督",
+    "aliases": [
+      "人工监督",
+      "监管"
+    ],
+    "brief": "治理概念"
+  },
+  {
+    "canonical": "约束条件",
+    "aliases": [
+      "约束",
+      "限制条件"
+    ],
+    "brief": "技术概念"
+  },
+  {
+    "canonical": "澄清问题",
+    "aliases": [
+      "澄清提问",
+      "需求澄清"
+    ],
+    "brief": "交互方法"
+  },
+  {
+    "canonical": "表达意图",
+    "aliases": [
+      "意图表达",
+      "意图声明"
+    ],
+    "brief": "交互方法"
+  },
+  {
+    "canonical": "扩大自主权",
+    "aliases": [
+      "自主权扩展",
+      "放权"
+    ],
+    "brief": "治理方法"
+  },
+  {
+    "canonical": "微观管理",
+    "aliases": [
+      "过度管理",
+      "micromanagement"
+    ],
+    "brief": "管理概念"
+  },
+  {
+    "canonical": "强沟通者",
+    "aliases": [
+      "高效沟通者",
+      "沟通能力"
+    ],
+    "brief": "团队角色"
+  },
+  {
+    "canonical": "并行工作",
+    "aliases": [
+      "并行协作",
+      "并行开发"
+    ],
+    "brief": "协作模式"
+  },
+  {
+    "canonical": "惯用法",
+    "aliases": [
+      "惯用模式",
+      "idiom"
+    ],
+    "brief": "编程概念"
+  },
+  {
+    "canonical": "协议",
+    "aliases": [
+      "通信协议",
+      "交互协议"
+    ],
+    "brief": "技术概念"
+  },
+  {
+    "canonical": "编译",
+    "aliases": [
+      "编译过程",
+      "compilation"
+    ],
+    "brief": "技术概念"
+  },
+  {
+    "canonical": "粘贴循环",
+    "aliases": [
+      "复制粘贴循环",
+      "粘贴回路"
+    ],
+    "brief": "反模式"
+  },
+  {
+    "canonical": "保持连贯",
+    "aliases": [
+      "连贯性保持",
+      "一致性保持"
+    ],
+    "brief": "设计原则"
+  },
+  {
+    "canonical": "易于审查",
+    "aliases": [
+      "可审查性",
+      "便于审查"
+    ],
+    "brief": "设计原则"
+  },
+  {
+    "canonical": "盲目信任",
+    "aliases": [
+      "过度信任",
+      "盲信"
+    ],
+    "brief": "认知偏差"
+  },
+  {
+    "canonical": "优柔寡断",
+    "aliases": [
+      "决策瘫痪",
+      "犹豫不决"
+    ],
+    "brief": "认知偏差"
+  },
+  {
+    "canonical": "直觉",
+    "aliases": [
+      "直觉判断",
+      "intuition"
+    ],
+    "brief": "认知概念"
+  },
+  {
+    "canonical": "特沃斯基",
+    "aliases": [
+      "Tversky",
+      "特沃斯基研究"
+    ],
+    "brief": "人物引用"
+  },
+  {
+    "canonical": "编程自有其位",
+    "aliases": [
+      "编程定位",
+      "编程角色"
+    ],
+    "brief": "领域观点"
+  },
+  {
+    "canonical": "智能体链成熟度",
+    "aliases": [
+      "链成熟度",
+      "成熟度模型"
+    ],
+    "brief": "评估模型"
+  },
+  {
+    "canonical": "感知的信任边界",
+    "aliases": [
+      "信任边界",
+      "信任边界感知"
+    ],
+    "brief": "安全概念"
+  },
+  {
+    "canonical": "压缩信任决策",
+    "aliases": [
+      "信任决策压缩",
+      "信任决策"
+    ],
+    "brief": "治理方法"
+  },
+  {
+    "canonical": "保持问责",
+    "aliases": [
+      "问责保持",
+      "责任保持"
+    ],
+    "brief": "治理方法"
+  },
+  {
+    "canonical": "智能体软件工程",
+    "aliases": [
+      "智能体工程",
+      "Agent软件工程"
+    ],
+    "brief": "领域名"
+  },
+  {
+    "canonical": "可审计性",
+    "aliases": [
+      "审计能力",
+      "可追溯性"
+    ],
+    "brief": "质量属性"
+  },
+  {
+    "canonical": "可审查性",
+    "aliases": [
+      "可评审性",
+      "可检查性"
+    ],
+    "brief": "质量属性"
+  },
+  {
+    "canonical": "结构化反馈",
+    "aliases": [
+      "结构化评审意见",
+      "格式化反馈"
+    ],
+    "brief": "协作机制"
+  },
+  {
+    "canonical": "概率性指令",
+    "aliases": [
+      "概率性提示",
+      "非确定性指令"
+    ],
+    "brief": "提示工程"
+  },
+  {
+    "canonical": "信任崩塌",
+    "aliases": [
+      "信任瓦解",
+      "信任丧失"
+    ],
+    "brief": "风险现象"
+  },
+  {
+    "canonical": "刚性流程",
+    "aliases": [
+      "僵化流程",
+      "固定流程"
+    ],
+    "brief": "流程模式"
+  },
+  {
+    "canonical": "快速迭代",
+    "aliases": [
+      "敏捷迭代",
+      "短周期迭代"
+    ],
+    "brief": "开发实践"
+  },
+  {
+    "canonical": "视野悖论",
+    "aliases": [
+      "隧道视野悖论",
+      "视野狭窄悖论"
+    ],
+    "brief": "认知现象"
+  },
+  {
+    "canonical": "行动者",
+    "aliases": [
+      "Actor",
+      "执行主体"
+    ],
+    "brief": "智能体概念"
+  },
+  {
+    "canonical": "就绪",
+    "aliases": [
+      "就绪状态",
+      "Ready"
+    ],
+    "brief": "状态概念"
+  },
+  {
+    "canonical": "决策就绪",
+    "aliases": [
+      "决策就绪度",
+      "就绪决策"
+    ],
+    "brief": "决策机制"
+  },
+  {
+    "canonical": "权限蔓延",
+    "aliases": [
+      "权限扩散",
+      "权限膨胀"
+    ],
+    "brief": "安全风险"
+  },
+  {
+    "canonical": "自动化阶梯",
+    "aliases": [
+      "自动化分级",
+      "自动化层级"
+    ],
+    "brief": "成熟度模型"
+  },
+  {
+    "canonical": "变异度",
+    "aliases": [
+      "变异性",
+      "变化度"
+    ],
+    "brief": "度量指标"
+  },
+  {
+    "canonical": "探索性实现",
+    "aliases": [
+      "探索式实现",
+      "试验性实现"
+    ],
+    "brief": "开发方法"
+  },
+  {
+    "canonical": "基于证据委派",
+    "aliases": [
+      "证据驱动委派",
+      "证据式授权"
+    ],
+    "brief": "委派机制"
+  },
+  {
+    "canonical": "分阶段审批",
+    "aliases": [
+      "阶段性审批",
+      "分步审批"
+    ],
+    "brief": "治理机制"
+  },
+  {
+    "canonical": "行为变更",
+    "aliases": [
+      "行为变化",
+      "行为改动"
+    ],
+    "brief": "变更管理"
+  },
+  {
+    "canonical": "元数据",
+    "aliases": [
+      "Metadata",
+      "描述数据",
+      "metadata",
+      "元信息"
+    ],
+    "brief": "数据概念"
+  },
+  {
+    "canonical": "领域知识",
+    "aliases": [
+      "Domain Knowledge",
+      "专业知识"
+    ],
+    "brief": "知识概念"
+  },
+  {
+    "canonical": "未遂事件",
+    "aliases": [
+      "险兆事件",
+      "Near Miss"
+    ],
+    "brief": "风险概念"
+  },
+  {
+    "canonical": "主权边界",
+    "aliases": [
+      "权限边界",
+      "自治边界"
+    ],
+    "brief": "治理概念"
+  },
+  {
+    "canonical": "记忆基底",
+    "aliases": [
+      "记忆基础",
+      "记忆底座",
+      "记忆层",
+      "memory substrate"
+    ],
+    "brief": "智能体架构"
+  },
+  {
+    "canonical": "自我改进",
+    "aliases": [
+      "自我优化",
+      "自进化"
+    ],
+    "brief": "智能体能力"
+  },
+  {
+    "canonical": "长生命周期",
+    "aliases": [
+      "长周期",
+      "持久生命周期",
+      "long-lived"
+    ],
+    "brief": "生命周期"
+  },
+  {
+    "canonical": "遗留代码",
+    "aliases": [
+      "Legacy Code",
+      "历史代码"
+    ],
+    "brief": "软件工程"
+  },
+  {
+    "canonical": "组合拳",
+    "aliases": [
+      "组合策略",
+      "组合方法"
+    ],
+    "brief": "方法论"
+  },
+  {
+    "canonical": "协调工件",
+    "aliases": [
+      "协作工件",
+      "协调产物"
+    ],
+    "brief": "协作概念"
+  },
+  {
+    "canonical": "业务领导者",
+    "aliases": [
+      "业务负责人",
+      "业务主管"
+    ],
+    "brief": "角色"
+  },
+  {
+    "canonical": "智能体之间",
+    "aliases": [
+      "Agent间",
+      "智能体交互"
+    ],
+    "brief": "交互概念"
+  },
+  {
+    "canonical": "可信赖的软件",
+    "aliases": [
+      "可信软件",
+      "可靠软件"
+    ],
+    "brief": "质量目标"
+  },
+  {
+    "canonical": "术语表",
+    "aliases": [
+      "词汇表",
+      "Glossary"
+    ],
+    "brief": "文档结构"
+  },
+  {
+    "canonical": "后续步骤",
+    "aliases": [
+      "下一步",
+      "Next Steps"
+    ],
+    "brief": "文档结构"
+  },
+  {
+    "canonical": "如何阅读本书",
+    "aliases": [
+      "阅读指南",
+      "本书导读"
+    ],
+    "brief": "文档结构"
+  },
+  {
+    "canonical": "衡量协调工程",
+    "aliases": [
+      "协调工程度量",
+      "协调度量"
+    ],
+    "brief": "度量方法"
+  },
+  {
+    "canonical": "主要构建块",
+    "aliases": [
+      "核心构建块",
+      "基本构件"
+    ],
+    "brief": "架构概念"
+  },
+  {
+    "canonical": "指导或脚本",
+    "aliases": [
+      "指导脚本",
+      "指令脚本"
+    ],
+    "brief": "执行方式"
+  },
+  {
+    "canonical": "身份",
+    "aliases": [
+      "Identity",
+      "身份标识"
+    ],
+    "brief": "安全概念"
+  },
+  {
+    "canonical": "权威",
+    "aliases": [
+      "Authority",
+      "权威性"
+    ],
+    "brief": "治理概念"
+  },
+  {
+    "canonical": "指针",
+    "aliases": [
+      "Pointer",
+      "引用"
+    ],
+    "brief": "编程概念"
+  },
+  {
+    "canonical": "内存不安",
+    "aliases": [
+      "内存焦虑",
+      "内存压力"
+    ],
+    "brief": "系统现象"
+  },
+  {
+    "canonical": "终抉择",
+    "aliases": [
+      "最终抉择",
+      "最终决策"
+    ],
+    "brief": "决策概念"
+  },
+  {
+    "canonical": "限理性解释",
+    "aliases": [
+      "有限理性解释",
+      "有限理性"
+    ],
+    "brief": "认知理论"
+  },
+  {
+    "canonical": "跨领域控制",
+    "aliases": [
+      "跨域控制",
+      "跨领域治理",
+      "跨领域管控"
+    ],
+    "brief": "治理概念"
+  },
+  {
+    "canonical": "续性数据包",
+    "aliases": [
+      "持续性数据包",
+      "上下文数据包"
+    ],
+    "brief": "数据概念"
+  },
+  {
+    "canonical": "信任边界",
+    "aliases": [
+      "Trust Boundary",
+      "信任边界线",
+      "信任域",
+      "trust boundary"
+    ],
+    "brief": "安全概念"
+  },
+  {
+    "canonical": "搭建平台",
+    "aliases": [
+      "平台建设",
+      "构建平台"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "水线工程",
+    "aliases": [
+      "水线工程学",
+      "Waterline工程"
+    ],
+    "brief": "工程方法"
+  },
+  {
+    "canonical": "编写一旦廉价",
+    "aliases": [
+      "编写成本低廉",
+      "低成本编写"
+    ],
+    "brief": "经济现象"
+  },
+  {
+    "canonical": "领骑在前",
+    "aliases": [
+      "领跑",
+      "领先在前"
+    ],
+    "brief": "竞争概念"
+  },
+  {
+    "canonical": "假设和未",
+    "aliases": [
+      "假设与未知",
+      "假设和未知项"
+    ],
+    "brief": "认知概念"
+  },
+  {
+    "canonical": "针对特定",
+    "aliases": [
+      "特定场景",
+      "面向特定"
+    ],
+    "brief": "通用表述"
+  },
+  {
+    "canonical": "简短",
+    "aliases": [
+      "简洁",
+      "简明"
+    ],
+    "brief": "通用表述"
+  },
+  {
+    "canonical": "语义评审",
+    "aliases": [
+      "语义审查",
+      "语义检查"
+    ],
+    "brief": "评审方法"
+  },
+  {
+    "canonical": "事件学习",
+    "aliases": [
+      "事件驱动学习",
+      "经验学习",
+      "事件复盘",
+      "事故学习"
+    ],
+    "brief": "学习机制"
+  },
+  {
+    "canonical": "工具调用",
+    "aliases": [
+      "函数调用",
+      "工具使用"
+    ],
+    "brief": "智能体能力"
+  },
+  {
+    "canonical": "自主权设置",
+    "aliases": [
+      "自主权配置",
+      "自主权限"
+    ],
+    "brief": "权限管理"
+  },
+  {
+    "canonical": "自主权门控",
+    "aliases": [
+      "自主权门控机制",
+      "权限门控"
+    ],
+    "brief": "权限管理"
+  },
+  {
+    "canonical": "静态分析器",
+    "aliases": [
+      "静态分析工具",
+      "静态检查器",
+      "静态分析",
+      "static analyzer"
+    ],
+    "brief": "分析工具"
+  },
+  {
+    "canonical": "失效模式",
+    "aliases": [
+      "故障模式",
+      "失败模式"
+    ],
+    "brief": "可靠性"
+  },
+  {
+    "canonical": "质量保证",
+    "aliases": [
+      "QA",
+      "质量保障"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "执行平面",
+    "aliases": [
+      "执行层",
+      "执行面"
+    ],
+    "brief": "架构概念"
+  },
+  {
+    "canonical": "可维护性",
+    "aliases": [
+      "可维护",
+      "维护性"
+    ],
+    "brief": "质量属性"
+  },
+  {
+    "canonical": "合规缺口",
+    "aliases": [
+      "合规差距",
+      "合规风险"
+    ],
+    "brief": "合规管理"
+  },
+  {
+    "canonical": "最佳实践",
+    "aliases": [
+      "最佳做法",
+      "推荐实践"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "路线图",
+    "aliases": [
+      "技术路线图",
+      "发展路线"
+    ],
+    "brief": "规划"
+  },
+  {
+    "canonical": "关键实践",
+    "aliases": [
+      "核心实践",
+      "关键做法",
+      "best practice"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "锚定",
+    "aliases": [
+      "锚定效应",
+      "锚定策略"
+    ],
+    "brief": "认知偏差"
+  },
+  {
+    "canonical": "语言组合",
+    "aliases": [
+      "语言组合方式",
+      "组合语言",
+      "语言栈组合",
+      "多语言组合"
+    ],
+    "brief": "技术概念"
+  },
+  {
+    "canonical": "示例交互流程",
+    "aliases": [
+      "交互流程示例",
+      "交互示例"
+    ],
+    "brief": "流程示例"
+  },
+  {
+    "canonical": "协调与计划",
+    "aliases": [
+      "协调规划",
+      "计划协调"
+    ],
+    "brief": "智能体能力"
+  },
+  {
+    "canonical": "智能体更换",
+    "aliases": [
+      "智能体替换",
+      "Agent切换"
+    ],
+    "brief": "运维操作"
+  },
+  {
+    "canonical": "利益相关",
+    "aliases": [
+      "利益相关者",
+      "干系人"
+    ],
+    "brief": "项目管理"
+  },
+  {
+    "canonical": "交付物",
+    "aliases": [
+      "交付成果",
+      "可交付物"
+    ],
+    "brief": "项目管理"
+  },
+  {
+    "canonical": "前提条件",
+    "aliases": [
+      "前置条件",
+      "先决条件"
+    ],
+    "brief": "工程概念"
+  },
+  {
+    "canonical": "计算资源",
+    "aliases": [
+      "算力资源",
+      "计算能力"
+    ],
+    "brief": "资源管理"
+  },
+  {
+    "canonical": "自动化重构",
+    "aliases": [
+      "自动重构",
+      "重构自动化",
+      "automated refactoring"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "异优先审查",
+    "aliases": [
+      "异常优先审查",
+      "优先级审查"
+    ],
+    "brief": "评审方法"
+  },
+  {
+    "canonical": "流程即代码",
+    "aliases": [
+      "Pipeline as Code",
+      "流水线即代码"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "台账",
+    "aliases": [
+      "登记台账",
+      "记录台账"
+    ],
+    "brief": "管理工具"
+  },
+  {
+    "canonical": "玻姆的风险",
+    "aliases": [
+      "玻姆风险",
+      "Boehm风险"
+    ],
+    "brief": "风险管理"
+  },
+  {
+    "canonical": "真正的约束",
+    "aliases": [
+      "核心约束",
+      "关键约束"
+    ],
+    "brief": "工程概念"
+  },
+  {
+    "canonical": "可复用的指导",
+    "aliases": [
+      "可复用指南",
+      "复用指导"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "跨职能",
+    "aliases": [
+      "跨职能团队",
+      "跨职协作"
+    ],
+    "brief": "组织概念"
+  },
+  {
+    "canonical": "机性行动者",
+    "aliases": [
+      "机械性行动者",
+      "自动化行动者"
+    ],
+    "brief": "智能体概念"
+  },
+  {
+    "canonical": "自主性的三份",
+    "aliases": [
+      "自主性三要素",
+      "自主性三分"
+    ],
+    "brief": "智能体概念"
+  },
+  {
+    "canonical": "从英语意图到",
+    "aliases": [
+      "意图到实现",
+      "意图翻译"
+    ],
+    "brief": "工程方法"
+  },
+  {
+    "canonical": "设计自主的多",
+    "aliases": [
+      "多智能体自主设计",
+      "自主性设计"
+    ],
+    "brief": "设计方法"
+  },
+  {
+    "canonical": "每个交互模式",
+    "aliases": [
+      "交互模式",
+      "交互范式"
+    ],
+    "brief": "交互设计"
+  },
+  {
+    "canonical": "学会自我防卫",
+    "aliases": [
+      "自我防护",
+      "自我防御机制"
+    ],
+    "brief": "安全机制"
+  },
+  {
+    "canonical": "安全正成为基",
+    "aliases": [
+      "安全基线",
+      "安全基础"
+    ],
+    "brief": "安全概念"
+  },
+  {
+    "canonical": "续性数据",
+    "aliases": [
+      "持续性数据",
+      "持久化数据"
+    ],
+    "brief": "数据概念"
+  },
+  {
+    "canonical": "分布式系统中",
+    "aliases": [
+      "分布式系统",
+      "分布式环境"
+    ],
+    "brief": "系统架构"
+  },
+  {
+    "canonical": "新的二进制",
+    "aliases": [
+      "新二进制",
+      "二进制产物"
+    ],
+    "brief": "构建产物"
+  },
+  {
+    "canonical": "章小结与后",
+    "aliases": [
+      "章节小结",
+      "小结与后续"
+    ],
+    "brief": "文档结构"
+  },
+  {
+    "canonical": "小结与后",
+    "aliases": [
+      "小结与后续",
+      "章节小结"
+    ],
+    "brief": "文档结构"
+  },
+  {
+    "canonical": "版权声明",
+    "aliases": [
+      "版权信息",
+      "版权页"
+    ],
+    "brief": "文档结构"
+  },
+  {
+    "canonical": "导航",
+    "aliases": [
+      "导航机制",
+      "信息导航"
+    ],
+    "brief": "交互概念"
+  },
+  {
+    "canonical": "检索",
+    "aliases": [
+      "信息检索",
+      "检索机制"
+    ],
+    "brief": "智能体能力"
+  },
+  {
+    "canonical": "过滤",
+    "aliases": [
+      "信息过滤",
+      "过滤机制"
+    ],
+    "brief": "数据处理"
+  },
+  {
+    "canonical": "提炼",
+    "aliases": [
+      "信息提炼",
+      "摘要提炼"
+    ],
+    "brief": "数据处理"
+  },
+  {
+    "canonical": "偏差",
+    "aliases": [
+      "偏差问题",
+      "认知偏差"
+    ],
+    "brief": "认知概念"
+  },
+  {
+    "canonical": "过载",
+    "aliases": [
+      "信息过载",
+      "认知过载"
+    ],
+    "brief": "认知概念"
+  },
+  {
+    "canonical": "政策",
+    "aliases": [
+      "策略政策",
+      "治理政策"
+    ],
+    "brief": "治理概念"
+  },
+  {
+    "canonical": "技术领导",
+    "aliases": [
+      "技术负责人",
+      "Tech Lead",
+      "技术主管"
+    ],
+    "brief": "角色概念"
+  },
+  {
+    "canonical": "上下文囤积",
+    "aliases": [
+      "上下文堆积",
+      "上下文膨胀"
+    ],
+    "brief": "反模式"
+  },
+  {
+    "canonical": "简报腐化",
+    "aliases": [
+      "简报失真",
+      "任务简报退化"
+    ],
+    "brief": "反模式"
+  },
+  {
+    "canonical": "非确定性",
+    "aliases": [
+      "不确定性",
+      "随机性"
+    ],
+    "brief": "属性"
+  },
+  {
+    "canonical": "门控",
+    "aliases": [
+      "质量门",
+      "gate"
+    ],
+    "brief": "机制"
+  },
+  {
+    "canonical": "人工批准",
+    "aliases": [
+      "人工审批",
+      "human approval"
+    ],
+    "brief": "机制"
+  },
+  {
+    "canonical": "人工干预",
+    "aliases": [
+      "人工介入",
+      "human-in-the-loop"
+    ],
+    "brief": "机制"
+  },
+  {
+    "canonical": "交接元数据",
+    "aliases": [
+      "handoff元数据",
+      "交接信息",
+      "交接元数"
+    ],
+    "brief": "数据"
+  },
+  {
+    "canonical": "接收方智能体",
+    "aliases": [
+      "接收智能体",
+      "下游智能体"
+    ],
+    "brief": "角色"
+  },
+  {
+    "canonical": "工作台分离",
+    "aliases": [
+      "工作区隔离",
+      "工作台隔离"
+    ],
+    "brief": "架构"
+  },
+  {
+    "canonical": "容器机制",
+    "aliases": [
+      "容器化",
+      "沙箱容器"
+    ],
+    "brief": "机制"
+  },
+  {
+    "canonical": "混合机制",
+    "aliases": [
+      "混合模式",
+      "hybrid机制"
+    ],
+    "brief": "机制"
+  },
+  {
+    "canonical": "生命周期状态",
+    "aliases": [
+      "生命周期阶段",
+      "状态机"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "不变量",
+    "aliases": [
+      "invariant",
+      "不变式"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "模糊测试",
+    "aliases": [
+      "fuzzing",
+      "fuzz测试"
+    ],
+    "brief": "测试方法"
+  },
+  {
+    "canonical": "机制与意图匹配",
+    "aliases": [
+      "意图匹配",
+      "机制意图对齐"
+    ],
+    "brief": "机制"
+  },
+  {
+    "canonical": "英语意图到可检验",
+    "aliases": [
+      "意图转可检验",
+      "意图到验证"
+    ],
+    "brief": "流程"
+  },
+  {
+    "canonical": "动力经济",
+    "aliases": [
+      "激励经济学",
+      "动力经济学"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "倍增器",
+    "aliases": [
+      "放大器",
+      "杠杆"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "康威",
+    "aliases": [
+      "康威定律",
+      "Conway"
+    ],
+    "brief": "定律"
+  },
+  {
+    "canonical": "软件工程改写",
+    "aliases": [
+      "软件工程重塑",
+      "SE改写"
+    ],
+    "brief": "趋势"
+  },
+  {
+    "canonical": "传统控制",
+    "aliases": [
+      "经典控制",
+      "传统控制论"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "未知项",
+    "aliases": [
+      "未知量",
+      "unknown"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "技术负责",
+    "aliases": [
+      "技术负责人",
+      "tech lead"
+    ],
+    "brief": "角色"
+  },
+  {
+    "canonical": "友舰队平台",
+    "aliases": [
+      "舰队平台",
+      "fleet平台"
+    ],
+    "brief": "平台"
+  },
+  {
+    "canonical": "整个舰队",
+    "aliases": [
+      "舰队级",
+      "fleet级"
+    ],
+    "brief": "范围"
+  },
+  {
+    "canonical": "文本负载量",
+    "aliases": [
+      "上下文负载",
+      "token负载"
+    ],
+    "brief": "度量"
+  },
+  {
+    "canonical": "文本负载量表",
+    "aliases": [
+      "负载量表",
+      "token量表"
+    ],
+    "brief": "工具"
+  },
+  {
+    "canonical": "高吞吐量",
+    "aliases": [
+      "高吞吐",
+      "high throughput"
+    ],
+    "brief": "属性"
+  },
+  {
+    "canonical": "修复",
+    "aliases": [
+      "修补",
+      "fix"
+    ],
+    "brief": "活动"
+  },
+  {
+    "canonical": "响应",
+    "aliases": [
+      "应答",
+      "response"
+    ],
+    "brief": "活动"
+  },
+  {
+    "canonical": "规范",
+    "aliases": [
+      "规格",
+      "spec"
+    ],
+    "brief": "文档"
+  },
+  {
+    "canonical": "原则",
+    "aliases": [
+      "准则",
+      "principle"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "短板",
+    "aliases": [
+      "瓶颈",
+      "弱项"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "弱点",
+    "aliases": [
+      "脆弱点",
+      "weakness"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "惯用语",
+    "aliases": [
+      "习语",
+      "idiom"
+    ],
+    "brief": "语言"
+  },
+  {
+    "canonical": "解决办法",
+    "aliases": [
+      "解决方案",
+      "对策"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "理论提出者",
+    "aliases": [
+      "提出者",
+      "理论来源"
+    ],
+    "brief": "角色"
+  },
+  {
+    "canonical": "单元",
+    "aliases": [
+      "unit",
+      "模块单元"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "功能",
+    "aliases": [
+      "特性",
+      "feature"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "推理",
+    "aliases": [
+      "reasoning",
+      "推断"
+    ],
+    "brief": "能力"
+  },
+  {
+    "canonical": "生成",
+    "aliases": [
+      "generation",
+      "产出"
+    ],
+    "brief": "能力"
+  },
+  {
+    "canonical": "能力",
+    "aliases": [
+      "capability",
+      "本领"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "经验",
+    "aliases": [
+      "实践积累",
+      "experience"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "任务工程",
+    "aliases": [
+      "任务设计",
+      "任务分解"
+    ],
+    "brief": "方法"
+  },
+  {
+    "canonical": "渐进式委派",
+    "aliases": [
+      "渐进委派",
+      "逐步授权"
+    ],
+    "brief": "方法"
+  },
+  {
+    "canonical": "技术债",
+    "aliases": [
+      "技术债务",
+      "代码债",
+      "术债"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "验收属性",
+    "aliases": [
+      "验收标准",
+      "验收条件"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "验收目标",
+    "aliases": [
+      "验收目的",
+      "验收指标"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "意图到可检验",
+    "aliases": [
+      "意图可检验化",
+      "意图转验收"
+    ],
+    "brief": "方法"
+  },
+  {
+    "canonical": "反应式质量保证",
+    "aliases": [
+      "反应式质量",
+      "事后质量保证"
+    ],
+    "brief": "方法"
+  },
+  {
+    "canonical": "学习循环",
+    "aliases": [
+      "反馈循环",
+      "经验学习环"
+    ],
+    "brief": "机制"
+  },
+  {
+    "canonical": "反馈驱动的改进",
+    "aliases": [
+      "反馈驱动改进",
+      "数据驱动改进",
+      "反馈改进"
+    ],
+    "brief": "方法"
+  },
+  {
+    "canonical": "多智能体工作流",
+    "aliases": [
+      "多智能体协作",
+      "多Agent工作流"
+    ],
+    "brief": "架构"
+  },
+  {
+    "canonical": "工作流",
+    "aliases": [
+      "流程编排",
+      "workflow"
+    ],
+    "brief": "架构"
+  },
+  {
+    "canonical": "执行与编排",
+    "aliases": [
+      "编排执行",
+      "调度编排",
+      "orchestration"
+    ],
+    "brief": "架构"
+  },
+  {
+    "canonical": "集群",
+    "aliases": [
+      "智能体集群",
+      "Agent集群"
+    ],
+    "brief": "架构"
+  },
+  {
+    "canonical": "序列中交接",
+    "aliases": [
+      "顺序交接",
+      "串行交接"
+    ],
+    "brief": "机制"
+  },
+  {
+    "canonical": "合并顺序",
+    "aliases": [
+      "合并次序",
+      "集成顺序"
+    ],
+    "brief": "机制"
+  },
+  {
+    "canonical": "未遂",
+    "aliases": [
+      "未遂事件",
+      "near miss"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "可弃式赌注",
+    "aliases": [
+      "可弃探索",
+      "一次性试验"
+    ],
+    "brief": "策略"
+  },
+  {
+    "canonical": "探索性实验",
+    "aliases": [
+      "探索实验",
+      "试探性实验"
+    ],
+    "brief": "方法"
+  },
+  {
+    "canonical": "概念性设计",
+    "aliases": [
+      "概念设计",
+      "方案设计"
+    ],
+    "brief": "方法"
+  },
+  {
+    "canonical": "信息架构",
+    "aliases": [
+      "信息结构",
+      "IA"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "代码差异",
+    "aliases": [
+      "diff",
+      "代码变更"
+    ],
+    "brief": "工件"
+  },
+  {
+    "canonical": "代码阅读",
+    "aliases": [
+      "读代码",
+      "代码审阅"
+    ],
+    "brief": "活动"
+  },
+  {
+    "canonical": "内联评审",
+    "aliases": [
+      "内联评",
+      "行内评审"
+    ],
+    "brief": "活动"
+  },
+  {
+    "canonical": "带评判",
+    "aliases": [
+      "评判式评审",
+      "带评判生成"
+    ],
+    "brief": "方法"
+  },
+  {
+    "canonical": "触发条件",
+    "aliases": [
+      "触发规则",
+      "触发阈值"
+    ],
+    "brief": "机制"
+  },
+  {
+    "canonical": "无干预执行",
+    "aliases": [
+      "无人值守执行",
+      "自主执行"
+    ],
+    "brief": "模式"
+  },
+  {
+    "canonical": "作为一等公民",
+    "aliases": [
+      "一等公民",
+      "first-class"
+    ],
+    "brief": "原则"
+  },
+  {
+    "canonical": "专业化",
+    "aliases": [
+      "专门化",
+      "分工专业化"
+    ],
+    "brief": "原则"
+  },
+  {
+    "canonical": "协调中的集中",
+    "aliases": [
+      "集中协调",
+      "中心化协调"
+    ],
+    "brief": "模式"
+  },
+  {
+    "canonical": "计划性集中",
+    "aliases": [
+      "计划集中",
+      "集中式计划"
+    ],
+    "brief": "模式"
+  },
+  {
+    "canonical": "异步协作",
+    "aliases": [
+      "异步协同",
+      "异步配合"
+    ],
+    "brief": "模式"
+  },
+  {
+    "canonical": "包的异步协作",
+    "aliases": [
+      "异步包协作",
+      "异步交付协作"
+    ],
+    "brief": "模式"
+  },
+  {
+    "canonical": "审批",
+    "aliases": [
+      "人工审批",
+      "审批流"
+    ],
+    "brief": "流程"
+  },
+  {
+    "canonical": "防卫",
+    "aliases": [
+      "防御机制",
+      "防御性设计"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "鬼代言",
+    "aliases": [
+      "幽灵代言",
+      "代理发言"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "无限循环",
+    "aliases": [
+      "死循环",
+      "循环失控"
+    ],
+    "brief": "故障"
+  },
+  {
+    "canonical": "原型泄露",
+    "aliases": [
+      "原型泄",
+      "原型污染"
+    ],
+    "brief": "故障"
+  },
+  {
+    "canonical": "工具链成熟度",
+    "aliases": [
+      "具链成熟",
+      "工具成熟度"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "报告新鲜度",
+    "aliases": [
+      "报新鲜度",
+      "信息新鲜度"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "与人类队友",
+    "aliases": [
+      "人机队友",
+      "人类协作伙伴"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "自主的多智能体",
+    "aliases": [
+      "自主多智能体",
+      "自主多Agent",
+      "自主的多智",
+      "计自主的多智",
+      "主的多智"
+    ],
+    "brief": "架构"
+  },
+  {
+    "canonical": "常规操作",
+    "aliases": [
+      "例行操作",
+      "标准操作"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "卡尼",
+    "aliases": [
+      "卡尼曼",
+      "Kahneman"
+    ],
+    "brief": "人名"
+  },
+  {
+    "canonical": "法拉利",
+    "aliases": [
+      "法拉利已",
+      "Ferrari"
+    ],
+    "brief": "隐喻"
+  },
+  {
+    "canonical": "方差条",
+    "aliases": [
+      "方差带",
+      "波动区间"
+    ],
+    "brief": "度量工具"
+  },
+  {
+    "canonical": "剩余风险",
+    "aliases": [
+      "残余风险",
+      "遗留风险"
+    ],
+    "brief": "风险管理"
+  },
+  {
+    "canonical": "信息隐藏",
+    "aliases": [
+      "封装隐藏",
+      "信息遮蔽"
+    ],
+    "brief": "软件设计"
+  },
+  {
+    "canonical": "重新对齐",
+    "aliases": [
+      "再对齐",
+      "重新校准"
+    ],
+    "brief": "协作机制"
+  },
+  {
+    "canonical": "随机性行动",
+    "aliases": [
+      "随机行动",
+      "随机化动作"
+    ],
+    "brief": "智能体行为"
+  },
+  {
+    "canonical": "任务分解",
+    "aliases": [
+      "任务拆解",
+      "任务切分"
+    ],
+    "brief": "规划方法"
+  },
+  {
+    "canonical": "人工审批",
+    "aliases": [
+      "人工审核",
+      "人工确认"
+    ],
+    "brief": "人机协同"
+  },
+  {
+    "canonical": "人工审查",
+    "aliases": [
+      "人工复核",
+      "人工检查"
+    ],
+    "brief": "人机协同"
+  },
+  {
+    "canonical": "智能体编码",
+    "aliases": [
+      "智能体编程",
+      "Agent编码"
+    ],
+    "brief": "开发方式"
+  },
+  {
+    "canonical": "意图匹配",
+    "aliases": [
+      "意图识别",
+      "意图对齐"
+    ],
+    "brief": "智能体技术"
+  },
+  {
+    "canonical": "流程运行",
+    "aliases": [
+      "流程执行",
+      "流程运转"
+    ],
+    "brief": "流程管理"
+  },
+  {
+    "canonical": "局部正确性",
+    "aliases": [
+      "局部正确",
+      "部分正确性"
+    ],
+    "brief": "质量属性"
+  },
+  {
+    "canonical": "校准自主权",
+    "aliases": [
+      "自主权校准",
+      "自主度调节"
+    ],
+    "brief": "人机协同"
+  },
+  {
+    "canonical": "证据构件",
+    "aliases": [
+      "证据组件",
+      "证据工件"
+    ],
+    "brief": "工程产物"
+  },
+  {
+    "canonical": "工程体系",
+    "aliases": [
+      "工程框架",
+      "工程体系结构"
+    ],
+    "brief": "工程方法"
+  },
+  {
+    "canonical": "遵从率",
+    "aliases": [
+      "遵循率",
+      "符合率"
+    ],
+    "brief": "度量指标"
+  },
+  {
+    "canonical": "语义方差",
+    "aliases": [
+      "语义波动",
+      "语义偏差"
+    ],
+    "brief": "度量指标"
+  },
+  {
+    "canonical": "执行计划",
+    "aliases": [
+      "执行方案",
+      "行动计划"
+    ],
+    "brief": "规划产物"
+  },
+  {
+    "canonical": "周期状态",
+    "aliases": [
+      "循环状态",
+      "周期阶段"
+    ],
+    "brief": "流程管理"
+  },
+  {
+    "canonical": "反应式质量保障",
+    "aliases": [
+      "反应式质量",
+      "被动质量保障"
+    ],
+    "brief": "质量保障"
+  },
+  {
+    "canonical": "证据驱动的监督",
+    "aliases": [
+      "基于证据的监督",
+      "证据监督"
+    ],
+    "brief": "治理机制"
+  },
+  {
+    "canonical": "混合",
+    "aliases": [
+      "混合模式",
+      "混合式"
+    ],
+    "brief": "架构模式"
+  },
+  {
+    "canonical": "异步",
+    "aliases": [
+      "异步执行",
+      "异步处理"
+    ],
+    "brief": "执行模式"
+  },
+  {
+    "canonical": "分层",
+    "aliases": [
+      "分层架构",
+      "层次化"
+    ],
+    "brief": "架构模式"
+  },
+  {
+    "canonical": "索引",
+    "aliases": [
+      "索引机制",
+      "检索索引"
+    ],
+    "brief": "数据技术"
+  },
+  {
+    "canonical": "受限",
+    "aliases": [
+      "受限模式",
+      "约束"
+    ],
+    "brief": "约束机制"
+  },
+  {
+    "canonical": "业务领导",
+    "aliases": [
+      "业务负责人",
+      "业务主管",
+      "业务领导者"
+    ],
+    "brief": "工程角色"
+  },
+  {
+    "canonical": "空域",
+    "aliases": [
+      "空域管理",
+      "飞行空域"
+    ],
+    "brief": "应用场景"
+  },
+  {
+    "canonical": "失灵",
+    "aliases": [
+      "失效",
+      "故障"
+    ],
+    "brief": "故障模式"
+  },
+  {
+    "canonical": "根本矛盾",
+    "aliases": [
+      "根本矛",
+      "核心矛盾"
+    ],
+    "brief": "问题分析"
+  },
+  {
+    "canonical": "卫生",
+    "aliases": [
+      "代码卫生",
+      "工程卫生"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "缓冲",
+    "aliases": [
+      "缓冲机制",
+      "缓冲区"
+    ],
+    "brief": "系统机制"
+  },
+  {
+    "canonical": "介入",
+    "aliases": [
+      "人工介入",
+      "干预"
+    ],
+    "brief": "人机协同"
+  },
+  {
+    "canonical": "需人工干预",
+    "aliases": [
+      "人工干预",
+      "需人工介入"
+    ],
+    "brief": "人机协同"
+  },
+  {
+    "canonical": "架构层面",
+    "aliases": [
+      "架构层",
+      "架构级"
+    ],
+    "brief": "架构视角"
+  },
+  {
+    "canonical": "成为瓶颈",
+    "aliases": [
+      "瓶颈",
+      "性能瓶颈"
+    ],
+    "brief": "性能问题"
+  },
+  {
+    "canonical": "规模腾飞",
+    "aliases": [
+      "规模化扩展",
+      "规模跃升"
+    ],
+    "brief": "扩展策略"
+  },
+  {
+    "canonical": "默认值",
+    "aliases": [
+      "缺省值",
+      "默认配置"
+    ],
+    "brief": "配置管理"
+  },
+  {
+    "canonical": "概率",
+    "aliases": [
+      "概率值",
+      "可能性"
+    ],
+    "brief": "度量概念"
+  },
+  {
+    "canonical": "效率",
+    "aliases": [
+      "效能",
+      "效率指标"
+    ],
+    "brief": "度量指标"
+  },
+  {
+    "canonical": "可靠",
+    "aliases": [
+      "可靠性",
+      "可靠度"
+    ],
+    "brief": "质量属性"
+  },
+  {
+    "canonical": "准备",
+    "aliases": [
+      "就绪",
+      "预备"
+    ],
+    "brief": "流程状态"
+  },
+  {
+    "canonical": "头脑",
+    "aliases": [
+      "头脑风暴",
+      "思维"
+    ],
+    "brief": "思维方法"
+  },
+  {
+    "canonical": "剧场",
+    "aliases": [
+      "剧场模式",
+      "演示剧场"
+    ],
+    "brief": "协作隐喻"
+  },
+  {
+    "canonical": "蒸发",
+    "aliases": [
+      "蒸发消失",
+      "蒸发效应"
+    ],
+    "brief": "现象描述"
+  },
+  {
+    "canonical": "吸收",
+    "aliases": [
+      "吸收整合",
+      "吸纳"
+    ],
+    "brief": "知识管理"
+  },
+  {
+    "canonical": "互相",
+    "aliases": [
+      "相互",
+      "交互"
+    ],
+    "brief": "关系描述"
+  },
+  {
+    "canonical": "提升决策质量",
+    "aliases": [
+      "决策质量提升",
+      "改善决策"
+    ],
+    "brief": "决策支持"
+  },
+  {
+    "canonical": "个人偏好",
+    "aliases": [
+      "偏好",
+      "个体偏好"
+    ],
+    "brief": "人因因素"
+  },
+  {
+    "canonical": "验收包",
+    "aliases": [
+      "验收材料",
+      "acceptance包"
+    ],
+    "brief": "交付物"
+  },
+  {
+    "canonical": "回滚触发",
+    "aliases": [
+      "回滚条件",
+      "触发回滚"
+    ],
+    "brief": "运维机制"
+  },
+  {
+    "canonical": "金丝雀计划",
+    "aliases": [
+      "灰度发布",
+      "部署止损",
+      "回滚"
+    ],
+    "brief": "部署策略"
+  },
+  {
+    "canonical": "平台工程",
+    "aliases": [
+      "platform engineering",
+      "内部开发平台"
+    ],
+    "brief": "工程领域"
+  },
+  {
+    "canonical": "有限理性",
+    "aliases": [
+      "bounded rationality",
+      "受限理性"
+    ],
+    "brief": "认知理论"
+  },
+  {
+    "canonical": "先验知识",
+    "aliases": [
+      "先验经验",
+      "prior knowledge"
+    ],
+    "brief": "认知概念"
+  },
+  {
+    "canonical": "程序理解",
+    "aliases": [
+      "代码理解",
+      "program comprehension"
+    ],
+    "brief": "技术活动"
+  },
+  {
+    "canonical": "问责工程",
+    "aliases": [
+      "可问责工程",
+      "accountability engineering"
+    ],
+    "brief": "工程领域"
+  },
+  {
+    "canonical": "可逆世界",
+    "aliases": [
+      "可逆性设计",
+      "可回退环境"
+    ],
+    "brief": "设计理念"
+  },
+  {
+    "canonical": "布鲁克斯视角",
+    "aliases": [
+      "布鲁克斯观点",
+      "Brooks视角"
+    ],
+    "brief": "理论引用"
+  },
+  {
+    "canonical": "智能体时代的语言",
+    "aliases": [
+      "Agent时代语言",
+      "智能体语言"
+    ],
+    "brief": "概念表述"
+  },
+  {
+    "canonical": "就绪包的异构",
+    "aliases": [
+      "就绪包异构性",
+      "readiness包异构"
+    ],
+    "brief": "概念表述"
+  },
+  {
+    "canonical": "信任决策",
+    "aliases": [
+      "信任判断",
+      "trust decision"
+    ],
+    "brief": "决策机制"
+  },
+  {
+    "canonical": "改进循环",
+    "aliases": [
+      "改进闭环",
+      "持续改进循环"
+    ],
+    "brief": "工程机制"
+  },
+  {
+    "canonical": "透明度撬动",
+    "aliases": [
+      "透明度杠杆",
+      "透明化驱动"
+    ],
+    "brief": "管理理念"
+  },
+  {
+    "canonical": "版本管理",
+    "aliases": [
+      "版本控制",
+      "version control"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "流水线定义",
+    "aliases": [
+      "pipeline定义",
+      "流水线配置"
+    ],
+    "brief": "技术组件"
+  },
+  {
+    "canonical": "升级处理",
+    "aliases": [
+      "升级机制",
+      "escalation处理"
+    ],
+    "brief": "运维机制"
+  },
+  {
+    "canonical": "无人轮换",
+    "aliases": [
+      "无人值守轮换",
+      "自动轮换"
+    ],
+    "brief": "运维机制"
+  },
+  {
+    "canonical": "多对多",
+    "aliases": [
+      "多对多关系",
+      "many-to-many"
+    ],
+    "brief": "关系模式"
+  },
+  {
+    "canonical": "有序汇聚",
+    "aliases": [
+      "有序聚合",
+      "顺序汇聚"
+    ],
+    "brief": "技术机制"
+  },
+  {
+    "canonical": "软件工程体系",
+    "aliases": [
+      "软件工程框架",
+      "SE体系"
+    ],
+    "brief": "工程领域"
+  },
+  {
+    "canonical": "可预测性",
+    "aliases": [
+      "predictability",
+      "可预测"
+    ],
+    "brief": "质量属性"
+  },
+  {
+    "canonical": "标识符",
+    "aliases": [
+      "identifier",
+      "ID"
+    ],
+    "brief": "数据概念"
+  },
+  {
+    "canonical": "类型泄漏",
+    "aliases": [
+      "type泄漏",
+      "类型泄露"
+    ],
+    "brief": "技术缺陷"
+  },
+  {
+    "canonical": "原型",
+    "aliases": [
+      "prototype",
+      "原型系统"
+    ],
+    "brief": "开发产物"
+  },
+  {
+    "canonical": "夹具",
+    "aliases": [
+      "fixture",
+      "测试夹具"
+    ],
+    "brief": "测试组件"
+  },
+  {
+    "canonical": "集成冲突",
+    "aliases": [
+      "合并冲突",
+      "integration冲突"
+    ],
+    "brief": "工程问题"
+  },
+  {
+    "canonical": "兼容性",
+    "aliases": [
+      "compatibility",
+      "向后兼容"
+    ],
+    "brief": "质量属性"
+  },
+  {
+    "canonical": "复制成本",
+    "aliases": [
+      "拷贝成本",
+      "copy成本"
+    ],
+    "brief": "经济概念"
+  },
+  {
+    "canonical": "步骤清单",
+    "aliases": [
+      "步骤列表",
+      "checklist"
+    ],
+    "brief": "交付物"
+  },
+  {
+    "canonical": "审查界面",
+    "aliases": [
+      "评审界面",
+      "review界面"
+    ],
+    "brief": "交互组件"
+  },
+  {
+    "canonical": "标题与标语",
+    "aliases": [
+      "标题标语",
+      "headline与slogan"
+    ],
+    "brief": "文档要素"
+  },
+  {
+    "canonical": "默认选项",
+    "aliases": [
+      "默认设置",
+      "default选项"
+    ],
+    "brief": "配置概念"
+  },
+  {
+    "canonical": "可检验的意图",
+    "aliases": [
+      "可验证意图",
+      "testable intent"
+    ],
+    "brief": "概念表述"
+  },
+  {
+    "canonical": "复用指导",
+    "aliases": [
+      "复用指南",
+      "reuse指导"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "架构师",
+    "aliases": [
+      "architect",
+      "系统架构师"
+    ],
+    "brief": "角色"
+  },
+  {
+    "canonical": "调试",
+    "aliases": [
+      "debug",
+      "排错"
+    ],
+    "brief": "技术活动"
+  },
+  {
+    "canonical": "异常",
+    "aliases": [
+      "exception",
+      "异常处理"
+    ],
+    "brief": "技术概念"
+  },
+  {
+    "canonical": "身份感知的信任",
+    "aliases": [
+      "身份感知信任",
+      "信性即代码",
+      "信任需要强"
+    ],
+    "brief": "安全机制"
+  },
+  {
+    "canonical": "人工审批点",
+    "aliases": [
+      "人工审批",
+      "审批点"
+    ],
+    "brief": "流程控制"
+  },
+  {
+    "canonical": "概率性触发",
+    "aliases": [
+      "概率触发"
+    ],
+    "brief": "调度机制"
+  },
+  {
+    "canonical": "行动手册",
+    "aliases": [
+      "运行手册",
+      "程运行手册"
+    ],
+    "brief": "运维文档"
+  },
+  {
+    "canonical": "证据指针",
+    "aliases": [
+      "证据引用"
+    ],
+    "brief": "审计机制"
+  },
+  {
+    "canonical": "请求包与决议记录",
+    "aliases": [
+      "请求包与决议",
+      "询请求包与决"
+    ],
+    "brief": "交互协议"
+  },
+  {
+    "canonical": "共享状态",
+    "aliases": [
+      "共享内存状态"
+    ],
+    "brief": "并发模型"
+  },
+  {
+    "canonical": "非实时调度",
+    "aliases": [
+      "非实时调度员",
+      "非实时调"
+    ],
+    "brief": "调度策略"
+  },
+  {
+    "canonical": "非定制化宏",
+    "aliases": [
+      "非定制宏"
+    ],
+    "brief": "配置机制"
+  },
+  {
+    "canonical": "探索性实践",
+    "aliases": [
+      "探索性实"
+    ],
+    "brief": "工程方法"
+  },
+  {
+    "canonical": "计划性集成",
+    "aliases": [
+      "计划性集"
+    ],
+    "brief": "集成策略"
+  },
+  {
+    "canonical": "概念计划",
+    "aliases": [
+      "概念规划"
+    ],
+    "brief": "规划方法"
+  },
+  {
+    "canonical": "回归率",
+    "aliases": [
+      "回归比率"
+    ],
+    "brief": "质量指标"
+  },
+  {
+    "canonical": "合规工程",
+    "aliases": [
+      "合规工程化"
+    ],
+    "brief": "工程领域"
+  },
+  {
+    "canonical": "可逆",
+    "aliases": [
+      "可逆性",
+      "可回滚"
+    ],
+    "brief": "设计原则"
+  },
+  {
+    "canonical": "形式化",
+    "aliases": [
+      "形式化方法"
+    ],
+    "brief": "方法学"
+  },
+  {
+    "canonical": "关键洞见",
+    "aliases": [
+      "键洞见",
+      "核心洞见"
+    ],
+    "brief": "认知概念"
+  },
+  {
+    "canonical": "悖论四重",
+    "aliases": [
+      "四重悖论"
+    ],
+    "brief": "理论框架"
+  },
+  {
+    "canonical": "结构性跃迁",
+    "aliases": [
+      "结构性的跃迁",
+      "结构性的跃"
+    ],
+    "brief": "演进概念"
+  },
+  {
+    "canonical": "能力与记忆基底",
+    "aliases": [
+      "力与记忆基底",
+      "力与记忆基",
+      "力与记忆"
+    ],
+    "brief": "架构组件"
+  },
+  {
+    "canonical": "员运营的能力",
+    "aliases": [
+      "运营的能力",
+      "营的能力"
+    ],
+    "brief": "运营概念"
+  },
+  {
+    "canonical": "版本比较",
+    "aliases": [
+      "版本对比"
+    ],
+    "brief": "工程操作"
+  },
+  {
+    "canonical": "验收",
+    "aliases": [
+      "验收测试",
+      "验收标准"
+    ],
+    "brief": "质量活动"
+  },
+  {
+    "canonical": "合规",
+    "aliases": [
+      "合规性"
+    ],
+    "brief": "治理概念"
+  },
+  {
+    "canonical": "贡献者",
+    "aliases": [
+      "代码贡献者"
+    ],
+    "brief": "协作角色"
+  },
+  {
+    "canonical": "模板",
+    "aliases": [
+      "模版"
+    ],
+    "brief": "工程资产"
+  },
+  {
+    "canonical": "主动管理",
+    "aliases": [
+      "主动式管理"
+    ],
+    "brief": "管理策略"
+  },
+  {
+    "canonical": "资质认证",
+    "aliases": [
+      "资质证明"
+    ],
+    "brief": "治理机制"
+  },
+  {
+    "canonical": "数据库",
+    "aliases": [
+      "DB"
+    ],
+    "brief": "基础设施"
+  },
+  {
+    "canonical": "导师",
+    "aliases": [
+      "指导者"
+    ],
+    "brief": "协作角色"
+  },
+  {
+    "canonical": "实践即告完成",
+    "aliases": [
+      "实践即告完",
+      "实践即告"
+    ],
+    "brief": "工程理念"
+  },
+  {
+    "canonical": "证据说话",
+    "aliases": [
+      "证据驱动"
+    ],
+    "brief": "决策原则"
+  },
+  {
+    "canonical": "证明其合理性",
+    "aliases": [
+      "证明合理"
+    ],
+    "brief": "论证活动"
+  },
+  {
+    "canonical": "替代了什么",
+    "aliases": [
+      "替代分析"
+    ],
+    "brief": "评估方法"
+  },
+  {
+    "canonical": "过滤器",
+    "aliases": [
+      "种过滤器",
+      "Filter"
+    ],
+    "brief": "处理组件"
+  },
+  {
+    "canonical": "相互竞争",
+    "aliases": [
+      "相互竞"
+    ],
+    "brief": "协作现象"
+  },
+  {
+    "canonical": "委派校验",
+    "aliases": [
+      "委派校"
+    ],
+    "brief": "协作机制"
+  },
+  {
+    "canonical": "决策和约束",
+    "aliases": [
+      "决策和约"
+    ],
+    "brief": "治理概念"
+  },
+  {
+    "canonical": "各配优化",
+    "aliases": [
+      "配置优化"
+    ],
+    "brief": "优化方法"
+  },
+  {
+    "canonical": "互干扰",
+    "aliases": [
+      "相互干扰"
+    ],
+    "brief": "并发问题"
+  },
+  {
+    "canonical": "信任需要强化",
+    "aliases": [
+      "信任需要强"
+    ],
+    "brief": "安全原则"
+  },
+  {
+    "canonical": "选出最佳方案",
+    "aliases": [
+      "选出最佳方"
+    ],
+    "brief": "决策方法"
+  },
+  {
+    "canonical": "那条长长的方案",
+    "aliases": [
+      "长长的方",
+      "条长长的方"
+    ],
+    "brief": "方案描述"
+  },
+  {
+    "canonical": "需要什么证据",
+    "aliases": [
+      "证据需求"
+    ],
+    "brief": "审计问题"
+  },
+  {
+    "canonical": "会发生什么",
+    "aliases": [
+      "后果分析"
+    ],
+    "brief": "评估问题"
+  },
+  {
+    "canonical": "独立尝试",
+    "aliases": [
+      "独立试错"
+    ],
+    "brief": "探索方法"
+  },
+  {
+    "canonical": "持续存在",
+    "aliases": [
+      "持久化"
+    ],
+    "brief": "系统属性"
+  },
+  {
+    "canonical": "公开",
+    "aliases": [
+      "公开透明"
+    ],
+    "brief": "治理原则"
+  },
+  {
+    "canonical": "实施",
+    "aliases": [
+      "落地实施"
+    ],
+    "brief": "工程活动"
+  },
+  {
+    "canonical": "提交",
+    "aliases": [
+      "commit"
+    ],
+    "brief": "版本操作"
+  },
+  {
+    "canonical": "面向智能体",
+    "aliases": [
+      "面向智能体设计",
+      "agent-oriented"
+    ],
+    "brief": "设计范式"
+  },
+  {
+    "canonical": "工具链",
+    "aliases": [
+      "工具链体系",
+      "toolchain"
+    ],
+    "brief": "工程设施"
+  },
+  {
+    "canonical": "确定性触发器",
+    "aliases": [
+      "确定性触发",
+      "deterministic trigger"
+    ],
+    "brief": "执行机制"
+  },
+  {
+    "canonical": "分层委托",
+    "aliases": [
+      "分层委派",
+      "层级委托"
+    ],
+    "brief": "协作模式"
+  },
+  {
+    "canonical": "合并冲突",
+    "aliases": [
+      "冲突解决",
+      "merge conflict"
+    ],
+    "brief": "版本控制"
+  },
+  {
+    "canonical": "自主性",
+    "aliases": [
+      "自主",
+      "agent autonomy"
+    ],
+    "brief": "智能体属性"
+  },
+  {
+    "canonical": "验证差异率",
+    "aliases": [
+      "规性验证差异",
+      "验证差异"
+    ],
+    "brief": "质量度量"
+  },
+  {
+    "canonical": "决策陈述",
+    "aliases": [
+      "决策声明",
+      "decision statement"
+    ],
+    "brief": "决策记录"
+  },
+  {
+    "canonical": "隐藏原则",
+    "aliases": [
+      "息隐藏原则",
+      "隐含原则"
+    ],
+    "brief": "设计原则"
+  },
+  {
+    "canonical": "指导原则",
+    "aliases": [
+      "率性指导方针",
+      "设计准则"
+    ],
+    "brief": "设计原则"
+  },
+  {
+    "canonical": "人类先例",
+    "aliases": [
+      "人类先例参照",
+      "human precedent"
+    ],
+    "brief": "参照依据"
+  },
+  {
+    "canonical": "类命令环境",
+    "aliases": [
+      "命令式环境",
+      "CLI环境"
+    ],
+    "brief": "运行环境"
+  },
+  {
+    "canonical": "函数式",
+    "aliases": [
+      "函数式编程",
+      "functional"
+    ],
+    "brief": "编程范式"
+  },
+  {
+    "canonical": "会话",
+    "aliases": [
+      "会话上下文",
+      "session"
+    ],
+    "brief": "交互单元"
+  },
+  {
+    "canonical": "并行",
+    "aliases": [
+      "并行执行",
+      "parallel"
+    ],
+    "brief": "执行模式"
+  },
+  {
+    "canonical": "脚本",
+    "aliases": [
+      "定性脚本",
+      "自动化脚本"
+    ],
+    "brief": "自动化"
+  },
+  {
+    "canonical": "拉取",
+    "aliases": [
+      "拉取请求",
+      "pull"
+    ],
+    "brief": "版本控制"
+  },
+  {
+    "canonical": "全局",
+    "aliases": [
+      "全局状态",
+      "global"
+    ],
+    "brief": "系统范围"
+  },
+  {
+    "canonical": "工作流程",
+    "aliases": [
+      "工作流程运",
+      "workflow"
+    ],
+    "brief": "流程管理"
+  },
+  {
+    "canonical": "协调基础设施",
+    "aliases": [
+      "协调基础设",
+      "coordination infra"
+    ],
+    "brief": "基础设施"
+  },
+  {
+    "canonical": "安全执行环",
+    "aliases": [
+      "安全的执行环",
+      "安全执行循环"
+    ],
+    "brief": "执行机制"
+  },
+  {
+    "canonical": "规划",
+    "aliases": [
+      "任务规划",
+      "planning"
+    ],
+    "brief": "智能体能力"
+  },
+  {
+    "canonical": "事后",
+    "aliases": [
+      "事后分析",
+      "post-mortem"
+    ],
+    "brief": "复盘机制"
+  },
+  {
+    "canonical": "回顾",
+    "aliases": [
+      "回顾会议",
+      "retrospective"
+    ],
+    "brief": "复盘机制"
+  },
+  {
+    "canonical": "探索构建块",
+    "aliases": [
+      "构建块探索",
+      "building blocks"
+    ],
+    "brief": "架构方法"
+  },
+  {
+    "canonical": "接口清晰",
+    "aliases": [
+      "清晰接口",
+      "interface clarity"
+    ],
+    "brief": "设计原则"
+  },
+  {
+    "canonical": "备选方案",
+    "aliases": [
+      "备选方",
+      "alternatives"
+    ],
+    "brief": "决策方法"
+  },
+  {
+    "canonical": "分析输出",
+    "aliases": [
+      "输出分析",
+      "analysis output"
+    ],
+    "brief": "数据处理"
+  },
+  {
+    "canonical": "多个行动",
+    "aliases": [
+      "多行动",
+      "multi-action"
+    ],
+    "brief": "执行模式"
+  },
+  {
+    "canonical": "连续",
+    "aliases": [
+      "连续执行",
+      "continuous"
+    ],
+    "brief": "执行模式"
+  },
+  {
+    "canonical": "规模",
+    "aliases": [
+      "舰队规模",
+      "scale"
+    ],
+    "brief": "系统属性"
+  },
+  {
+    "canonical": "与人类队友合作",
+    "aliases": [
+      "与人类队友合",
+      "人机协作"
+    ],
+    "brief": "协作模式"
+  },
+  {
+    "canonical": "上下文负载量",
+    "aliases": [
+      "上下文负载",
+      "context load"
+    ],
+    "brief": "度量指标"
+  },
+  {
+    "canonical": "上下文过载",
+    "aliases": [
+      "上下文超载",
+      "context overload"
+    ],
+    "brief": "失效模式"
+  },
+  {
+    "canonical": "决策记录",
+    "aliases": [
+      "架构决策记录",
+      "ADR"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "流水线工程",
+    "aliases": [
+      "流水线",
+      "pipeline engineering"
+    ],
+    "brief": "工程实践"
+  },
+  {
+    "canonical": "概率性",
+    "aliases": [
+      "概率性行为",
+      "probabilistic"
+    ],
+    "brief": "系统属性"
+  },
+  {
+    "canonical": "确定性检查",
+    "aliases": [
+      "决定性检查",
+      "deterministic check"
+    ],
+    "brief": "验证手段"
+  },
+  {
+    "canonical": "隔离运行",
+    "aliases": [
+      "沙箱运行",
+      "sandbox execution"
+    ],
+    "brief": "运行机制"
+  },
+  {
+    "canonical": "所有权边界",
+    "aliases": [
+      "责任边界",
+      "ownership boundary"
+    ],
+    "brief": "治理概念"
+  },
+  {
+    "canonical": "成熟度",
+    "aliases": [
+      "成熟度模型",
+      "maturity"
+    ],
+    "brief": "评估维度"
+  },
+  {
+    "canonical": "高风险",
+    "aliases": [
+      "高风险变更",
+      "high risk"
+    ],
+    "brief": "风险等级"
+  },
+  {
+    "canonical": "指导包",
+    "aliases": [
+      "指导材料",
+      "guidance package"
+    ],
+    "brief": "交付物"
+  },
+  {
+    "canonical": "多智能体",
+    "aliases": [
+      "多智能体系统",
+      "multi-agent"
+    ],
+    "brief": "系统架构"
+  },
+  {
+    "canonical": "代码成为新",
+    "aliases": [
+      "代码即新资产"
+    ],
+    "brief": "理念"
+  },
+  {
+    "canonical": "时代的语言",
+    "aliases": [
+      "时代语言"
+    ],
+    "brief": "理念"
+  },
+  {
+    "canonical": "人类复制粘贴",
+    "aliases": [
+      "人工复制粘贴",
+      "copy-paste"
+    ],
+    "brief": "反模式"
+  },
+  {
+    "canonical": "返工",
+    "aliases": [
+      "重做",
+      "rework"
+    ],
+    "brief": "工程现象"
+  },
+  {
+    "canonical": "僵化",
+    "aliases": [
+      "僵化流程",
+      "rigidity"
+    ],
+    "brief": "组织属性"
+  },
+  {
+    "canonical": "官僚主义",
+    "aliases": [
+      "官僚化",
+      "bureaucracy"
+    ],
+    "brief": "组织现象"
+  },
+  {
+    "canonical": "英雄主义",
+    "aliases": [
+      "个人英雄主义",
+      "heroism"
+    ],
+    "brief": "组织现象"
+  },
+  {
+    "canonical": "阿吉里斯",
+    "aliases": [
+      "阿吉里",
+      "Argyris"
+    ],
+    "brief": "理论来源"
+  },
+  {
+    "canonical": "橡皮图章",
+    "aliases": [
+      "橡皮图章式评审",
+      "rubber stamp"
+    ],
+    "brief": "反模式"
+  },
+  {
+    "canonical": "逃逸通道",
+    "aliases": [
+      "逃逸路径",
+      "escape hatch"
+    ],
+    "brief": "机制"
+  },
+  {
+    "canonical": "不变式",
+    "aliases": [
+      "不变量",
+      "invariant"
+    ],
+    "brief": "形式概念"
+  },
+  {
+    "canonical": "双向",
+    "aliases": [
+      "双向映射",
+      "bidirectional"
+    ],
+    "brief": "关系属性"
+  },
+  {
+    "canonical": "定制化",
+    "aliases": [
+      "定制",
+      "customization"
+    ],
+    "brief": "工程属性"
+  },
+  {
+    "canonical": "重置",
+    "aliases": [
+      "重置机制",
+      "reset"
+    ],
+    "brief": "操作"
+  },
+  {
+    "canonical": "必须上报",
+    "aliases": [
+      "上报机制",
+      "escalation"
+    ],
+    "brief": "治理规则"
+  },
+  {
+    "canonical": "透明度撬动治理",
+    "aliases": [
+      "透明度治理",
+      "transparency governance"
+    ],
+    "brief": "治理理念"
+  },
+  {
+    "canonical": "纪律严明",
+    "aliases": [
+      "严格纪律",
+      "disciplined"
+    ],
+    "brief": "组织属性"
+  },
+  {
+    "canonical": "优胜者",
+    "aliases": [
+      "胜出方案",
+      "winner"
+    ],
+    "brief": "决策概念"
+  },
+  {
+    "canonical": "二元",
+    "aliases": [
+      "二元对立",
+      "binary"
+    ],
+    "brief": "思维模式"
+  },
+  {
+    "canonical": "一脉相承",
+    "aliases": [
+      "延续性"
+    ],
+    "brief": "理念"
+  },
+  {
+    "canonical": "手术室",
+    "aliases": [
+      "手术室式",
+      "operating room"
+    ],
+    "brief": "隐喻"
+  },
+  {
+    "canonical": "开法拉利",
+    "aliases": [
+      "开跑车",
+      "ferrari"
+    ],
+    "brief": "隐喻"
+  },
+  {
+    "canonical": "头脑风暴",
+    "aliases": [
+      "脑暴",
+      "brainstorming"
+    ],
+    "brief": "方法"
+  },
+  {
+    "canonical": "重复代码",
+    "aliases": [
+      "代码重复",
+      "duplication"
+    ],
+    "brief": "代码坏味"
+  },
+  {
+    "canonical": "模块性",
+    "aliases": [
+      "模块化",
+      "modularity"
+    ],
+    "brief": "设计属性"
+  },
+  {
+    "canonical": "跨越双重",
+    "aliases": [
+      "双重跨越"
+    ],
+    "brief": "概念"
+  },
+  {
+    "canonical": "范围内",
+    "aliases": [
+      "范围之内",
+      "in scope"
+    ],
+    "brief": "范围概念"
+  },
+  {
+    "canonical": "缺口",
+    "aliases": [
+      "差距",
+      "gap"
+    ],
+    "brief": "分析概念"
+  },
+  {
+    "canonical": "启动",
+    "aliases": [
+      "启动阶段",
+      "kickoff"
+    ],
+    "brief": "流程阶段"
+  },
+  {
+    "canonical": "演示",
+    "aliases": [
+      "演示环节",
+      "demo"
+    ],
+    "brief": "活动"
+  }
+]

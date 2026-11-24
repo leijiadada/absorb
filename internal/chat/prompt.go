@@ -252,8 +252,7 @@ const pageContentHeadRunes = 6000
 // pageContentBlock 扩展端采集到页面内容时注入 <page_content>：LLM 直接看到正文，
 // 无需再调 fetch_page（对 SPA/内网页面，HTTP 抓取本就拿不到渲染态内容）。
 // 网页划词时不注入——划词即来源于页面正文，页面全文与参考材料冗余；
-// 文档划词（DocumentID 非空）例外：划词只是文档一小段，全文才是回答关键
-// （实测 flash 模型不会主动调 expand_context，正文不在场就答"不知道"）。
+// 文档划词（DocumentID 非空）例外：划词只是文档一小段，全文才是回答关键。
 func pageContentBlock(c AskContext) string {
 	if strings.TrimSpace(c.PageMd) == "" {
 		return ""

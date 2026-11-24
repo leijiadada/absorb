@@ -150,9 +150,10 @@ func TestDocumentIdInjectsPageContent(t *testing.T) {
 	if strings.Contains(rec.Body.String(), `"type":"error"`) {
 		t.Fatalf("请求不应报错，SSE: %s", rec.Body.String())
 	}
-	// 正文入会话页面缓存（无 documentId 的追问轮经 LoadPageText 复用）
-	if got := loadPageCache(t, svc, sid, url); !strings.Contains(got, "智能体工程全书") {
-		t.Fatalf("文档正文应写入页面缓存，got %q", got)
+	// 文档轮不写页面缓存（expand_context 为网页划词专属；文档原文阅读走
+	// search_document 读页模式）
+	if got := loadPageCache(t, svc, sid, url); got != "" {
+		t.Fatalf("文档轮不应写页面缓存，got %q", got)
 	}
 	reqBody := cap2.get()
 	var sent struct {
@@ -214,8 +215,9 @@ func TestDocumentIdUUIDInjectsPageContent(t *testing.T) {
 	if strings.Contains(rec.Body.String(), `"type":"error"`) {
 		t.Fatalf("请求不应报错，SSE: %s", rec.Body.String())
 	}
-	if got := loadPageCache(t, svc, sid, url); !strings.Contains(got, "UUID 主路径正文") {
-		t.Fatalf("文档正文应写入页面缓存，got %q", got)
+	// 文档轮不写页面缓存（expand_context 为网页划词专属）
+	if got := loadPageCache(t, svc, sid, url); got != "" {
+		t.Fatalf("文档轮不应写页面缓存，got %q", got)
 	}
 	reqBody := cap2.get()
 	var sent struct {
@@ -241,7 +243,7 @@ func TestDocumentIdUUIDInjectsPageContent(t *testing.T) {
 }
 
 // 文档划词（PDF 解读联调回归）：划词来源是文档页时，<page_content> 仍须注入
-// （划词只是文档一小段，flash 模型不会主动调 expand_context）且划词材料不丢、
+// （划词只是文档一小段，全文才是回答关键）且划词材料不丢、
 // scope 落文档 URL。查看器内划词的 URL 纠正在扩展端 quote-collector 源头完成，
 // 服务端收到的 context.url 已是真实文档地址。
 func TestSelectionWithDocumentIdInjectsPageContent(t *testing.T) {

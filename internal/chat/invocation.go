@@ -149,32 +149,36 @@ func PrepareInvocation(ctx context.Context, app, user string, in InvocationInput
 	// 带新划词 → pageMd（扩展端已转换，免转换直读）写入该 scope 缓存（追问可复用）；
 	// 无新划词（追问）/pageMd 为空（转换失败等）→ 按当前 scope 读缓存，查无则空
 	// （宁缺勿错，不串其他页面）；都无 → 检索工具返回无缓存失败。
+	// 文档轮（页面携带 documentId）不读写页面缓存：expand_context 为网页划词
+	// 专属，文档场景的证据检索与原文阅读走 search_document（读页模式自行加载
+	// document_contents）。
+	isDocTurn := in.Page != nil && strings.TrimSpace(in.Page.DocumentID) != ""
 	pageText := ""
-	if in.Context != nil && strings.TrimSpace(in.Context.PageMd) != "" {
-		// 截断守卫不可省：直读路径没有转换器内置的 pageTextMaxLen 截断，
-		// 超长 payload 须经同一规格截断后再入缓存。
-		pageText = retriever.TruncatePageText(in.Context.PageMd)
-	}
-	if pageText != "" {
-		if err := sessionSvc.SavePageText(ctx, app, user, sessionID, filterKey, askCtx.PageTitle, pageText); err != nil {
-			log.Errorf("[Absorb] save page cache failed: %v", err)
-		} else {
-			log.Infof("[Absorb] page cache updated (scope=%q %d chars)", filterKey, len(pageText))
+	if !isDocTurn {
+		if in.Context != nil && strings.TrimSpace(in.Context.PageMd) != "" {
+			// 截断守卫不可省：直读路径没有转换器内置的 pageTextMaxLen 截断，
+			// 超长 payload 须经同一规格截断后再入缓存。
+			pageText = retriever.TruncatePageText(in.Context.PageMd)
 		}
-	} else if sessionID != "" {
-		if t, err := sessionSvc.LoadPageText(ctx, app, user, sessionID, filterKey); err != nil {
-			log.Errorf("[Absorb] read page cache failed: %v", err)
-		} else {
-			pageText = t
+		if pageText != "" {
+			if err := sessionSvc.SavePageText(ctx, app, user, sessionID, filterKey, askCtx.PageTitle, pageText); err != nil {
+				log.Errorf("[Absorb] save page cache failed: %v", err)
+			} else {
+				log.Infof("[Absorb] page cache updated (scope=%q %d chars)", filterKey, len(pageText))
+			}
+		} else if sessionID != "" {
+			if t, err := sessionSvc.LoadPageText(ctx, app, user, sessionID, filterKey); err != nil {
+				log.Errorf("[Absorb] read page cache failed: %v", err)
+			} else {
+				pageText = t
+			}
 		}
 	}
 	// 文档上下文（PDF 解读 PR2）：页面携带 documentId（/api/page/prepare 产物，
-	// M0 起 = documents.id UUID）时注入已提取正文，覆盖网页快照路径的 pageText
-	// （文档正文完整度高于快照）。兼容窗口：M0 前扩展端卡片持 URL 语义，按 ID
-	// 查无时回退按 URL 读（宁缺勿错原则不变，回退仅一次查询）。同时写入会话
-	// 页面缓存，后续追问（无 documentId 轮）经既有 LoadPageText 复用，不再重复
-	// 读取 document_contents。注入前统一按 PageTextMaxLen 截断（与 pageMd 直读
-	// 路径同一守卫）。
+	// M0 起 = documents.id UUID）时注入已提取正文。<page_content> 渲染取该字段
+	// 头部 6000 字，全量阅读走 search_document 读页模式（不进 expand 页面缓存）。
+	// 兼容窗口：M0 前扩展端卡片持 URL 语义，按 ID 查无时回退按 URL 读（宁缺勿错
+	// 原则不变，回退仅一次查询）。
 	if in.Page != nil {
 		if docID := strings.TrimSpace(in.Page.DocumentID); docID != "" {
 			dc, derr := sessionSvc.Storage().LoadDocumentContentByID(ctx, app, user, docID)
@@ -192,20 +196,15 @@ func PrepareInvocation(ctx context.Context, app, user string, in InvocationInput
 				}
 				log.Infof("[Absorb] document not injectable (doc=%s status=%q)", docID, status)
 			default:
-				pageText = retriever.TruncatePageText(dc.ContentText)
 				// 回写 askCtx.PageMd：prompt 侧 <page_content> 只从该字段渲染
 				// （pageContentBlock）。不回写则模型看不到正文在场，还会被
 				// <page_url> 的"按需 fetch_page"提示误导（正文已在手，fetch 徒劳）。
-				// 截断后 ≤ PageTextMaxLen，pageContentBlock 再取头部 6000 字注入，
-				// 全量由 expand_context 检索——与 pageMd 直读路径同一套预算。
-				askCtx.PageMd = pageText
+				// 截断后 ≤ PageTextMaxLen，pageContentBlock 再取头部 6000 字注入。
+				askCtx.PageMd = retriever.TruncatePageText(dc.ContentText)
 				// 标记文档场景：划词提问也注入 <page_content>
 				askCtx.DocumentID = docID
 				log.Infof("[Absorb] document content injected (doc=%s status=%s stored=%d chars injected<=%d)",
 					docID, dc.ExtractionStatus, dc.CharCount, retriever.PageTextMaxLen)
-				if err := sessionSvc.SavePageText(ctx, app, user, sessionID, filterKey, askCtx.PageTitle, pageText); err != nil {
-					log.Errorf("[Absorb] save document page cache failed: %v", err)
-				}
 			}
 		}
 	}
@@ -227,12 +226,13 @@ func PrepareInvocation(ctx context.Context, app, user string, in InvocationInput
 	// 注入文档检索状态（M3 hybrid）：当前文档锚定注入（不接受模型指定
 	// document_id，范围与归属校验都在服务端）；无文档轮为空 = 租户内全部
 	// 已索引文档。SharedEmbedder 为 nil（未配置）时自动纯词法。
+	// contentReader 支持读页模式（search_document 的 start_page 分支）。
 	var docScope []string
 	if askCtx.DocumentID != "" {
 		docScope = []string{askCtx.DocumentID}
 	}
-	runCtx = searchdoc.WithHybridSearchState(runCtx, sessionSvc.Storage(),
-		retrieval.SharedEmbedder(), sessionSvc.Storage(), app, user, docScope)
+	runCtx = searchdoc.WithDocumentQueryState(runCtx, sessionSvc.Storage(),
+		retrieval.SharedEmbedder(), sessionSvc.Storage(), sessionSvc.Storage(), app, user, docScope)
 	// DetachedCancel:取消信号不随 SSE 连接关闭传播,保证正常收尾落库不被断连打断;
 	// 主动停止改由 /api/cancel -> managed.Cancel(requestID) 触发(见 cancelHandler)。
 	requestID := uuid.NewString()

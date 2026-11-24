@@ -213,7 +213,8 @@ func setupEmbedding(cfg conf.Config, proxyFn func() string) {
 			rrBase = "https://api.siliconflow.cn/v1"
 		}
 		retrieval.SetSharedReranker(retrieval.NewLlamaRerankClient(rrBase, rrModel, emb.APIKey, proxyFn), emb.RerankTopN)
-		log.Infof("[Absorb] cloud rerank enabled | model=%s candidates=%d", rrModel, retrieval.SharedRerankTopN())
+		retrieval.SetSharedRerankLexSeed(emb.RerankLexSeed)
+		log.Infof("[Absorb] cloud rerank enabled | model=%s candidates=%d lex_seed=%d", rrModel, retrieval.SharedRerankTopN(), retrieval.SharedRerankLexSeed())
 	}
 }
 

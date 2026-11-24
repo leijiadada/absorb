@@ -117,6 +117,15 @@ type Storage interface {
 	// LoadDocumentChunks 读取文档现有 chunks（chunk_index 升序）：词法索引就绪但
 	// 向量缺失/换模型时的补建路径用——复用 chunks，不重写词法索引。
 	LoadDocumentChunks(ctx context.Context, app, user, documentID string) ([]*DocumentChunk, error)
+	// LoadDocumentSections 返回文档 chunk 的去重 section_path（按首现 chunk_index
+	// 排序，空面包屑不计）——动态建议提问（doc-suggestions）通道 B 素材。
+	// 查无返回空切片。
+	LoadDocumentSections(ctx context.Context, app, user, documentID string) ([]string, error)
+	// UpdateSectionPaths 原地刷新 chunk 的章节面包屑元数据（仅 document_chunks /
+	// document_chunks_fts 的 section_path 两列，不动 chunk_id/content/search_text，
+	// 向量以 chunk_id 关联故不受影响）。撤销 marks 门控后存量文档重算面包屑用——
+	// 正文未变无需重建 chunk/re-embed。paths 键为 chunk_id，值为新面包屑。
+	UpdateSectionPaths(ctx context.Context, app, user, documentID string, paths map[string]string) error
 	// UpdateDocumentVectorState 只覆盖 document_index_state 的 vector_* 四列
 	// （向量域状态，独立于词法 index_status）：embedChunks 成功/失败后调用。
 	UpdateDocumentVectorState(ctx context.Context, app, user, documentID string, vs DocumentVectorState) error

@@ -146,22 +146,11 @@ func TestQueryRewriteF4AV2(t *testing.T) {
 			t.Fatalf("embed %q: %v", c.query, err)
 		}
 		vec50 := retrieval.TopKByCosine(vhits, vrows, qv, 50)
-		vec40 := vec50
-		if len(vec50) > 40 {
-			vec40 = vec50[:40] // TopKByCosine 前缀即 top40
-		}
 
-		// 对照腿：F4b 生产形态（扩池、无改写）
+		// 对照腿：F4b 生产形态（扩池、无改写）——直接调生产函数，成功分支等价
 		fusedP := retrieval.FuseRRF(lexOrig, vec50, 50)
-		poolP, poolKeysP := rerankPoolF4B(fusedP, vec40)
-		rrP, _ := retrieval.RerankCandidates(ctx, poolP, c.query, reranker, len(poolP))
-		var tailP []storage.DocumentChunkHit
-		for _, h := range fusedP[rrTopN:] {
-			if _, ok := poolKeysP[chunkKeyOf(h)]; !ok {
-				tailP = append(tailP, h)
-			}
-		}
-		finalP, _ := searchdoc.DeduplicateHits(append(rrP, tailP...), 10)
+		pooledP, _ := retrieval.RerankPoolCandidates(ctx, fusedP, vec50, nil, c.query, reranker, retrieval.RerankPoolSpec{TopN: rrTopN, VecSeed: retrieval.RerankSeedTopN})
+		finalP, _ := searchdoc.DeduplicateHits(pooledP, 10)
 		for i, h := range finalP {
 			if i < 10 && strings.Contains(h.Content, c.anchor) {
 				out.rankCtl = i + 1
@@ -190,15 +179,8 @@ func TestQueryRewriteF4AV2(t *testing.T) {
 			lexUnion = unionLexicalBest(lexOrig, lexRew, 50)
 		}
 		fusedV := retrieval.FuseRRF(lexUnion, vec50, 50)
-		poolV, poolKeysV := rerankPoolF4B(fusedV, vec40)
-		rrV, _ := retrieval.RerankCandidates(ctx, poolV, c.query, reranker, len(poolV))
-		var tailV []storage.DocumentChunkHit
-		for _, h := range fusedV[rrTopN:] {
-			if _, ok := poolKeysV[chunkKeyOf(h)]; !ok {
-				tailV = append(tailV, h)
-			}
-		}
-		finalV, _ := searchdoc.DeduplicateHits(append(rrV, tailV...), 10)
+		pooledV, _ := retrieval.RerankPoolCandidates(ctx, fusedV, vec50, nil, c.query, reranker, retrieval.RerankPoolSpec{TopN: rrTopN, VecSeed: retrieval.RerankSeedTopN})
+		finalV, _ := searchdoc.DeduplicateHits(pooledV, 10)
 		for i, h := range finalV {
 			if i < 10 && strings.Contains(h.Content, c.anchor) {
 				out.rankV2 = i + 1

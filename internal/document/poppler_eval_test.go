@@ -416,9 +416,9 @@ func scoreSynonymCases(ctx context.Context, t *testing.T, st storage.Storage,
 // TestSynonymRetrievalStructAB 生产端到端腿：生产择优提取器（双跑择优 +
 // marks 门控）产出的正文建索引，同口径评分。P1 修订：AgenticSE 的 dslipak
 // 主路文本带行内乱序（罕见 bigram 42.3% vs 32.7%），择优必然切到 poppler
-// 干净文本——门控下 marks 不生成（干净文本上旧叠加实测稳定 -7pp，撤门控
-// 与否由 F3a marks 评测决定），本腿验证生产端到端（择优换源 + 门控跳过）
-// 的实际产出，指标应≈poppler 纯文本。
+// 干净文本——v7 撤销门控后 marks 也生成（正文不注入、只进 FTS section_path
+// 加权，净效应 0），本腿验证生产端到端（择优换源 + 章节导航元数据）的实际
+// 产出，指标应≈poppler 纯文本。
 func TestSynonymRetrievalStructAB(t *testing.T) {
 	popplerBin(t) // pdftotext 可用性门控（生产择优依赖它）
 	dbPath := filepath.Join(os.TempDir(), synonymDBCopy)
@@ -466,7 +466,8 @@ func TestSynonymRetrievalStructAB(t *testing.T) {
 		hybrid = true
 	}
 
-	// 生产端到端：双跑择优（乱序项判切）+ 叠加门控（含两次下载与 docling 解析）
+	// 生产端到端：双跑择优（乱序项判切）+ 结构进元数据（含两次下载与 docling 解析）。
+	// v7 撤销门控：本书主路切 poppler 后正文不注入标题（injected==0），但仍生成 marks。
 	fetchSvc := fetch_page.NewFetchPageService(proxyFn, nil)
 	prod, err := extract.NewPDFExtractor(fetchSvc, proxyFn, func() int64 { return 50 << 20 }).Extract(ctx, bookURL)
 	if err != nil {
@@ -476,10 +477,10 @@ func TestSynonymRetrievalStructAB(t *testing.T) {
 	chars := len([]rune(prod.Content))
 	t.Logf("生产端到端：%d 字，注入标题 %d 个，marks %d 个", chars, injected, len(prod.Marks))
 	if injected != 0 {
-		t.Fatalf("门控失效：本书主路带行内乱序应切到 poppler（不注入标题），实际注入 %d 个", injected)
+		t.Fatalf("正文不应注入标题行（结构只进元数据），实际注入 %d 个", injected)
 	}
-	if len(prod.Marks) != 0 {
-		t.Fatalf("门控失效：本书主路应切到 poppler（不生成 marks），实际 %d 个", len(prod.Marks))
+	if len(prod.Marks) == 0 {
+		t.Fatal("v7 撤销门控后 poppler 分支也应生成 marks，实际 0 个")
 	}
 	if chars < 210000 {
 		// v4 全文 226K；v5 起 TOC 剥离删约 8.7K 目录字符 → ~217K。主路未剥离
@@ -517,7 +518,7 @@ func TestSynonymRetrievalStructAB(t *testing.T) {
 		t.Fatalf("struct mirror index not ready: %+v", state)
 	}
 
-	modeName := "词法检索（生产端到端语料：poppler 换源 + marks 门控跳过）"
+	modeName := "词法检索（生产端到端语料：poppler 换源 + 章节导航 marks）"
 	if hybrid {
 		modeName = "HYBRID 混合检索（生产端到端语料，词法 + " + emb.Model() + "，RRF）+ Reranker"
 	}

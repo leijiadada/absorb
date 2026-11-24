@@ -131,8 +131,8 @@ func resumePhase(
 	recallKey := session.Key{AppName: app, UserID: user, SessionID: sessionID}
 	runCtx := expand.WithPageSearchState(ctx, pageText, refMat)
 	// search_document（M3 hybrid）：恢复轮无 documentId 上下文，nil = 租户内全部已索引文档
-	runCtx = searchdoc.WithHybridSearchState(runCtx, sessionSvc.Storage(),
-		retrieval.SharedEmbedder(), sessionSvc.Storage(), app, user, nil)
+	runCtx = searchdoc.WithDocumentQueryState(runCtx, sessionSvc.Storage(),
+		retrieval.SharedEmbedder(), sessionSvc.Storage(), sessionSvc.Storage(), app, user, nil)
 	runCtx = recall.WithRecallState(runCtx, sessionSvc, recallKey, filterKey,
 		sessionSvc.SummaryCutoffs(ctx, recallKey))
 

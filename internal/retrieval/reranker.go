@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"sort"
+	"strconv"
 	"sync"
 	"time"
 
@@ -32,13 +33,20 @@ type Reranker interface {
 // 新安装/配置丢失静默降级到旧的 8 而与已验证水位脱钩。
 const defaultRerankTopN = 16
 
+// defaultRerankLexSeed 词法种子默认数（F11 A 档，2026-11-20 两书两轮全线过
+// 转正线后协议所有者裁决：配置化双档，默认 A=25，可配 50=B 档；0 视为未配置
+// 走默认——与 rerank_top_n 的 0=默认语义一致）。词法盲区桶审计（C=5）与
+// F11 评测先验见 design/5.md。
+const defaultRerankLexSeed = 25
+
 // rerankMissingScore 未返回分数的文档位置的哨兵值（排序时必然沉底）。
 const rerankMissingScore = -1e9
 
 var (
-	sharedRerankMu   sync.RWMutex
-	sharedReranker   Reranker
-	sharedRerankTopN = defaultRerankTopN
+	sharedRerankMu     sync.RWMutex
+	sharedReranker     Reranker
+	sharedRerankTopN   = defaultRerankTopN
+	sharedRerankLexSeed = defaultRerankLexSeed
 )
 
 // SetSharedReranker 装配层注入共享精排器；candidates 指定精排候选数（<=0 取默认 16）。
@@ -63,6 +71,22 @@ func SharedRerankTopN() int {
 	sharedRerankMu.RLock()
 	defer sharedRerankMu.RUnlock()
 	return sharedRerankTopN
+}
+
+// SetSharedRerankLexSeed 装配层注入精排池词法种子数（>0 生效，<=0 保持默认）。
+func SetSharedRerankLexSeed(n int) {
+	sharedRerankMu.Lock()
+	defer sharedRerankMu.Unlock()
+	if n > 0 {
+		sharedRerankLexSeed = n
+	}
+}
+
+// SharedRerankLexSeed 返回精排池词法种子数（0 = 不并词法种子，F4b 形态）。
+func SharedRerankLexSeed() int {
+	sharedRerankMu.RLock()
+	defer sharedRerankMu.RUnlock()
+	return sharedRerankLexSeed
 }
 
 // LlamaRerankClient /v1/rerank 端点客户端：local sidecar（llama-server）与
@@ -217,22 +241,33 @@ func RerankCandidates(ctx context.Context, fused []storage.DocumentChunkHit, que
 // 业界常见区间（50 条）内保守取 40。
 const RerankSeedTopN = 40
 
-// RerankPoolCandidates 扩池精排（F4b）：池 = 融合榜 topN ∪ 向量种子 topK，
-// 按块去重（融合序在前、向量序在后），整池重排；池外融合尾保持原融合序
-// 缀后。融合榜本身不触碰（F4a 教训：union 逐块名次不减≠融合名次不减）。
-// 精排失败/未配置降级原融合榜，语义与 RerankCandidates 一致。
-func RerankPoolCandidates(ctx context.Context, fused, vecSeeds []storage.DocumentChunkHit, query string, r Reranker, topN, seedN int) ([]storage.DocumentChunkHit, bool) {
+// RerankPoolSpec 精排池三路种子配置（F11 起）：池 = 融合榜 topN ∪ 向量种子
+// VecSeed ∪ 词法种子 LexSeed，按块去重（融合序→向量序→词法序）。
+type RerankPoolSpec struct {
+	TopN    int // 融合榜 head 宽度（F4b=16；<=0 取融合榜全长）
+	VecSeed int // 向量种子数（F4b=40；0 = 不并入）
+	LexSeed int // 词法种子数（0 = 不并入——F4b 形态；F11 A 档 25 / B 档 50）
+}
+
+// RerankPoolCandidates 扩池精排（F4b 三路种子，F11 增词法路）：池 = 融合榜
+// topN ∪ 向量种子 ∪ 词法种子，按块去重（融合序在前、向量序次之、词法序缀后），
+// 整池重排；池外融合尾保持原融合序缀后。融合榜本身不触碰（F4a 教训：union
+// 逐块名次不减≠融合名次不减）。精排失败/未配置降级原融合榜，语义与
+// RerankCandidates 一致。词法路先验：词法盲区桶审计 C=5 + F11 两书两轮
+// （design/5.md 2026-11-20）。
+func RerankPoolCandidates(ctx context.Context, fused, vecSeeds, lexSeeds []storage.DocumentChunkHit, query string, r Reranker, spec RerankPoolSpec) ([]storage.DocumentChunkHit, bool) {
 	if r == nil || len(fused) == 0 {
 		return fused, false
 	}
+	topN := spec.TopN
 	if topN <= 0 || topN > len(fused) {
 		topN = len(fused)
 	}
-	pool := make([]storage.DocumentChunkHit, 0, topN+seedN)
-	keys := make(map[string]struct{}, topN+seedN)
+	pool := make([]storage.DocumentChunkHit, 0, topN+spec.VecSeed+spec.LexSeed)
+	keys := make(map[string]struct{}, topN+spec.VecSeed+spec.LexSeed)
 	add := func(list []storage.DocumentChunkHit) {
 		for _, h := range list {
-			k := h.DocumentID + "#" + itoa(h.ChunkIndex)
+			k := h.DocumentID + "#" + strconv.Itoa(h.ChunkIndex)
 			if _, ok := keys[k]; ok {
 				continue
 			}
@@ -241,11 +276,19 @@ func RerankPoolCandidates(ctx context.Context, fused, vecSeeds []storage.Documen
 		}
 	}
 	add(fused[:topN])
-	if seedN > 0 {
-		if seedN > len(vecSeeds) {
-			seedN = len(vecSeeds)
+	if spec.VecSeed > 0 {
+		vs := spec.VecSeed
+		if vs > len(vecSeeds) {
+			vs = len(vecSeeds)
 		}
-		add(vecSeeds[:seedN])
+		add(vecSeeds[:vs])
+	}
+	if spec.LexSeed > 0 {
+		ls := spec.LexSeed
+		if ls > len(lexSeeds) {
+			ls = len(lexSeeds)
+		}
+		add(lexSeeds[:ls])
 	}
 	rr, applied := RerankCandidates(ctx, pool, query, r, len(pool))
 	if !applied {
@@ -253,7 +296,7 @@ func RerankPoolCandidates(ctx context.Context, fused, vecSeeds []storage.Documen
 	}
 	tail := make([]storage.DocumentChunkHit, 0, len(fused))
 	for _, h := range fused[topN:] {
-		if _, ok := keys[h.DocumentID+"#"+itoa(h.ChunkIndex)]; !ok {
+		if _, ok := keys[h.DocumentID+"#"+strconv.Itoa(h.ChunkIndex)]; !ok {
 			tail = append(tail, h)
 		}
 	}

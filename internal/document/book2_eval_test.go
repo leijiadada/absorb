@@ -225,24 +225,16 @@ func TestBook2RetrievalGeneralization(t *testing.T) {
 				t.Fatalf("embed %q: %v", c.query, qerr)
 			}
 			vec50 := retrieval.TopKByCosine(vhits, vrows, qv, 50)
-			vec40 := vec50
-			if len(vec50) > 40 {
-				vec40 = vec50[:40]
-			}
 			fused := retrieval.FuseRRF(lex, vec50, 50)
-			pool, poolKeys := rerankPoolF4B(fused, vec40)
-			rr, applied := retrieval.RerankCandidates(ctx, pool, c.query, reranker, len(pool))
+			// 生产同款 F4b 扩池精排（池 = 融合 top16 ∪ 向量 seed40，成功分支
+			// 与原手写 rerankPoolF4B+RerankCandidates+尾缀完全等价）：
+			// 直接调生产函数，避免评测再造一份管线副本。seed40 由函数内部截断。
+			pooled, applied := retrieval.RerankPoolCandidates(ctx, fused, vec50, nil, c.query, reranker, retrieval.RerankPoolSpec{TopN: rrTopN, VecSeed: retrieval.RerankSeedTopN})
 			if !applied {
 				rrFallbackCnt++
 				t.Logf("rerank 失败降级融合序（%s）", c.name)
 			}
-			var tail []storage.DocumentChunkHit
-			for _, h := range fused[rrTopN:] {
-				if _, ok := poolKeys[chunkKeyOf(h)]; !ok {
-					tail = append(tail, h)
-				}
-			}
-			hits, _ = searchdoc.DeduplicateHits(append(rr, tail...), 10)
+			hits, _ = searchdoc.DeduplicateHits(pooled, 10)
 		} else {
 			hits, _ = searchdoc.DeduplicateHits(lex, 10)
 		}

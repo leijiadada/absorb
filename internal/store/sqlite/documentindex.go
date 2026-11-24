@@ -159,6 +159,62 @@ func (ss *sqliteStore) LoadDocumentChunks(ctx context.Context, app, user, docume
 	return out, rows.Err()
 }
 
+// LoadDocumentSections 文档 chunk 的去重 section_path（按首现 chunk_index 排序，
+// 空面包屑不计）——动态建议提问（doc-suggestions）通道 B 素材。查无返回空切片。
+func (ss *sqliteStore) LoadDocumentSections(ctx context.Context, app, user, documentID string) ([]string, error) {
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
+	rows, err := ss.db.QueryContext(ctx,
+		`SELECT section_path, MIN(chunk_index) AS first_idx
+		 FROM document_chunks
+		 WHERE app_name=? AND user_id=? AND document_id=? AND section_path <> ''
+		 GROUP BY section_path
+		 ORDER BY first_idx`, app, user, documentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var p string
+		if err := rows.Scan(&p); err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
+// UpdateSectionPaths 原地刷新 chunk 面包屑元数据（撤销 marks 门控后存量文档用）：
+// 仅改 document_chunks / document_chunks_fts 的 section_path 两列，按 chunk_id
+// 定位。不动 chunk_id/content/search_text/offset，向量以 chunk_id 关联故完全
+// 不受影响——正文未变时无需重建 chunk、无需 re-embed。单事务，失败全回滚。
+func (ss *sqliteStore) UpdateSectionPaths(ctx context.Context, app, user, documentID string, paths map[string]string) error {
+	if len(paths) == 0 {
+		return nil
+	}
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
+	tx, err := ss.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	for chunkID, path := range paths {
+		if _, err := tx.ExecContext(ctx,
+			`UPDATE document_chunks SET section_path=? WHERE app_name=? AND user_id=? AND document_id=? AND id=?`,
+			path, app, user, documentID, chunkID); err != nil {
+			return err
+		}
+		if _, err := tx.ExecContext(ctx,
+			`UPDATE document_chunks_fts SET section_path=? WHERE chunk_id=?`,
+			path, chunkID); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
 // UpdateDocumentVectorState 只覆盖 document_index_state 的 vector_* 四列
 // （向量域状态）：embedChunks 成功/失败后调用，不触碰词法状态与 chunks/FTS。
 func (ss *sqliteStore) UpdateDocumentVectorState(ctx context.Context, app, user, documentID string, vs storage.DocumentVectorState) error {

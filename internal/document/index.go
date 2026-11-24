@@ -45,7 +45,11 @@ func (s *Service) BuildIndex(ctx context.Context, documentID string, dc *storage
 		st.IndexedContentHash == dc.ContentHash &&
 		st.ChunkerVersion == ChunkerVersion &&
 		st.TokenizerVersion == TokenizerVersion {
-		// 词法已就绪：是否需要补向量只由向量域决定
+		// 词法已就绪：正文/块边界未变，但 marks 可能新增（撤销门控后存量文档
+		// 重新 prepare 落了新 heading_marks）——按新 marks 重算面包屑，仅把
+		// 变化原地刷新 section_path，不重建 chunk、不 re-embed。
+		s.refreshSectionPaths(ctx, documentID, dc)
+		// 是否需要补向量只由向量域决定
 		if s.embedder == nil {
 			return
 		}
@@ -246,4 +250,40 @@ func markBreadcrumb(m extract.HeadingMark) string {
 		parts = append(parts, truncateRunes(t, headingTitleMax))
 	}
 	return truncatePath(strings.Join(parts, " > "))
+}
+
+// refreshSectionPaths 存量文档章节导航原地刷新（撤销门控后）：词法索引已就绪、
+// 正文/块边界未变，但本次 prepare 新落了 heading_marks（旧文档在门控下无 marks）。
+// 用库内 chunk 偏移 + 新 marks 按同一中点规则重算面包屑，仅把与库内不同的按
+// chunk_id 原地 UPDATE section_path——不重建 chunk、不改 chunk_id、不 re-embed
+// （向量吃纯正文，与 section_path 无关，见 embeddingInput）。marks 为空时跳过，
+// 避免清空 HTML 路径等本来就有面包屑的文档。
+func (s *Service) refreshSectionPaths(ctx context.Context, documentID string, dc *storage.DocumentContent) {
+	marks := parseHeadingMarks(dc.HeadingMarks)
+	if len(marks) == 0 {
+		return
+	}
+	chunks, err := s.st.LoadDocumentChunks(ctx, s.app, s.user, documentID)
+	if err != nil || len(chunks) == 0 {
+		return
+	}
+	pieces := make([]textChunk, len(chunks))
+	for i, c := range chunks {
+		pieces[i] = textChunk{Content: c.Content, StartOffset: c.StartOffset, EndOffset: c.EndOffset}
+	}
+	assignMarkSectionPaths(pieces, marks)
+	updates := make(map[string]string)
+	for i, c := range chunks {
+		if pieces[i].SectionPath != c.SectionPath {
+			updates[c.ID] = pieces[i].SectionPath
+		}
+	}
+	if len(updates) == 0 {
+		return
+	}
+	if err := s.st.UpdateSectionPaths(ctx, s.app, s.user, documentID, updates); err != nil {
+		log.Warnf("[Absorb] section_path refresh failed (doc=%s): %v", documentID, err)
+		return
+	}
+	log.Infof("[Absorb] section_path refreshed in place | doc=%s chunks=%d (no re-embed)", documentID, len(updates))
 }

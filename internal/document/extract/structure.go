@@ -97,8 +97,8 @@ func doclingSections(data []byte) ([]docSection, int) {
 }
 
 // MarksForDiag 诊断/评测入口：对指定文本应用 docling 章节匹配，返回标题
-// marks 与命中数（不修改正文）。生产门控在 extract.go（仅对主路保留文本
-// 生成 marks），不走此函数。
+// marks 与命中数（不修改正文）。生产路径在 extract.go（v7 起所有拿到 PDF
+// 字节的文档都生成 marks），不走此函数；本入口仅供实验手工构造 marks 用。
 func MarksForDiag(data []byte, text string) ([]HeadingMark, int) {
 	secs, docPages := doclingSections(data)
 	return overlayMarks(text, secs, docPages)

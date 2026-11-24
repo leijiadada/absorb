@@ -54,7 +54,7 @@ func ValidatePublicURL(raw string) error {
 	}
 	ips, err := lookupIP(host)
 	if err != nil {
-		return fmt.Errorf("域名解析失败: %v", err)
+		return fmt.Errorf("域名解析失败: %w", err)
 	}
 	for _, ip := range ips {
 		if !isPublicIP(ip) {

@@ -101,16 +101,36 @@ func (p *PDFExtractor) Extract(ctx context.Context, url string) (*Result, error)
 		content = best
 		currentBad = false
 	}
-	// 结构进元数据（F3a）：docling 章节树不再注入正文——匹配产出 HeadingMark
-	// 元数据（偏移+层级+面包屑），切块后按中点规则赋 SectionPath。门控沿用
-	// P1 结论：仅当择优保留主路文本时生成 marks（干净 poppler 文本上叠加的
-	// 负面结果源自标题行注入扰动块边界，F3a 正文不动后是否撤门控由评测决定，
-	// 评审契约先保守沿用）。poppler 未运行（无字节）时同样跳过。
+	// 页眉/页脚过滤：剔除分页文本中逐页重复的页首/页尾行。必须在 docling
+	// 结构叠加之前，HeadingMark 偏移以过滤后文本为基准；\f 数量与位置不变。
+	// 主路连续文本（无 \f）跳过。
+	var furnitureLines int
+	if strings.Contains(content, "\f") {
+		content, furnitureLines = stripPDFFurniture(content)
+	}
+	// 结构进元数据（F3a 形态，门控已放开）：docling 章节树不再注入正文——匹配
+	// 产出 HeadingMark 元数据（偏移+层级+面包屑），切块后按中点规则赋 SectionPath。
+	// 门控（仅主路保留文本才生成 marks）已撤：正文一字节不动、向量吃纯正文（F3c），
+	// P1 干净文本上叠加的 -7pp 来自标题行注入扰动块边界，该路径已不存在；F7 实测
+	// poppler 文本上 MarksForDiag 命中 192、覆盖 99.4%。仅在无 PDF 原始字节
+	// （poppler 未运行/下载失败，docling 无法解析章节树）时跳过。
 	var marks []HeadingMark
 	marksHit := 0
-	if data != nil && !switched {
+	if data != nil {
 		secs, docPages := doclingSections(data)
 		marks, marksHit = overlayMarks(content, secs, docPages)
+		// F8 hybrid：用 PDF 原生书签树的完整标题/层级修正 docling Path（断行、
+		// 错配），并在 docling 质量门挡掉的书（人月神话等 marks=0）上直接由书签
+		// 生成 marks。只改 Path / 新建 mark，正文不变；失败静默回退 docling。
+		// 必须在 stripTOC 之前——后者会改 Offset，页窗口匹配依赖原始分页文本。
+		var outlineHit int
+		marks, outlineHit = HybridOutlinePaths(ctx, marks, data, content)
+		if outlineHit > 0 {
+			log.Infof("[Absorb] outline hybrid | url=%s covered=%d total_marks=%d", url, outlineHit, len(marks))
+			if len(marks) > marksHit {
+				marksHit = len(marks)
+			}
+		}
 	}
 	if currentBad {
 		return nil, &Error{Status: StatusNoText, Message: "文本无法解码（PDF 字体缺少 Unicode 映射，可能是扫描件或特殊编码）"}
@@ -121,8 +141,8 @@ func (p *PDFExtractor) Extract(ctx context.Context, url string) (*Result, error)
 	// 其余偏移前移修正，维持「text[offset:] 以 Title 开头」不变式
 	var tocPages, tocLines int
 	content, marks, tocPages, tocLines = stripTOCWithStats(content, marks)
-	diagnostics := fmt.Sprintf("marks=%d tocPages=%d tocLines=%d popplerSwitched=%t",
-		marksHit, tocPages, tocLines, switched)
+	diagnostics := fmt.Sprintf("marks=%d tocPages=%d tocLines=%d furniture=%d popplerSwitched=%t",
+		marksHit, tocPages, tocLines, furnitureLines, switched)
 	// PDF 文本层的逐字符空格化修复（CID 字体常见现象，实测《Go 程序设计
 	// 语言》中文版整本 "最 早 参 与"——不分词不可用、原文呈现不可读）
 	return &Result{

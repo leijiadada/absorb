@@ -8,6 +8,7 @@ package retrieval
 
 import (
 	"math"
+	"strconv"
 
 	"absorb-agent/internal/store/storage"
 )
@@ -27,7 +28,7 @@ func FuseRRF(lexical, vector []storage.DocumentChunkHit, limit int) []storage.Do
 	fused := make([]entry, 0, len(lexical)+len(vector))
 	add := func(list []storage.DocumentChunkHit) {
 		for rank, h := range list {
-			key := h.DocumentID + "#" + itoa(h.ChunkIndex)
+			key := h.DocumentID + "#" + strconv.Itoa(h.ChunkIndex)
 			if pos, ok := index[key]; ok {
 				fused[pos].score += 1.0 / float64(RRFK+rank+1)
 				continue
@@ -53,18 +54,6 @@ func FuseRRF(lexical, vector []storage.DocumentChunkHit, limit int) []storage.Do
 		out = append(out, e.hit)
 	}
 	return out
-}
-
-func itoa(i int) string {
-	if i == 0 {
-		return "0"
-	}
-	var b []byte
-	for i > 0 {
-		b = append([]byte{byte('0' + i%10)}, b...)
-		i /= 10
-	}
-	return string(b)
 }
 
 // TopKByCosine 语义召回：查询向量与全部 chunk 向量算余弦相似度，取 top limit。

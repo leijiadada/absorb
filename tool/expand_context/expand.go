@@ -88,7 +88,7 @@ func NewExpandContextTool() tool.CallableTool {
 	return function.NewFunctionTool(fn,
 		function.WithName("expand_context"),
 		function.WithDescription(
-			"恢复当前页面中的原文证据。当问题需要引用页面其他部分的定义、论据或数据，"+
+			"恢复当前页面中的原文证据（仅限会话已缓存页面内容的网页场景；文档库请用 search_document）。当问题需要引用页面其他部分的定义、论据或数据，"+
 				"而这些内容不在你已看到的材料中时调用：对缓存的页面全文做关键词定向检索，本地完成、零网络开销。"+
 				"提供 keywords（页面原文可能使用的词，含英文原名），一次性返回所有命中（命中章节、段落、全文片段），无需多次调用。"+
 				"关键词全页未命中时返回零命中信号，表示页面没有展开该内容，直接基于自身知识回答。"+

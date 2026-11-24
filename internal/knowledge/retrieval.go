@@ -2,6 +2,7 @@ package knowledge
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"strings"
 	"unicode"
@@ -136,7 +137,7 @@ func (s *Service) SearchRelevant(ctx context.Context, app, user string, q Retrie
 	}
 	raw, err := ks.Keywords(ctx, q)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("生成检索关键词: %w", err)
 	}
 	kws := normalizeKeywords(raw)
 	if len(kws) == 0 {
@@ -153,7 +154,7 @@ func (s *Service) SearchRelevant(ctx context.Context, app, user string, q Retrie
 
 	hits, err := s.st.SearchKnowledgeWithSources(ctx, app, user, kws, 0)
 	if err != nil {
-		return nil, kws, err
+		return nil, kws, fmt.Errorf("检索知识命中: %w", err)
 	}
 
 	var cands []*RetrievalCandidate
@@ -164,11 +165,11 @@ func (s *Service) SearchRelevant(ctx context.Context, app, user string, q Retrie
 		}
 		cands = append(cands, c)
 	}
-	sort.Slice(cands, func(i, j int) bool {
+	sort.SliceStable(cands, func(i, j int) bool {
 		if cands[i].Score != cands[j].Score {
 			return cands[i].Score > cands[j].Score
 		}
-		return false // 同分保持存储层 updated_at 降序（hits 已按此排序）
+		return false // 同分保持存储层 updated_at 降序（hits 已按此序；Stable 保住候选池>12 时的次级序，契约见 RetrievalSearcher）
 	})
 	if len(cands) > opts.Limit {
 		cands = cands[:opts.Limit]
