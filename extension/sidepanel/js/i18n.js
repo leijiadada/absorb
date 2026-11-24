@@ -95,7 +95,7 @@ const zh = {
   },
   // 软提示（建议性）
   soft: {
-    roundsWarn: '已 {rounds} 轮对话，建议点「＋新」新建会话以节省 token（历史会话保留在列表中）',
+    roundsWarn: '已 {rounds} 轮对话，建议新建会话以节省 token（历史会话保留在列表中）',
   },
   // 占位提示
   placeholders: {
@@ -138,12 +138,14 @@ const zh = {
     metaReady: '正文已提取 · {chars} 字 · 文本层可读取',
     metaPartial: '正文部分提取 · {chars} 字',
     suggestTitle: '从理解这份文档开始',
-    suggest1: '帮我建立这篇文档的整体理解框架',
-    suggest2: '提炼核心观点、论据和结论',
-    suggest3: '有哪些观点值得质疑或进一步思考？',
     reread: '重新读取',
     errorGeneric: '读取失败，请稍后重试。',
     errorTimeout: '读取超时，请检查网络后重试。',
+  },
+  // 网页建议 chips（doc-suggestions §4.4）：普通网页空态区，pageMd 标题组句
+  webchips: {
+    title: '你可能想了解',
+    question: '文中〈{title}〉这部分讲了什么？',
   },
   // 文档工具栏（PR4：输入框上方单行条 + 展开面板）
   docbar: {
@@ -194,15 +196,13 @@ const zh = {
   // HTML 静态文案（sidepanel.html 经 data-i18n* 属性替换）
   ui: {
     docTitle: 'Absorb 阅读助手',
-    history: '历史',
-    newShort: '＋新',
     historyTip: '查看历史',
     restoreHistory: '拉取历史会话',
     remoteLoadFailed: '加载失败，请确认桌面端已启动',
     newTip: '新对话',
     historyTitle: '历史对话',
-    emptyTitle: '右键划词提问',
-    emptyTip1: '输入框,针对网页提问即可,回答将在此流式显示。',
+    emptyTitle: '从阅读开始，深入理解',
+    emptyTip1: '围绕当前网页提问，探索内容背后的观点与知识。',
     removeChip: '移除该标签',
     webSource: '网页',
     me: '我',
@@ -346,12 +346,15 @@ const en = {
     metaReady: 'Text extracted · {chars} chars · text layer readable',
     metaPartial: 'Text partially extracted · {chars} chars',
     suggestTitle: 'Start by understanding this document',
-    suggest1: 'Build an overall framework of this document for me',
-    suggest2: 'Extract the core points, arguments and conclusions',
-    suggest3: 'Which viewpoints are worth questioning or thinking further about?',
     reread: 'Read again',
     errorGeneric: 'Read failed. Please try again later.',
     errorTimeout: 'Read timed out. Check your network and retry.',
+  },
+  // Web suggestion chips (doc-suggestions §4.4): empty-state on plain pages,
+  // questions composed from pageMd headings
+  webchips: {
+    title: 'You may want to know',
+    question: 'What does the section "{title}" cover?',
   },
   // Document toolbar (PR4: single-row bar above the input + expandable panel)
   docbar: {
@@ -398,15 +401,13 @@ const en = {
   },
   ui: {
     docTitle: 'Absorb Reading Assistant',
-    history: 'History',
-    newShort: '＋ New',
     historyTip: 'View history',
     restoreHistory: 'Pull history',
     remoteLoadFailed: 'Load failed. Make sure the desktop app is running',
     newTip: 'New conversation',
     historyTitle: 'History',
-    emptyTitle: 'Select & Ask',
-    emptyTip1: 'Type in the input box to ask about the current page — answers will stream in here.',
+    emptyTitle: 'Start reading, go deeper',
+    emptyTip1: 'Ask about the current page to explore the ideas and knowledge behind the content.',
     removeChip: 'Remove chip',
     webSource: 'Web',
     me: 'Me',
@@ -448,7 +449,8 @@ export function t(key, params = {}) {
 // 把 HTML 静态文案按当前语言替换（浏览器不会替换 HTML 里的 __MSG_*__，只能 JS 注入）：
 // data-i18n → textContent；data-i18n-placeholder → 写回 data-placeholder
 // （contenteditable 占位由 CSS attr(data-placeholder) 渲染）；
-// data-i18n-title → title，且原有 aria-label 一并同步
+// data-i18n-tip → 写回 data-tip（自定义 CSS 气泡文案）；
+// data-i18n-aria → aria-label（图标按钮的无障碍名，不再借道原生 title）
 export function applyDomI18n(root = document) {
   document.documentElement.lang = uiLang;
   root.querySelectorAll('[data-i18n]').forEach((el) => {
@@ -456,6 +458,12 @@ export function applyDomI18n(root = document) {
   });
   root.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
     el.dataset.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+  root.querySelectorAll('[data-i18n-tip]').forEach((el) => {
+    el.dataset.tip = t(el.dataset.i18nTip);
+  });
+  root.querySelectorAll('[data-i18n-aria]').forEach((el) => {
+    el.setAttribute('aria-label', t(el.dataset.i18nAria));
   });
   root.querySelectorAll('[data-i18n-title]').forEach((el) => {
     const v = t(el.dataset.i18nTitle);

@@ -47,6 +47,8 @@
   --ease: cubic-bezier(.4, 0, .2, 1);
   --dur: .18s;
   --icon-sm: 16px;
+  /* header 固定高度：融合滚动布局的让位基准（.main 上拉量 / .messages 顶部留白） */
+  --header-h: 38px;
   --icon-md: 20px;
 }
 
@@ -103,12 +105,16 @@ button {
 /* ---------- Header ----------
    单行工具条：品牌由系统标题栏承担，页面内不放 logo，仅右侧操作按钮 */
 .app-header {
+  height: var(--header-h);
+  padding: 0 14px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding: 6px 14px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  /* 与内容同底色，纯色遮盖滚入 header 下方的内容（无虚化、无渐隐）；
+     消息区经 .main 负 margin 上拉，z-index 保证图标浮于内容上 */
+  background: var(--bg);
+  position: relative;
+  z-index: 1;
   flex-shrink: 0;
 }
 
@@ -123,6 +129,13 @@ button {
   color: var(--text-2);
   padding: 5px 10px;
   font-size: 12px;
+}
+
+/* 历史/新会话按钮：纯图标无框（同 #imageBtn），收紧内边距保持点击区 */
+#toggleHistory,
+#newSession {
+  border: none;
+  padding: 5px 8px;
 }
 
 /* 图片上传按钮：无边框纯图标，置于操作行右侧（发送旁） */
@@ -178,13 +191,38 @@ button {
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
+/* header 图标按钮：气泡显示在按钮下方（ChatGPT 式；底部工具栏空间不足仍显示在上方） */
+.app-header .icon-btn[data-tip]:hover::after {
+  top: calc(100% + 8px);
+  bottom: auto;
+  animation: tip-in-below var(--dur) var(--ease);
+}
+@keyframes tip-in-below {
+  from { opacity: 0; transform: translateX(-50%) translateY(-2px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* 贴边按钮（图片上传位于操作行最左）：气泡左对齐锚定并向右展开，
+   避免居中定位后左溢出面板边缘被裁剪；动画同样去掉水平位移 */
+#imageBtn[data-tip]:hover::after {
+  left: 0;
+  transform: none;
+  animation: tip-in-left var(--dur) var(--ease);
+}
+@keyframes tip-in-left {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ---------- Main ---------- */
 .main {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 12px 14px;
+  /* 上拉至 header 下方：负 margin 让消息滚动区顶端与视口顶对齐，内容得以滚入 header 渐隐遮罩下 */
+  margin-top: calc(-1 * var(--header-h));
+  padding: 0 14px 12px;
   min-height: 0;
 }
 
@@ -301,6 +339,8 @@ button {
   gap: 12px;
   min-height: 0;
   overflow-y: auto;
+  /* 顶部留白 = header 高度：静止时首条内容恰好位于 header 下缘；滚动后内容穿过遮罩淡出 */
+  padding-top: var(--header-h);
   padding-bottom: 16px;
 }
 
@@ -953,6 +993,12 @@ button {
 
 #askBtn {
   margin-left: auto;
+  /* 纯图标发送键：正圆钮（全局 pill 圆角），18px 箭头 + 8px 内边距 ≈ 34px，命中区与参考设计相当 */
+  padding: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
 }
 
 
@@ -2286,7 +2332,7 @@ button {
 .db-suggest-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  /* 箭头贴近问题文本（Trae 式），不顶到行尾 */
   gap: 8px;
   width: 100%;
   padding: 9px 0;
@@ -2301,6 +2347,19 @@ button {
 .db-suggest-item:hover { color: var(--text); }
 .db-suggest-item .arr { color: var(--muted); flex-shrink: 0; }
 .db-suggest-item:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--ring); border-radius: var(--radius-sm); }
+
+/* ---------- 网页建议问题块（doc-suggestions §4.4）：内容区尾部，视觉归属内容框 ---------- */
+/* 挂在 main 尾部（composer 之外）：背景透出内容区灰底（--bg），与内容框相融；
+   与输入区的边界由 composer 白底 + 上缘分隔线产生，问题块自身不画框 */
+.web-chips {
+  width: 100%;
+  margin: 0 0 4px;
+  text-align: left;
+}
+
+.web-chips .wc-title {
+  margin-bottom: 6px;
+}
 
 /* 面板底部操作行：双描边按钮（重新读取 / 打开原文） */
 .db-actions {

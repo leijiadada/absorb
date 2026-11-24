@@ -22,10 +22,9 @@ export const DOC_TYPES = {
     key: 'pdf',
     ext: /\.pdf$/i,
     icon: '../icons/PDF.png',
-    suggestKeys: ['suggest1', 'suggest2', 'suggest3'],
   },
-  // 未来 docx / epub / html 等类型：在此各加一项（icon + ext + suggestKeys），
-  // bar/panel 渲染走同一套代码，不感知具体格式。
+  // 未来 docx / epub / html 等类型：在此各加一项（icon + ext）即可——建议提问
+  // 由服务端章节树双通道生成（doc-suggestions-design.md），渲染不感知格式。
 };
 
 // URL → 类型定义（未命中返回 null）。isPdfUrl 保留给 conversation.js 提问链路。
@@ -258,20 +257,22 @@ function renderPanel(type, name, state) {
     );
     panel.append(info);
 
-    panel.append(el('div', 'db-sec', t('doccard.suggestTitle')));
-    const list = el('div', 'db-suggest');
-    type.suggestKeys.forEach((k) => {
-      const item = el('button', 'db-suggest-item');
-      item.type = 'button';
-      item.append(el('span', 'db-suggest-text', t(`doccard.${k}`)), el('span', 'arr', '↗'));
-      item.addEventListener('click', () => {
-        // 建议问题透传 documentId：提问时 getActivePage 按当前活动 PDF 标签页
-        // 自动附带，这里只负责把问题落输入框提交
-        if (_ask) _ask(t(`doccard.${k}`));
+    // 动态建议提问（doc-suggestions-design.md）：服务端章节树双通道直出成句
+    // 问题，原样显示、点击原样发送（documentId 由 getActivePage 自动附带）。
+    // 素材不足（<2 条）不渲染该小节——裁决：无固定兜底。
+    const suggestions = Array.isArray(rec.suggestions) ? rec.suggestions : [];
+    if (suggestions.length >= 2) {
+      panel.append(el('div', 'db-sec', t('doccard.suggestTitle')));
+      const list = el('div', 'db-suggest');
+      suggestions.forEach((question) => {
+        const item = el('button', 'db-suggest-item');
+        item.type = 'button';
+        item.append(el('span', 'db-suggest-text', question), el('span', 'arr', '→'));
+        item.addEventListener('click', () => { if (_ask) _ask(question); });
+        list.appendChild(item);
       });
-      list.appendChild(item);
-    });
-    panel.append(list);
+      panel.append(list);
+    }
 
     const actions = el('div', 'db-actions');
     const reread = el('button', 'db-act-btn', t('doccard.reread'));
@@ -380,6 +381,7 @@ async function startRead() {
         serverStatus: status,
         charCount: res.charCount || 0,
         truncated: !!res.truncated,
+        suggestions: Array.isArray(res.suggestions) ? res.suggestions : [],
         updatedAt: Date.now()
       };
     } else {

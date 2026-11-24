@@ -17,6 +17,7 @@ import { initImageUI, setImageGate } from './image.js';
 import { handleFigAction } from './figToolbar.js';
 import { initDesktopGuide } from './desktop-guide.js';
 import { initDocCard } from './doccard.js';
+import { initWebChips } from './webchips.js';
 
 // ---------- 事件绑定 ----------
 // contenteditable 输入变化 → 更新占位与按钮可用态 + 同步草稿（防抖落 storage）
@@ -274,14 +275,16 @@ async function init() {
   initDesktopGuide();
   // 文档卡（PDF 解读）：识别活动 PDF 标签页渲染三态卡片；建议问题经 ask 落
   // 输入框后走 submitQuestion 全链路（追加而非清空，不吞用户已输入的草稿/chip）
-  initDocCard({
-    ask: (text) => {
-      const elx = els.questionInput;
-      elx.appendChild(document.createTextNode(text));
-      elx.dispatchEvent(new InputEvent('input', { bubbles: true }));
-      submitQuestion();
-    }
-  });
+  const askViaComposer = (text) => {
+    const elx = els.questionInput;
+    elx.appendChild(document.createTextNode(text));
+    elx.dispatchEvent(new InputEvent('input', { bubbles: true }));
+    submitQuestion();
+  };
+  initDocCard({ ask: askViaComposer });
+  // 网页建议 chips（doc-suggestions §4.4）：普通网页空态区 pageMd 标题问题，
+  // 与文档卡共用同一提问入口（活动标签页类型互斥，webchips.js 内部判定）
+  initWebChips({ ask: askViaComposer });
   // 能力下发刷新软闸：不阻塞 init（桥端口发现可能慢/失败，失败保持 settings 缓存初判）
   refreshCapabilities().then((caps) => {
     if (caps !== null) setImageGate(caps);

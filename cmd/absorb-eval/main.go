@@ -164,10 +164,11 @@ func main() {
 			}
 			retrieval.SetSharedReranker(retrieval.NewLlamaRerankClient(rrBase, rrModel, emb.APIKey,
 				func() string { return cfg.Proxy.URL }), emb.RerankTopN)
+			retrieval.SetSharedRerankLexSeed(emb.RerankLexSeed)
 			rrDesc = rrModel
 		}
-		log.Infof("[Absorb] eval semantic retrieval | embedding=%s rerank=%s topN=%d",
-			emb.Model, rrDesc, retrieval.SharedRerankTopN())
+		log.Infof("[Absorb] eval semantic retrieval | embedding=%s rerank=%s topN=%d lex_seed=%d",
+			emb.Model, rrDesc, retrieval.SharedRerankTopN(), retrieval.SharedRerankLexSeed())
 	} else {
 		log.Infof("[Absorb] eval semantic retrieval disabled (embedding.api_key empty) — lexical only")
 	}

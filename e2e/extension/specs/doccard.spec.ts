@@ -124,8 +124,30 @@ test.describe('文档卡（PDF 解读）', () => {
     });
     await expect(sidepanel.locator('.msg.assistant').last()).toBeVisible();
     const asked = await pollLastAsk(sidepanel);
-    expect(asked.question).toContain('帮我建立这篇文档的整体理解框架');
+    // 动态建议（doc-suggestions）：问题为服务端双通道直出的成句文本，原样发送
+    expect(asked.question).toContain('书中〈检索增强生成〉这部分讲了什么？');
     expect(asked.documentId).toBe(PDF_URL);
+  });
+
+  test('prepare 无 suggestions 字段 → 不渲染建议提问小节（无固定兜底）', async ({ context, serviceWorker }) => {
+    const pdf = await openPdfTab(context);
+    await pdf.bringToFront();
+    await expectPdfActive(serviceWorker);
+    // 注入 ready 响应但不带 suggestions 字段（服务端无素材的 mock 形态）
+    await fetch(`http://127.0.0.1:${MOCK_PORT}/__prepare-script`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'ready', charCount: 12000, message: '' }),
+    });
+    await sidepanel.evaluate(() => {
+      const btn = [...document.querySelectorAll('#docCard .db-bar-cta')]
+        .find((b) => b.textContent === '读取文档') as HTMLButtonElement | undefined;
+      btn?.click();
+    });
+    await pollLastPrepare(sidepanel);
+    await expect(sidepanel.locator('#docCard .db-badge-green')).toHaveText('已就绪');
+    // 就绪自动展开：建议提问小节整段不渲染（文档信息 + 操作仍在）
+    await expect(sidepanel.locator('#docCard .db-suggest')).toHaveCount(0);
+    await expect(sidepanel.locator('#docCard .db-act-btn')).toHaveCount(1);
   });
 
   test('失败态（needs_auth）渲染原因文案，重试后转已就绪', async ({ context, serviceWorker }) => {

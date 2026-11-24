@@ -488,18 +488,11 @@ function onDocClick(e) {
 // ---------- 初始化 ----------
 // 视觉软闸：按 hasVisionModel() 重算图片按钮可用态。可多次调用——启动时按
 // settings 缓存初判，/api/capabilities 下发后刷新（见 main.js init 与 state.refreshCapabilities）。
-// 禁用态提示走 CSS 气泡（data-tip，样式见 sidepanel.css）：原生 title 的气泡位置由
-// 浏览器决定（底部工具栏会弹到按钮下方），且无法承载定位；禁用态须移除 title 避免
-// 原生气泡与 CSS 气泡叠加。恢复可用时还原正常态 title（"插入图片"）。
+// 提示统一走 CSS 气泡（data-tip，样式见 sidepanel.css）：可用态显示"插入图片"、
+// 禁用态显示不支持原因；不用原生 title（气泡位置由浏览器决定且无法承载定位）
 export function setImageGate(enabled) {
   els.imageBtn.disabled = !enabled;
-  if (enabled) {
-    delete els.imageBtn.dataset.tip;
-    els.imageBtn.title = t('ui.imageTip');
-  } else {
-    els.imageBtn.removeAttribute('title');
-    els.imageBtn.dataset.tip = t('ui.imageDisabledTip');
-  }
+  els.imageBtn.dataset.tip = enabled ? t('ui.imageTip') : t('ui.imageDisabledTip');
 }
 
 export function initImageUI() {
