@@ -22,7 +22,6 @@ import (
 	"trpc.group/trpc-go/trpc-agent-go/runner"
 	"trpc.group/trpc-go/trpc-agent-go/session"
 
-	expand "absorb-agent/tool/expand_context"
 	readpage "absorb-agent/tool/read_page"
 	recall "absorb-agent/tool/recall_history"
 	searchdoc "absorb-agent/tool/search_document"
@@ -128,10 +127,8 @@ func resumePhase(
 	if perr != nil {
 		log.Warnf("[Absorb] resume load page cache failed (session=%s): %v", sessionID, perr)
 	}
-	refMat, _ := sessionSvc.RecentReferenceMaterial(ctx, app, user, sessionID, filterKey)
 	recallKey := session.Key{AppName: app, UserID: user, SessionID: sessionID}
-	runCtx := expand.WithPageSearchState(ctx, pageText, refMat)
-	runCtx = readpage.WithPageSectionState(runCtx, pageText)
+	runCtx := readpage.WithPageSectionState(ctx, pageText)
 	// search_document（M3 hybrid）：恢复轮无 documentId 上下文，nil = 租户内全部已索引文档
 	runCtx = searchdoc.WithDocumentQueryState(runCtx, sessionSvc.Storage(),
 		retrieval.SharedEmbedder(), sessionSvc.Storage(), sessionSvc.Storage(), app, user, nil)

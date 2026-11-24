@@ -265,7 +265,7 @@ func pageContentBlock(c AskContext) string {
 	if len(md) > pageContentHeadRunes {
 		md = md[:pageContentHeadRunes]
 		// 如实标注：缓存有上限（PageTextMaxLen），不能声称"完整内容已缓存"
-		tail = "\n（以上为页面开头部分；后续内容已缓存至篇幅上限，可调用 expand_context 工具按关键词检索；如仍未覆盖所需细节请如实说明）"
+		tail = "\n（以上为页面开头部分；后续内容可调 read_page 工具查看章节目录并按节阅读；如仍未覆盖所需细节请如实说明）"
 		if strings.TrimSpace(c.DocumentID) != "" {
 			// 文档场景（PDF/长文）：30k 缓存之外的全文证据走 search_document（FTS 全文检索）
 			tail += "长文档全文证据可用 search_document 工具检索（不受上述篇幅上限约束）。"

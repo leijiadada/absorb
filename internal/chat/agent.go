@@ -24,7 +24,6 @@ import (
 	"trpc.group/trpc-go/trpc-agent-go/tool"
 
 	askuser "absorb-agent/tool/askuser"
-	expand "absorb-agent/tool/expand_context"
 	fetch "absorb-agent/tool/fetch_page"
 	readpage "absorb-agent/tool/read_page"
 	recall "absorb-agent/tool/recall_history"
@@ -298,7 +297,6 @@ func NewRunner(cfg conf.Config, proxyFn func() string, ps PromptStrategy, sessio
 		// 只重建历史部分，system 段从此逐字节稳定。
 		llmagent.WithSessionSummaryInjectionMode(llmagent.SessionSummaryInjectionUser),
 		llmagent.WithTools([]tool.Tool{
-			expand.NewExpandContextTool(),     // 当材料不足时反向请求浏览器扩充邻近段落
 			readpage.NewReadPageTool(),        // 网页章节读取：目录 + 按节读全文（确定性定位，替代关键词猜词）
 			searchdoc.NewSearchDocumentTool(), // 长文档（PDF）全文证据检索（M1：chunks+FTS5，30k 缓存之外可达）+ 读页模式
 			fetchTool,                         // 需要访问 URL 资源时直接抓取（基于 httpfetch，开主内容提取）

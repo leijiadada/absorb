@@ -483,8 +483,8 @@ func TestPageContentBlock_HeadBudget(t *testing.T) {
 	if n > 7000 {
 		t.Errorf("<page_content> 应截断注入（got %d runes）", n)
 	}
-	if !strings.Contains(got, "expand_context") {
-		t.Errorf("截断时应带 expand_context 检索提示")
+	if !strings.Contains(got, "read_page") {
+		t.Errorf("截断时应带 read_page 章节阅读提示")
 	}
 }
 

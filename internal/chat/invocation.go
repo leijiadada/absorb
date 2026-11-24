@@ -9,7 +9,6 @@ import (
 	"trpc.group/trpc-go/trpc-agent-go/model"
 	"trpc.group/trpc-go/trpc-agent-go/session"
 
-	expand "absorb-agent/tool/expand_context"
 	readpage "absorb-agent/tool/read_page"
 	retriever "absorb-agent/tool/pageretriever"
 	recall "absorb-agent/tool/recall_history"
@@ -146,12 +145,12 @@ func PrepareInvocation(ctx context.Context, app, user string, in InvocationInput
 		}
 	}
 
-	// 页面文本缓存（expand_context 本地检索用，scope 感知：同会话多页面各存一行）：
-	// 带新划词 → pageMd（扩展端已转换，免转换直读）写入该 scope 缓存（追问可复用）；
-	// 无新划词（追问）/pageMd 为空（转换失败等）→ 按当前 scope 读缓存，查无则空
-	// （宁缺勿错，不串其他页面）；都无 → 检索工具返回无缓存失败。
-	// 文档轮（页面携带 documentId）不读写页面缓存：expand_context 为网页划词
-	// 专属，文档场景的证据检索与原文阅读走 search_document（读页模式自行加载
+	// 页面文本缓存（read_page 章节索引与页文本来源，scope 感知：同会话多页面
+	// 各存一行）：带新划词 → pageMd（扩展端已转换，免转换直读）写入该 scope
+	// 缓存；无新划词（追问）/pageMd 为空（转换失败等）→ 按当前 scope 读缓存，
+	// 查无则空（宁缺勿错，不串其他页面）；都无 → read_page 返回无缓存失败。
+	// 文档轮（页面携带 documentId）不读写页面缓存：页面缓存为网页划词专属，
+	// 文档场景的证据检索与原文阅读走 search_document（读页模式自行加载
 	// document_contents）。
 	isDocTurn := in.Page != nil && strings.TrimSpace(in.Page.DocumentID) != ""
 	pageText := ""
@@ -209,11 +208,6 @@ func PrepareInvocation(ctx context.Context, app, user string, in InvocationInput
 			}
 		}
 	}
-	// 参考材料优先取追问重申结果（多轮语义），首轮取划选文本
-	refMat := askCtx.ReferenceMaterial
-	if strings.TrimSpace(refMat) == "" {
-		refMat = askCtx.SelectedText
-	}
 	recallKey := session.Key{AppName: app, UserID: user, SessionID: sessionID}
 
 	prompt := ps.BuildUserMessage(askCtx)
@@ -222,10 +216,8 @@ func PrepareInvocation(ctx context.Context, app, user string, in InvocationInput
 	for _, im := range in.Images { // 文本 prompt 不变（前端已带“请解读图片内容”），仅追加图片 part
 		msg.AddImageURL(imageSource(im), "auto") // src 为 base64 或 http(s) 链接均兼容
 	}
-	// 注入页面检索状态（缓存全文+参考材料），expand_context 工具从 ctx 读取；
-	// 同一份缓存文本注入 read_page 章节索引（目录 + 按节读原文）
-	runCtx := expand.WithPageSearchState(ctx, pageText, refMat)
-	runCtx = readpage.WithPageSectionState(runCtx, pageText)
+	// 注入网页章节索引（read_page：目录 + 按节读原文）
+	runCtx := readpage.WithPageSectionState(ctx, pageText)
 	// 注入文档检索状态（M3 hybrid）：当前文档锚定注入（不接受模型指定
 	// document_id，范围与归属校验都在服务端）；无文档轮为空 = 租户内全部
 	// 已索引文档。SharedEmbedder 为 nil（未配置）时自动纯词法。

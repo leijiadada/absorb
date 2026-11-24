@@ -1,10 +1,10 @@
 // Package read_page 网页章节读取工具：在缓存的页面结构化文本（pageMd，
 // markdown 标题已转换）上按章节定位与阅读。
 //
-// 与 expand_context 分工：expand_context 靠模型猜关键词做子串匹配（无排序、
-// 命中质量不稳定），read_page 按标题结构确定性切分——outline 列目录、按序号
-// 读整节，模型不猜词、定位准确率 100%。页级阅读（已入库文档）走
-// search_document 的 start_page 模式，两者职责互不重叠。
+// expand_context 的关键词子串匹配靠模型猜词、无相关性排序，命中质量不稳定；
+// read_page 按标题结构确定性切分——outline 列目录、按序号读整节，模型不猜词、
+// 定位准确率 100%。页级阅读（已入库文档）走 search_document 的 start_page
+// 模式，两者职责互不重叠。
 package readpage
 
 import (
@@ -28,8 +28,8 @@ type pageSectionState struct {
 
 type pageSectionKey struct{}
 
-// WithPageSectionState 注入页面章节索引状态（与 expand_context 共用同一份
-// 页面缓存文本）；pageText 为空时工具返回无缓存失败信号。
+// WithPageSectionState 注入页面章节索引状态；pageText 为空时工具返回
+// 无缓存失败信号。
 func WithPageSectionState(ctx context.Context, pageText string) context.Context {
 	return context.WithValue(ctx, pageSectionKey{}, &pageSectionState{pageText: pageText})
 }
@@ -153,7 +153,7 @@ func NewReadPageTool() tool.CallableTool {
 		txt := s.text()
 		runes := []rune(txt)
 		if len(runes) > sectionBudgetRunes {
-			txt = string(runes[:sectionBudgetRunes]) + "…（本节超预算已截断，可结合 expand_context 关键词检索该节细节）"
+			txt = string(runes[:sectionBudgetRunes]) + "…（本节超长已截断）"
 		}
 		span.SetAttributes(
 			attribute.Int("section", in.Section),
