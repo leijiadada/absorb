@@ -9,7 +9,7 @@ require (
 	github.com/go-ego/gse v1.0.0
 	github.com/google/uuid v1.6.0
 	github.com/openai/openai-go v1.12.0
-	github.com/unitedrhino/docling v1.6.2
+	github.com/unitedrhino/docling v1.6.3
 	github.com/wailsapp/wails/v2 v2.16.0
 	go.opentelemetry.io/otel v1.45.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.29.0

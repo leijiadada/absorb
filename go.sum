@@ -196,8 +196,8 @@ github.com/tiendc/go-deepcopy v1.7.2 h1:Ut2yYR7W9tWjTQitganoIue4UGxZwCcJy3orjrrI
 github.com/tiendc/go-deepcopy v1.7.2/go.mod h1:4bKjNC2r7boYOkD2IOuZpYjmlDdzjbpTRyCx+goBCJQ=
 github.com/tkrajina/go-reflector v0.5.8 h1:yPADHrwmUbMq4RGEyaOUpz2H90sRsETNVpjzo3DLVQQ=
 github.com/tkrajina/go-reflector v0.5.8/go.mod h1:ECbqLgccecY5kPmPmXg1MrHW585yMcDkVl6IvJe64T4=
-github.com/unitedrhino/docling v1.6.2 h1:iubPRwVXiMIOXK+Re23c0X3/RXMwrtNDlhIomkOC7GU=
-github.com/unitedrhino/docling v1.6.2/go.mod h1:hNzhm+qEqBJ3VDGIBXvC4NCQchgB8Z+ic75HzVQ0hGU=
+github.com/unitedrhino/docling v1.6.3 h1:lDeAKH1g9Szfpj86S4oRECb8yQ31cWMMjaVzo+cxoqo=
+github.com/unitedrhino/docling v1.6.3/go.mod h1:hNzhm+qEqBJ3VDGIBXvC4NCQchgB8Z+ic75HzVQ0hGU=
 github.com/unitedrhino/go-cad v0.0.0-20261001090957-ddd91eea9618 h1:0nHkFHRgw+w6C1gNhJszzzBON906sY/n+xbItLeSF+g=
 github.com/unitedrhino/go-cad v0.0.0-20261001090957-ddd91eea9618/go.mod h1:/lJP5vXeqEveWggGtlZhwbs2L2D9RSLZiKjhyWaSSvQ=
 github.com/valyala/bytebufferpool v1.0.0 h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6KllzawFIhcdPw=
