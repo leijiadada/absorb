@@ -37,16 +37,14 @@ const popplerTimeout = 60 * time.Second
 var bundledPopplerRel = filepath.Join("runtime", "poppler")
 
 // pdftotextBin 解析 pdftotext 可执行文件路径：环境变量 ABSORB_PDFTOTEXT
-// （显式路径，人工覆盖场景）优先；其次捆绑运行时（exe 目录与工作目录旁的
-// runtime/poppler，覆盖安装版 {app}\runtime、便携模式 exe 旁、开发态仓库根
-// 三种形态）；最后 PATH 查找（系统安装的 poppler）。不可用返回空串。
-// PdftotextAvailable pdftotext 是否可用（环境变量/捆绑运行时/PATH 任一命中）。
-// 供上层在本地 PDF 入口做前置提示，避免走到提取层才失败。
-func PdftotextAvailable() bool { return pdftotextBin() != "" }
-
+// （显式覆盖）→ 捆绑运行时 → PATH，不可用返回空串。
 func pdftotextBin() string {
 	return pdftotextBinIn(bundledBases())
 }
+
+// PdftotextAvailable pdftotext 是否可用（环境变量/捆绑运行时/PATH 任一命中）。
+// 供上层在本地 PDF 入口做前置提示，避免走到提取层才失败。
+func PdftotextAvailable() bool { return pdftotextBin() != "" }
 
 // pdftotextBinIn 查找逻辑本体（bases 注入便于单测）：环境变量 → 捆绑运行时
 // → PATH。

@@ -54,13 +54,13 @@ type searchDocumentOutput struct {
 	Message string `json:"message,omitempty"` // 失败/零命中说明
 }
 
-// searchState 单次 /api/ask 请求内的检索上下文。
 // ContentReader 文档正文读取依赖（storage.Storage 方法子集）：页号推导与
 // 读页模式需要完整正文。
 type ContentReader interface {
 	LoadDocumentContentByID(ctx context.Context, app, user, docID string) (*storage.DocumentContent, error)
 }
 
+// searchState 单次 /api/ask 请求内的检索上下文。
 type searchState struct {
 	searcher      Searcher
 	app, user     string
