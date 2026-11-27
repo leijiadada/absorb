@@ -8,7 +8,8 @@
 # - 依赖与格式检查：go mod tidy 一致性、gofmt（含 interface{} → any）、goimports、
 #   typos 拼写检查（排除规则见 _typos.toml）；
 # - 大文件防护：新增/复制/重命名文件超过 1.5MB 时 check-file-size job 失败，
-#   已跟踪大文件的修改不拦；
+#   已跟踪大文件的修改不拦；runtime/、语料、vendor 目录的新增文件同样放行
+#   （随安装包分发的便携二进制与抓取语料本就是大文件，见下方 job 的排除清单）；
 # - Windows 安装包由 tag 触发的 release.yml 流水线构建（Inno Setup）。
 name: CI
 
@@ -195,8 +196,9 @@ jobs:
       - name: 运行扩展 E2E
         run: npx playwright test -c extension/playwright.config.ts
 
-  # 拦截新增/复制/重命名的超过 1.5MB 的文件；过滤条件不含 M，已跟踪大文件
-  # （runtime/、语料、vendor）的修改不受影响
+  # 拦截新增/复制/重命名的超过 1.5MB 的文件；过滤条件不含 M，已跟踪大文件的修改不受
+  # 影响。runtime/（便携 python/mingit/poppler）、语料、vendor 的新增文件同样放行——
+  # 这些目录本就以携带大文件为目的，与 _typos.toml 的排除清单保持同一口径
   check-file-size:
     name: 大文件防护（新增文件超过 1.5MB 拒绝）
     runs-on: ubuntu-latest
@@ -237,5 +239,7 @@ jobs:
               echo "::error file=${f}::新增文件 ${size} 字节，超过 ${limit} 字节上限"
               fail=1
             fi
-          done < <(git diff --name-only -z --diff-filter=ACR "${range}" --)
+          done < <(git diff --name-only -z --diff-filter=ACR "${range}" \
+            -- . ':(exclude)runtime/**' ':(exclude)docs/page-corpus/**' \
+            ':(exclude)docs/defuddle-coverage/**' ':(exclude)extension/sidepanel/vendor/**')
           exit $fail

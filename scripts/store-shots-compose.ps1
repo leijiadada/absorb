@@ -1,5 +1,5 @@
 # Compose store screenshots: article(860x800) + panel(420x800) -> 1280x800 shot-N.png.
-# Raw PNGs come from e2e spec: ABSORB_E2E_STORE_SHOTS=1 npx playwright test specs/store-shots.spec.ts
+# Raw shots come from e2e spec: ABSORB_E2E_STORE_SHOTS=1 npx playwright test specs/store-shots.spec.ts
 # (English-only literals: PS 5.1 parses no-BOM UTF-8 as ANSI.)
 param(
   [string]$RawDir = 'docs/store/shots/raw',

@@ -23,17 +23,22 @@ linters:
         - fmt.Fprintln
     staticcheck:
       # -ST1000 包注释 / -ST1016 接收器命名：存量风格债，不拦门禁
+      # -ST1003 全大写命名：Win32 包装常量沿用 Windows API 惯例（_SW_HIDE 等），
+      #   与标准库 syscall 包同风格，Go 驼峰命名例外
       # -QF*：quickfix 风格建议（De Morgan、嵌入字段选择器等），噪音大于收益
       checks:
         - all
         - -ST1000
         - -ST1016
+        - -ST1003
         - -QF*
   exclusions:
     rules:
-      # 所有 Close/Rollback/Write 释放与写入路径（含项目自定义类型与第三方），良性统一豁免
+      # 所有 Close/Rollback/Write 释放与写入路径（含项目自定义类型与第三方），良性统一豁免；
+      # Call 为 Win32 syscall 包装（syscall.LazyProc.Call）的返回值，语义是 API 结果码而非
+      # error，失败不影响流程正确性，良性统一豁免
       - linters: [errcheck]
-        text: 'Error return value of `.*\.(Close|Rollback|Write)` is not checked'
+        text: 'Error return value of `.*\.(Close|Rollback|Write|Call)` is not checked'
       # 测试文件：资源清理类 errcheck / 风格类 staticcheck / 未使用的测试辅助 不拦门禁
       - path: _test\.go
         linters:

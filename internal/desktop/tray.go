@@ -9,6 +9,7 @@ import (
 	"math"
 
 	"absorb-agent/internal/kind"
+
 	"github.com/energye/systray"
 	xdraw "golang.org/x/image/draw"
 )

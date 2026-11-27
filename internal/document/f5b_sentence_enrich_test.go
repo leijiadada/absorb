@@ -128,7 +128,9 @@ func TestF5BSentenceEnrichDump(t *testing.T) {
 	}
 	defer st.Close()
 	ctx := context.Background()
-	const (app, user = "absorb-reader", "absorb-user")
+	const (
+		app, user = "absorb-reader", "absorb-user"
+	)
 	doc, _ := st.UpsertDocument(ctx, app, user, book2URL, "人月神话（文字版）")
 	chunks, _ := st.LoadDocumentChunks(ctx, app, user, doc.ID)
 	if len(chunks) == 0 {
@@ -201,7 +203,9 @@ func TestF5BSentenceEnrichBook2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("extract: %v", err)
 	}
-	const (app, user = "absorb-reader", "absorb-user")
+	const (
+		app, user = "absorb-reader", "absorb-user"
+	)
 	doc, _ := st.UpsertDocument(ctx, app, user, book2URL, "人月神话（文字版）")
 	sum := sha256.Sum256([]byte(res.Content))
 	dc := &storage.DocumentContent{URL: book2URL, ContentText: res.Content, CharCount: len([]rune(res.Content)),
@@ -255,7 +259,9 @@ func TestF5BSentenceEnrichBook1(t *testing.T) {
 	}
 	defer st.Close()
 	ctx := context.Background()
-	const (app, user = "absorb-reader", "absorb-user")
+	const (
+		app, user = "absorb-reader", "absorb-user"
+	)
 	mdoc, _ := st.UpsertDocument(ctx, app, user, "https://agenticse-book.github.io/pdf/AgenticSE_Book_CN.pdf", "AgenticSE Book CN")
 	state, _ := st.LoadDocumentIndexState(ctx, app, user, mdoc.ID)
 	if state == nil || state.IndexStatus != storage.IndexStatusReady {

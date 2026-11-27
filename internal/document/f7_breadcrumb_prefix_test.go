@@ -56,7 +56,9 @@ func TestF7BreadcrumbPrefix(t *testing.T) {
 	}
 	defer st.Close()
 	ctx := context.Background()
-	const (app, user = "absorb-reader", "absorb-user")
+	const (
+		app, user = "absorb-reader", "absorb-user"
+	)
 
 	// 1. 语料：网络抓 PDF → poppler 提取 → docling marks（F3 现成路径）
 	data, err := fetchBytesForTest(ctx, proxyFn, f7BookURL, 50<<20)
