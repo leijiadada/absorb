@@ -3,8 +3,8 @@
 APP       := absorb-agent-desktop
 APP_CLI   := absorb-agent-cli
 BIN_DIR   := build/bin
-# 命令行可覆盖: make installer VERSION=0.2.0
-VERSION   ?= 0.1.0
+# 命令行可覆盖: make installer VERSION=0.2.1
+VERSION   ?= 0.2.0
 # 评测入口可覆盖: make eval SET=knowledge-relevance RUNS=2
 SET       ?= understanding-basic
 RUNS      ?= 3

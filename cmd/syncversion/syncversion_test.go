@@ -3,8 +3,11 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
+
+	"absorb-agent/internal/upgrade"
 )
 
 // fixtures 复刻真实文件的关键形态：wails.json 用 productVersion，
@@ -210,16 +213,37 @@ func TestSyncRejectsBadVersion(t *testing.T) {
 	}
 }
 
+// reMakefileVersion 匹配 Makefile 的默认版本定义行（VERSION ?= x.y.z）。
+var reMakefileVersion = regexp.MustCompile(`(?m)^VERSION\s*\?=\s*(\S+)`)
+
+// makefileDefaultVersion 从仓库根 Makefile 解析默认 VERSION。
+// 期望值若在测试里硬编码，会形成第二处手工同步点，发版漏改就误报，
+// 故直接以 Makefile 为唯一权威。
+func makefileDefaultVersion(t *testing.T) string {
+	t.Helper()
+	b, err := os.ReadFile(filepath.Join("..", "..", "Makefile"))
+	if err != nil {
+		t.Fatalf("read Makefile: %v", err)
+	}
+	m := reMakefileVersion.FindSubmatch(b)
+	if m == nil {
+		t.Fatal("Makefile 缺少 VERSION ?= 默认值定义")
+	}
+	return string(m[1])
+}
+
 // 仓库自身的版本元数据必须与 Makefile 的默认 VERSION 一致（防再次漂移）。
+// 四段值复用 upgrade.ExtensionVersion，与 sync-version 的落盘规则同一实现。
 func TestRepoVersionMetadataInSync(t *testing.T) {
-	const want = "0.1.0" // 与 Makefile 的 VERSION ?= 保持一致
+	want := makefileDefaultVersion(t)
+	four := upgrade.ExtensionVersion(want)
 	for _, tc := range []struct{ file, field string }{
 		{"wails.json", `"productVersion": "` + want + `"`},
 		{"frontend/package.json", `"version": "` + want + `"`},
-		{"extension/manifest.json", `"version": "` + want + `.0"`},
-		{"build/windows/info.json", `"file_version": "` + want + `.0"`},
-		{"build/windows/info.json", `"product_version": "` + want + `.0"`},
-		{"build/windows/info.json", `"FileVersion": "` + want + `.0"`},
+		{"extension/manifest.json", `"version": "` + four + `"`},
+		{"build/windows/info.json", `"file_version": "` + four + `"`},
+		{"build/windows/info.json", `"product_version": "` + four + `"`},
+		{"build/windows/info.json", `"FileVersion": "` + four + `"`},
 		{"build/windows/info.json", `"ProductVersion": "` + want + `"`},
 	} {
 		path := filepath.Join("..", "..", tc.file)
