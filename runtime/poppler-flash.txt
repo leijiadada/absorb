@@ -1,0 +1,4 @@
+plain flags=0x0 err=<nil> outLen=148 newConsole=CASCADIA_HOSTING_WINDOW_CLASS hwnd=12715798; PseudoConsoleWindow hwnd=17108116; 
+no_window flags=0x8000000 err=<nil> outLen=148 newConsole=none
+detached flags=0x8 err=<nil> outLen=148 newConsole=none
+both flags=0x8000008 err=<nil> outLen=148 newConsole=none
