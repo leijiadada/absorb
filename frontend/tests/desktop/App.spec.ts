@@ -47,14 +47,15 @@ describe('App 布局与状态', () => {
 })
 
 describe('无边框窗口控制', () => {
-  it('最小化/最大化/关闭分别调用对应 runtime 方法（关闭=隐藏到托盘）', async () => {
+  it('最小化/最大化走 runtime，关闭走 Go 绑定 HideToTray（隐藏到托盘）', async () => {
     const calls: string[] = []
     ;(window as any).runtime = {
       WindowMinimise: () => calls.push('min'),
       WindowToggleMaximise: () => calls.push('max'),
-      WindowHide: () => calls.push('hide'),
     }
     mockBackend()
+    // mockBackend 整体替换 window.go.main.App，HideToTray 须在其后合并
+    ;(window as any).go.main.App.HideToTray = () => calls.push('tray')
     const router = testRouter()
     const w = mount(App, { global: { plugins: [router] } })
     await router.isReady()
@@ -62,13 +63,15 @@ describe('无边框窗口控制', () => {
     await w.find('button[title="最小化"]').trigger('click')
     await w.find('button[title="最大化"]').trigger('click')
     await w.find('button[title="关闭"]').trigger('click')
-    expect(calls).toEqual(['min', 'max', 'hide'])
+    expect(calls).toEqual(['min', 'max', 'tray'])
     w.unmount()
     delete (window as any).runtime
+    delete (window as any).go
   })
 
-  it('runtime 缺失（测试/浏览器环境）时点击不报错', async () => {
+  it('runtime/go 缺失（测试/浏览器环境）时点击不报错', async () => {
     delete (window as any).runtime
+    delete (window as any).go
     mockBackend()
     const router = testRouter()
     const w = mount(App, { global: { plugins: [router] } })

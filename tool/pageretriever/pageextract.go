@@ -12,9 +12,9 @@ import (
 //
 // 划词时前端把主内容区 HTML 随上下文发给 Go 端，
 // 此处抽取为带结构标记的纯文本（markdown 风格），缓存在 SQLite（约 ≤30K 字符），
-// expand_context 工具直接在缓存文本上检索，零浏览器往返。
+// read_page 工具直接在缓存文本上按章节定位与阅读，零浏览器往返。
 //
-// 结构标记约定（pagesearch.go 依赖）：
+// 结构标记约定（read_page 章节切分依赖）：
 //   - 首行「页面标题: <title>」（title 存在时）
 //   - H1-H6 →「#」×level 前缀行，如「### 3.1 Runner 的定义」
 //   - PRE  → ``` 围栏代码块

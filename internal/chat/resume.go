@@ -20,16 +20,22 @@ import (
 	"trpc.group/trpc-go/trpc-agent-go/agent"
 	"trpc.group/trpc-go/trpc-agent-go/model"
 	"trpc.group/trpc-go/trpc-agent-go/runner"
-	"trpc.group/trpc-go/trpc-agent-go/session"
-
-	expand "absorb-agent/tool/expand_context"
-	recall "absorb-agent/tool/recall_history"
 
 	"absorb-agent/internal/errs"
 	"absorb-agent/internal/kind"
 	"absorb-agent/internal/log"
 	"absorb-agent/internal/store"
 )
+
+// sseEnv 一轮问答的 SSE 输出环境：响应写手、flusher、宿主 span 与错误归一化
+// 上下文。问答主循环与恢复轮共享，避免逐参传递；恢复轮的错误标记打在自己的
+// 子 span（ask.resume）上，不写 env.span。
+type sseEnv struct {
+	w       http.ResponseWriter
+	flusher http.Flusher
+	span    trace.Span
+	appCtx  errs.ModelContext
+}
 
 // continueLikeReplies "继续类"输入白名单：命中 → 恢复轮续答即视为完成本轮，不再跑
 // 用户问题轮（省一次 LLM 调用）。漏命中无害——恢复轮续答后，用户输入作为正常轮再跑，
@@ -62,10 +68,7 @@ func resumeIfDangling(
 	sessionSvc *store.SessionService,
 	app, user, sessionID, question string,
 	reg *RunRegistry,
-	appCtx errs.ModelContext,
-	span trace.Span,
-	w http.ResponseWriter,
-	flusher http.Flusher,
+	env *sseEnv,
 ) bool {
 	dangling, derr := sessionSvc.HasDanglingToolCall(ctx, app, user, sessionID)
 	if derr != nil {
@@ -76,24 +79,24 @@ func resumeIfDangling(
 	if !dangling {
 		return false
 	}
-	span.SetAttributes(attribute.Bool("resume_pending_tools", true))
-	reqIDA := resumePhase(ctx, r, sessionSvc, app, user, sessionID, reg, appCtx, w, flusher)
+	env.span.SetAttributes(attribute.Bool("resume_pending_tools", true))
+	reqIDA := resumePhase(ctx, r, sessionSvc, app, user, sessionID, reg, env)
 	if reqIDA == "" {
 		// 恢复失败：SSE error 已下发。悬挂仍在，带着残缺历史跑新问题可能 400，不降级
 		return true
 	}
 	if isContinueLike(question) {
 		// "继续"类输入：恢复轮续答即完成本轮；requestId 随 done 下发（知识入口挂恢复轮）
-		writeSSE(w, map[string]any{"done": true, "requestId": reqIDA, "resumed": true})
-		if flusher != nil {
-			flusher.Flush()
+		writeSSE(env.w, map[string]any{"done": true, "requestId": reqIDA, "resumed": true})
+		if env.flusher != nil {
+			env.flusher.Flush()
 		}
 		return true
 	}
 	// 新问题：phase 边界事件让前端开启新消息气泡，随后正常轮照旧
-	writeSSE(w, map[string]any{"type": "phase"})
-	if flusher != nil {
-		flusher.Flush()
+	writeSSE(env.w, map[string]any{"type": "phase"})
+	if env.flusher != nil {
+		env.flusher.Flush()
 	}
 	return false
 }
@@ -110,9 +113,7 @@ func resumePhase(
 	sessionSvc *store.SessionService,
 	app, user, sessionID string,
 	reg *RunRegistry,
-	appCtx errs.ModelContext,
-	w http.ResponseWriter,
-	flusher http.Flusher,
+	env *sseEnv,
 ) string {
 	// 工具状态注入与被中断轮对齐（恢复轮可能补执行 expand_context / recall_history）：
 	// scope 按会话历史继承，页面缓存与参考材料按该 scope 读回，recall 拿同一套摘要 cutoff。
@@ -125,11 +126,8 @@ func resumePhase(
 	if perr != nil {
 		log.Warnf("[Absorb] resume load page cache failed (session=%s): %v", sessionID, perr)
 	}
-	refMat, _ := sessionSvc.RecentReferenceMaterial(ctx, app, user, sessionID, filterKey)
-	recallKey := session.Key{AppName: app, UserID: user, SessionID: sessionID}
-	runCtx := expand.WithPageSearchState(ctx, pageText, refMat)
-	runCtx = recall.WithRecallState(runCtx, sessionSvc, recallKey, filterKey,
-		sessionSvc.SummaryCutoffs(ctx, recallKey))
+	// 恢复轮无 documentId 上下文，docScope=nil = 租户内全部已索引文档
+	runCtx := injectToolState(ctx, sessionSvc, app, user, sessionID, filterKey, pageText, nil)
 
 	requestID := uuid.NewString()
 	reg.set(sessionID, requestID)
@@ -143,49 +141,28 @@ func resumePhase(
 		attribute.String("filter_key", filterKey),
 	)
 
-	eventChan, err := r.Run(runCtx, user, sessionID, model.Message{}, []agent.RunOption{
-		agent.WithRequestID(requestID),
-		agent.WithDetachedCancel(true),
-		agent.WithMaxRunDuration(maxRunDuration),
+	eventChan, err := r.Run(runCtx, user, sessionID, model.Message{}, newRunOpts(requestID,
 		agent.WithEventFilterKey(filterKey),
-		agent.WithResume(true),
-	}...)
+		agent.WithResume(true))...)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		log.Errorf("[Absorb] resume run start failed (session=%s): %v", sessionID, err)
-		writeSSE(w, map[string]any{"type": "error", "message": "恢复上次中断的回答失败: " + err.Error()})
-		if flusher != nil {
-			flusher.Flush()
+		writeSSE(env.w, map[string]any{"type": "error", "message": "恢复上次中断的回答失败: " + err.Error()})
+		if env.flusher != nil {
+			env.flusher.Flush()
 		}
 		return ""
 	}
 
 	for evt := range eventChan {
 		if evt.Error != nil {
-			norm := errs.FromModel(evt.Error, appCtx)
-			span.SetStatus(codes.Error, norm.Message)
+			norm := emitModelErr(env.w, env.flusher, span, evt.Error, env.appCtx)
 			log.Errorf("[Absorb] resume model error | provider=%s code=%s session=%s",
-				appCtx.Provider, norm.Code, sessionID)
-			writeSSE(w, map[string]any{"type": "error", "code": string(norm.Code), "message": norm.Message})
-			if flusher != nil {
-				flusher.Flush()
-			}
+				env.appCtx.Provider, norm.Code, sessionID)
 			return ""
 		}
 		if evt.Response != nil && len(evt.Response.Choices) > 0 {
-			c := evt.Response.Choices[0]
-			if rc := c.Delta.ReasoningContent; rc != "" {
-				writeSSE(w, map[string]any{"type": "reasoning", "content": rc})
-				if flusher != nil {
-					flusher.Flush()
-				}
-			}
-			if content := c.Delta.Content; content != "" {
-				writeSSE(w, map[string]any{"type": "token", "content": content})
-				if flusher != nil {
-					flusher.Flush()
-				}
-			}
+			forwardDelta(env.w, env.flusher, evt.Response.Choices[0])
 		}
 		// IsFinalResponse 不发 done：恢复轮只是 Phase A，后续还有用户问题轮
 		//（continue-like 由调用方补发 done）。继续 drain 到 runner 落库关流。

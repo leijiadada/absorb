@@ -359,6 +359,137 @@ func TestEscapeSQLLiteral(t *testing.T) {
 	}
 }
 
+// v9IndexDDL 复刻 0009 时代的文档索引结构：document_index_state 无 vector_* 列、
+// document_chunk_vectors 主键为单列 chunk_id（0010 的升级起点）。
+const v9IndexDDL = `
+` + migrationsTableDDL + `;
+CREATE TABLE IF NOT EXISTS document_chunks (
+	id                 TEXT PRIMARY KEY,
+	app_name           TEXT NOT NULL,
+	user_id            TEXT NOT NULL,
+	document_id        TEXT NOT NULL,
+	chunk_index        INTEGER NOT NULL,
+	section_path       TEXT NOT NULL DEFAULT '',
+	content            TEXT NOT NULL,
+	search_text        TEXT NOT NULL DEFAULT '',
+	start_offset       INTEGER NOT NULL DEFAULT 0,
+	end_offset         INTEGER NOT NULL DEFAULT 0,
+	token_count        INTEGER NOT NULL DEFAULT 0,
+	content_hash       TEXT NOT NULL DEFAULT '',
+	chunker_version    INTEGER NOT NULL DEFAULT 1,
+	tokenizer_version  TEXT NOT NULL DEFAULT '',
+	created_at         INTEGER NOT NULL,
+	UNIQUE(document_id, chunk_index)
+);
+CREATE VIRTUAL TABLE IF NOT EXISTS document_chunks_fts USING fts5(
+	chunk_id UNINDEXED, title, section_path, search_text, tokenize = 'unicode61'
+);
+CREATE TABLE IF NOT EXISTS document_index_state (
+	app_name             TEXT NOT NULL,
+	user_id              TEXT NOT NULL,
+	document_id          TEXT NOT NULL,
+	indexed_content_hash TEXT NOT NULL DEFAULT '',
+	index_status         TEXT NOT NULL DEFAULT 'pending',
+	chunker_version      INTEGER NOT NULL DEFAULT 0,
+	tokenizer_version    TEXT NOT NULL DEFAULT '',
+	chunk_count          INTEGER NOT NULL DEFAULT 0,
+	indexed_at           INTEGER NOT NULL DEFAULT 0,
+	error_message        TEXT NOT NULL DEFAULT '',
+	PRIMARY KEY (app_name, user_id, document_id)
+);
+CREATE TABLE IF NOT EXISTS document_chunk_vectors (
+	chunk_id     TEXT PRIMARY KEY,
+	app_name     TEXT NOT NULL,
+	user_id      TEXT NOT NULL,
+	document_id  TEXT NOT NULL,
+	chunk_index  INTEGER NOT NULL,
+	dims         INTEGER NOT NULL,
+	model        TEXT NOT NULL,
+	vector       BLOB NOT NULL,
+	created_at   INTEGER NOT NULL
+);
+`
+
+// createV9DB 造一个账本记录 1..9 已应用的 v9 库（文档索引旧形态 + 一行旧向量）。
+// 打开后仅 0010 待应用——精准验证升级路径，不经手 1..9。
+func createV9DB(t *testing.T, path string) {
+	t.Helper()
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatalf("open v9 db: %v", err)
+	}
+	defer db.Close()
+	if _, err := db.Exec(v9IndexDDL); err != nil {
+		t.Fatalf("create v9 schema: %v", err)
+	}
+	if _, err := db.Exec(
+		`INSERT INTO document_chunk_vectors
+			(chunk_id, app_name, user_id, document_id, chunk_index, dims, model, vector, created_at)
+		 VALUES ('c1','app','user','d1',0,2,'m1',?,1)`, []byte{1, 0, 0, 0, 2, 0, 0, 0}); err != nil {
+		t.Fatalf("seed vector row: %v", err)
+	}
+	for v := 1; v <= 9; v++ {
+		if _, err := db.Exec(
+			`INSERT INTO schema_migrations(version, name, applied_at) VALUES(?,?,1)`, v, fmt.Sprintf("v%d", v)); err != nil {
+			t.Fatalf("seed ledger %d: %v", v, err)
+		}
+	}
+}
+
+// 0010 升级路径：v9 库 → 向量状态四列 + 向量表复合主键 + 旧行保留 +
+// 同 chunk 不同 model 可写（单列主键时代的换模型死锁由此解除）。
+func TestMigrateV9VectorState(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "v9.db")
+	createV9DB(t, path)
+
+	raw, err := newSQLite(path)
+	if err != nil {
+		t.Fatalf("newSQLite on v9 db: %v", err)
+	}
+	st := raw.(*sqliteStore)
+	t.Cleanup(func() { _ = raw.Close() })
+
+	// 四列就位
+	for _, col := range []string{"vector_model", "vector_status", "vector_count", "vector_error"} {
+		if !columnExists(t, st, "document_index_state", col) {
+			t.Fatalf("column %s not added", col)
+		}
+	}
+	// 复合主键：model 进入主键
+	var modelPK int
+	if err := st.db.QueryRow(
+		`SELECT COUNT(*) FROM pragma_table_info('document_chunk_vectors') WHERE name='model' AND pk>0`).Scan(&modelPK); err != nil {
+		t.Fatalf("pragma: %v", err)
+	}
+	if modelPK == 0 {
+		t.Fatal("model not part of document_chunk_vectors primary key")
+	}
+	// 旧向量行迁移中保留
+	var kept int
+	if err := st.db.QueryRow(
+		`SELECT COUNT(*) FROM document_chunk_vectors WHERE chunk_id='c1' AND model='m1'`).Scan(&kept); err != nil {
+		t.Fatalf("count migrated rows: %v", err)
+	}
+	if kept != 1 {
+		t.Fatalf("v9 vector rows survived = %d, want 1", kept)
+	}
+	// 同 chunk 不同 model 可写（旧结构在此撞 UNIQUE(chunk_id)）
+	if _, err := st.db.Exec(
+		`INSERT INTO document_chunk_vectors
+			(chunk_id, app_name, user_id, document_id, chunk_index, dims, model, vector, created_at)
+		 VALUES ('c1','app','user','d1',0,2,'m2',?,1)`, []byte{3, 0, 0, 0, 4, 0, 0, 0}); err != nil {
+		t.Fatalf("same chunk different model must be writable: %v", err)
+	}
+	var applied int
+	if err := st.db.QueryRow(`SELECT MAX(version) FROM schema_migrations`).Scan(&applied); err != nil {
+		t.Fatalf("read ledger: %v", err)
+	}
+	if applied != schemaVersion {
+		t.Fatalf("applied = %d, want %d", applied, schemaVersion)
+	}
+}
+
 // BackupNow / SchemaInfo：升级前保全与 status 子命令的数据源。
 func TestBackupNowAndSchemaInfo(t *testing.T) {
 	dir := t.TempDir()

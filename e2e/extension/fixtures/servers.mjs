@@ -121,7 +121,14 @@ const mock = http.createServer(async (req, res) => {
         charCount: 28450,
         byteSize: 1024000,
         truncated: false,
-        message: ''
+        message: '',
+        // 动态建议提问（doc-suggestions）：章节树通道 A 的 mock 形态——3 条成句
+        // 问题，卡片就绪态渲染；__prepare-script 可整体覆盖（无字段=不渲染小节）
+        suggestions: [
+          '书中〈检索增强生成〉这部分讲了什么？作者的核心论据是什么？',
+          '书中〈向量数据库基础〉这部分讲了什么？作者的核心论据是什么？',
+          '书中〈答案可溯源〉这部分讲了什么？作者的核心论据是什么？'
+        ]
       });
     }
     case '/__last-save':

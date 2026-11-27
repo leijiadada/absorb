@@ -1,22 +1,53 @@
-// Absorb 阅读助手 - 文档卡（PDF 解读 PR3）
-// 职责：识别当前活动标签页的 PDF 文档 → 渲染三态文档卡（未读取/读取中/已就绪 +
-// 失败态），调 /api/page/prepare 提取正文并把 documentId 透传给提问链路。
+// Absorb 阅读助手 - 文档工具栏（PDF 解读 PR4，原 PR3 文档卡改造）
+// 职责：识别当前活动标签页的文档类型 → 渲染输入框上方的单行工具栏（文件名 +
+// 状态 badge + 字数 + 展开箭头 + 关闭），⌄ 展开按状态分发详情面板（文档信息/
+// 建议问题/读取进度/错误重试），调 /api/page/prepare 提取正文并透传 documentId。
 // 状态模型：idle（无记录）/ reading（内存态，面板关闭即中断）/ ready / error
-// （终态持久化在 DOCCARDS_KEY，documentId = URL，与服务端锚点一致）。
+// （终态持久化在 DOCCARDS_KEY，卡片按 url 索引，documentId 记服务端
+// documents.id UUID；旧记录无 documentId 时提问链路回退传 URL，服务端兼容）。
+// UI 态：_expanded（展开面板）、_dismissed（× 仅隐藏当前展示，不删提取记录，
+// 切换标签页/重新导航后恢复）。
+// 多文档类型扩展：DOC_TYPES 注册表（URL 识别 + 图标 + 建议问题），新类型加一项
+// 即可，渲染逻辑不感知具体格式。
 import { DOCCARDS_KEY } from './config.js';
 import { prepareDocument } from './net.js';
 import { t } from './i18n.js';
 
-// PDF URL 识别：路径以 .pdf 结尾（查询串/锚点前）。浏览器内置查看器的 tab.url
-// 保留原始 https 地址，content script 注入不可行（查看器非普通 DOM 文档），
-// 因此识别只看 URL 后缀——服务端按 content-type 兜底分类，误判无副作用。
-export function isPdfUrl(url) {
+// ---------- 文档类型注册表 ----------
+// ext 按 URL 路径后缀识别（查询串/锚点前）。浏览器内置查看器的 tab.url 保留
+// 原始 https/file 地址，content script 注入不可行（查看器非普通 DOM 文档），因此
+// 识别只看 URL 后缀——服务端按 content-type 兜底分类，误判无副作用。
+// file:// 本地 PDF：协议显式在列（本地路径无 http(s) 形态），prepare 由服务端
+// file 分支读盘提取（本地文件白名单校验见 document/localfile.go）。
+export const DOC_TYPES = {
+  pdf: {
+    key: 'pdf',
+    ext: /\.pdf$/i,
+    icon: '../icons/PDF.png',
+  },
+  // 未来 docx / epub / html 等类型：在此各加一项（icon + ext）即可——建议提问
+  // 由服务端章节树双通道生成（doc-suggestions-design.md），渲染不感知格式。
+};
+
+// 支持文档识别的协议：网页 http(s) + 本地 file（各类型共享，file 仅后缀命中者放行）
+const DOC_SCHEME_RE = /^(https?|file):$/;
+
+// URL → 类型定义（未命中返回 null）。isPdfUrl 保留给 conversation.js 提问链路。
+export function detectDocType(url) {
   try {
     const u = new URL(url);
-    return /^https?:$/.test(u.protocol) && /\.pdf$/i.test(u.pathname);
+    if (!DOC_SCHEME_RE.test(u.protocol)) return null;
+    for (const k of Object.keys(DOC_TYPES)) {
+      if (DOC_TYPES[k].ext.test(u.pathname)) return DOC_TYPES[k];
+    }
+    return null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+export function isPdfUrl(url) {
+  return detectDocType(url)?.key === 'pdf';
 }
 
 // 从 URL 取文件名（读取前 tab.title 可能就是 URL 本身）
@@ -30,7 +61,7 @@ function filenameFromUrl(url) {
 }
 
 // ---------- 状态表（持久化终态） ----------
-let _cards = {}; // documentId(=URL) → { url, title, state, serverStatus, charCount, truncated, message, updatedAt }
+let _cards = {}; // url → { url, documentId, title, state, serverStatus, charCount, truncated, message, updatedAt }
 
 async function loadCards() {
   try {
@@ -56,12 +87,14 @@ async function saveCards() {
 }
 
 // 提问链路取 documentId（conversation.js 调用）：该 URL 已提取到正文
-// （ready/partial，服务端 Injectable 同口径）时返回 URL 本身，否则空串。
+// （ready/partial，服务端 Injectable 同口径）时返回服务端 documentId
+// （documents.id UUID）；旧记录（M0 前后端语义 documentId=URL）无该字段，
+// 回退传 URL——服务端问答链路按 ID 查无时会按 URL 兼容。
 // 失败态不透传——后端查无落库正文只会徒增一次查询日志。
 export async function readyDocumentId(url) {
   const r = _cards[url];
   if (r && r.state === 'ready' && (r.serverStatus === 'ready' || r.serverStatus === 'partial')) {
-    return url;
+    return r.documentId || url;
   }
   return '';
 }
@@ -86,9 +119,14 @@ function startReading(url) {
   ];
 }
 
+// ---------- UI 态（均内存态，不持久化） ----------
+let _expanded = false;    // 面板是否展开
+let _dismissed = null;    // × 隐藏的 URL（仅隐藏展示；切到其他 URL 后自动失效）
+
 // ---------- 渲染 ----------
 let _container = null;
-let _current = null;  // { url, title } 当前活动 PDF 标签页；null = 非 PDF，卡片隐藏
+let _miniEl = null;   // × 隐藏态的迷你圆标挂载点（composer 操作行内，可缺省）
+let _current = null;  // { url, title } 当前活动文档标签页；null = 非文档，工具栏隐藏
 let _ask = null;      // main.js 注入的提问入口（(text) => void，落输入框并提交）
 
 function el(tag, cls, text) {
@@ -98,11 +136,11 @@ function el(tag, cls, text) {
   return n;
 }
 
-// PDF 文件图标（扩展自带 PDF.png，红色圆角方块白字样式）
-function fileIcon() {
+// 文档类型图标（扩展自带，红色圆角方块白字样式）
+function fileIcon(type) {
   const img = document.createElement('img');
-  img.className = 'dc-fileicon';
-  img.src = '../icons/PDF.png';
+  img.className = 'db-fileicon';
+  img.src = type.icon;
   img.alt = '';
   img.setAttribute('aria-hidden', 'true');
   return img;
@@ -110,7 +148,7 @@ function fileIcon() {
 
 // 状态 badge：橙色=待读取/需登录，蓝色=进行中，绿色=就绪，灰色=其他失败
 function badge(text, tone) {
-  return el('span', `dc-badge dc-badge-${tone}`, text);
+  return el('span', `db-badge db-badge-${tone}`, text);
 }
 
 // 失败态 badge 文案与配色：needs_auth 橙（可自助解决），其余灰
@@ -123,101 +161,205 @@ const ERROR_BADGES = {
   network_error: ['badgeError', 'gray']
 };
 
-function render() {
-  if (!_container || !_current) return;
-  const { url, title } = _current;
-  const name = title || filenameFromUrl(url);
+// 工具栏行内小按钮（展开箭头 / 关闭 ×）
+function barBtn(cls, label, svgPath) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = `db-btn ${cls}`;
+  b.title = label;
+  b.setAttribute('aria-label', label);
+  b.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${svgPath}</svg>`;
+  return b;
+}
+
+// 由持久化/读取态推导四态：reading（内存优先）> ready > error > idle
+function docState(url) {
+  if (_reading && _reading.url === url) return 'reading';
   const rec = _cards[url];
-  _container.textContent = '';
+  if (rec && rec.state === 'ready') return 'ready';
+  if (rec && rec.state === 'error') return 'error';
+  return 'idle';
+}
+
+// 收起态单行工具栏：图标 | 文件名 | badge | 字数 | ⌄ | ×
+function renderBar(type, name, state) {
+  const url = _current.url;
+  const rec = _cards[url];
+  const bar = el('div', 'db-bar');
+
+  bar.append(fileIcon(type));
+  const nameEl = el('span', 'db-name', name);
+  nameEl.title = name;
+  bar.append(nameEl);
+
+  let tone = 'orange';
+  let text = t('doccard.badgeIdle');
+  if (state === 'reading') { tone = 'blue'; text = t('doccard.badgeReading'); }
+  else if (state === 'ready') { tone = 'green'; text = t('doccard.badgeReady'); }
+  else if (state === 'error') {
+    const [key, tn] = ERROR_BADGES[rec.serverStatus] || ERROR_BADGES.network_error;
+    tone = tn; text = t(`doccard.${key}`);
+  }
+  bar.append(badge(text, tone));
+
+  if (state === 'ready') {
+    bar.append(el('span', 'db-chars', t('docbar.chars', { chars: (rec.charCount || 0).toLocaleString() })));
+  }
+
+  // 未读取态：主入口直接放工具栏行内（收起时也要一眼可见）
+  if (state === 'idle') {
+    const read = el('button', 'db-bar-cta', t('doccard.read'));
+    read.type = 'button';
+    read.addEventListener('click', () => startRead());
+    bar.append(read);
+  }
+
+  const toggle = barBtn('db-toggle', _expanded ? t('docbar.collapse') : t('docbar.expand'),
+    '<path d="m6 9 6 6 6-6"/>');
+  toggle.setAttribute('aria-expanded', String(_expanded));
+  toggle.addEventListener('click', () => { _expanded = !_expanded; render(); });
+  bar.append(toggle);
+
+  const close = barBtn('db-close', t('docbar.hide'), '<path d="M18 6 6 18M6 6l12 12"/>');
+  close.addEventListener('click', () => {
+    _dismissed = url;
+    _expanded = false;
+    render();
+  });
+  bar.append(close);
+
+  return bar;
+}
+
+// 展开面板：按状态分发（信息行/建议问题/读取进度/错误重试）
+function renderPanel(type, name, state) {
+  const url = _current.url;
+  const rec = _cards[url];
+  const panel = el('div', 'db-panel');
 
   // ---------- 读取中 ----------
-  if (_reading && _reading.url === url) {
-    const head = el('div', 'dc-head');
-    head.append(fileIcon(), el('span', 'dc-title dc-title-inline', name), badge(t('doccard.badgeReading'), 'blue'));
-    _container.appendChild(head);
-    const steps = el('div', 'dc-steps');
+  if (state === 'reading') {
+    const steps = el('div', 'db-steps');
     [t('doccard.step1'), t('doccard.step2'), t('doccard.step3')].forEach((label, i) => {
       const stepNo = i + 1;
-      const row = el('div', `dc-step${stepNo === _reading.step ? ' active' : stepNo < _reading.step ? ' done' : ''}`);
-      row.append(el('span', 'dc-stepnum', String(stepNo)), el('span', 'dc-steplabel', label));
+      const row = el('div', `db-step${stepNo === _reading.step ? ' active' : stepNo < _reading.step ? ' done' : ''}`);
+      row.append(el('span', 'db-stepnum', String(stepNo)), el('span', 'db-steplabel', label));
       steps.appendChild(row);
     });
-    _container.appendChild(steps);
-    _container.appendChild(el('div', 'dc-hint', t('doccard.processing')));
-    return;
+    panel.append(steps, el('div', 'db-hint', t('doccard.processing')));
+    return panel;
   }
 
-  // ---------- 已就绪（ready/partial） ----------
-  if (rec && rec.state === 'ready') {
+  // ---------- 已就绪（ready/partial）：文档信息 + 建议问题 + 操作 ----------
+  if (state === 'ready') {
     const partial = rec.serverStatus === 'partial';
-    const head = el('div', 'dc-head');
-    head.append(fileIcon(), el('span', 'dc-title dc-title-inline', name), badge(t('doccard.badgeReady'), 'green'));
-    _container.appendChild(head);
-    const chars = (rec.charCount || 0).toLocaleString();
-    _container.appendChild(el('div', 'dc-meta',
-      t(partial ? 'doccard.metaPartial' : 'doccard.metaReady', { chars })));
-    _container.appendChild(el('div', 'dc-divider'));
-    _container.appendChild(el('div', 'dc-suggest-title', t('doccard.suggestTitle')));
-    const list = el('div', 'dc-suggest');
-    ['suggest1', 'suggest2', 'suggest3'].forEach((k) => {
-      const item = el('button', 'dc-suggest-item');
-      item.type = 'button';
-      item.append(el('span', 'dc-suggest-text', t(`doccard.${k}`)), el('span', 'arr', '↗'));
-      item.addEventListener('click', () => {
-        // 建议问题透传 documentId：提问时 getActivePage 按当前活动 PDF 标签页
-        // 自动附带，这里只负责把问题落输入框提交
-        if (_ask) _ask(t(`doccard.${k}`));
+    panel.append(el('div', 'db-sec', t('docbar.infoTitle')));
+    const info = el('div', 'db-info');
+    info.append(
+      infoRow(t('docbar.rowName'), name),
+      infoRow(t('docbar.rowChars'), t('docbar.chars', { chars: (rec.charCount || 0).toLocaleString() })),
+      infoRow(t('docbar.rowStatus'), partial ? t('docbar.statusPartial') : t('docbar.statusReady'))
+    );
+    panel.append(info);
+
+    // 动态建议提问（doc-suggestions-design.md）：服务端章节树双通道直出成句
+    // 问题，原样显示、点击原样发送（documentId 由 getActivePage 自动附带）。
+    // 素材不足（<2 条）不渲染该小节——裁决：无固定兜底。
+    const suggestions = Array.isArray(rec.suggestions) ? rec.suggestions : [];
+    if (suggestions.length >= 2) {
+      panel.append(el('div', 'db-sec', t('doccard.suggestTitle')));
+      const list = el('div', 'db-suggest');
+      suggestions.forEach((question) => {
+        const item = el('button', 'db-suggest-item');
+        item.type = 'button';
+        item.append(el('span', 'db-suggest-text', question), el('span', 'arr', '→'));
+        item.addEventListener('click', () => { if (_ask) _ask(question); });
+        list.appendChild(item);
       });
-      list.appendChild(item);
-    });
-    _container.appendChild(list);
-    const actions = el('div', 'dc-actions');
-    const reread = el('button', 'dc-action-btn', t('doccard.reread'));
+      panel.append(list);
+    }
+
+    const actions = el('div', 'db-actions');
+    const reread = el('button', 'db-act-btn', t('doccard.reread'));
     reread.type = 'button';
     reread.addEventListener('click', () => startRead());
-    const open = el('button', 'dc-action-btn', t('doccard.openOriginal'));
-    open.type = 'button';
-    open.addEventListener('click', () => chrome.tabs.create({ url }));
-    actions.append(reread, open);
-    _container.appendChild(actions);
-    return;
+    actions.append(reread);
+    panel.append(actions);
+    return panel;
   }
 
-  // ---------- 失败态（效果图未给出，按 5.1 布局变体：badge 按状态配色、
-  // 说明区渲染 message、按钮改重试） ----------
-  if (rec && rec.state === 'error') {
-    const [key, tone] = ERROR_BADGES[rec.serverStatus] || ERROR_BADGES.network_error;
-    const head = el('div', 'dc-head');
-    head.append(fileIcon(), el('span', 'dc-title dc-title-inline', name), badge(t(`doccard.${key}`), tone));
-    _container.appendChild(head);
-    _container.appendChild(el('div', 'dc-meta', t('doccard.metaSource')));
-    _container.appendChild(el('div', 'dc-divider'));
-    _container.appendChild(el('div', 'dc-desc', rec.message || t('doccard.errorGeneric')));
-    const foot = el('div', 'dc-foot');
-    foot.appendChild(el('span', 'dc-chip', 'PDF'));
-    const retry = el('button', 'dc-cta', t('doccard.retry'));
+  // ---------- 失败态：原因说明 + 重试 ----------
+  if (state === 'error') {
+    panel.append(el('div', 'db-desc', rec.message || t('doccard.errorGeneric')));
+    const actions = el('div', 'db-actions');
+    const retry = el('button', 'db-cta', t('doccard.retry'));
     retry.type = 'button';
     retry.addEventListener('click', () => startRead());
-    foot.appendChild(retry);
-    _container.appendChild(foot);
+    actions.appendChild(retry);
+    panel.append(actions);
+    return panel;
+  }
+
+  // ---------- 未读取（idle）：仅说明文案，读取入口在工具栏行内（db-bar-cta） ----------
+  panel.append(el('div', 'db-desc', t('doccard.descIdle')));
+  return panel;
+}
+
+function infoRow(k, v) {
+  const row = el('div', 'db-row');
+  row.append(el('span', 'db-row-k', k), el('span', 'db-row-v', v));
+  return row;
+}
+
+// 迷你圆标（× 隐藏态渲染进 composer 操作行；点击恢复完整工具栏）
+function renderMini(type) {
+  if (!_miniEl) return;
+  _miniEl.hidden = false;
+  _miniEl.textContent = '';
+  const mini = document.createElement('button');
+  mini.type = 'button';
+  mini.className = 'db-mini';
+  mini.title = t('docbar.restore');
+  mini.setAttribute('aria-label', t('docbar.restore'));
+  mini.append(fileIcon(type));
+  mini.addEventListener('click', () => { _dismissed = null; render(); });
+  _miniEl.append(mini);
+}
+
+function clearMini() {
+  if (!_miniEl) return;
+  _miniEl.hidden = true;
+  _miniEl.textContent = '';
+}
+
+function render() {
+  if (!_container || !_current) return;
+  const url = _current.url;
+  const { title } = _current;
+  const type = detectDocType(url) || DOC_TYPES.pdf;
+  const name = title || filenameFromUrl(url);
+  const state = docState(url);
+
+  // × 隐藏态：完整工具栏隐藏，迷你圆标进 composer 操作行
+  if (_dismissed === url) {
+    _container.hidden = true;
+    _container.textContent = '';
+    _container.classList.remove('expanded');
+    renderMini(type);
     return;
   }
 
-  // ---------- 未读取（idle） ----------
-  const head = el('div', 'dc-head');
-  head.append(fileIcon(), el('span', 'dc-label', t('doccard.label')), badge(t('doccard.badgeIdle'), 'orange'));
-  _container.appendChild(head);
-  _container.appendChild(el('div', 'dc-title', name));
-  _container.appendChild(el('div', 'dc-meta', t('doccard.metaSource')));
-  _container.appendChild(el('div', 'dc-divider'));
-  _container.appendChild(el('div', 'dc-desc', t('doccard.descIdle')));
-  const foot = el('div', 'dc-foot');
-  foot.appendChild(el('span', 'dc-chip', 'PDF'));
-  const read = el('button', 'dc-cta', t('doccard.read'));
-  read.type = 'button';
-  read.addEventListener('click', () => startRead());
-  foot.appendChild(read);
-  _container.appendChild(foot);
+  clearMini();
+  _container.textContent = '';
+  _container.hidden = false;
+  _container.classList.toggle('expanded', _expanded);
+  _container.append(renderBar(type, name, state));
+  // 展开面板：收起态不渲染内容（动画由 .db-expand 的 grid-rows 过渡承担）
+  const expand = el('div', 'db-expand');
+  const clip = el('div');
+  if (_expanded) clip.appendChild(renderPanel(type, name, state));
+  expand.appendChild(clip);
+  _container.append(expand);
 }
 
 // ---------- 读取流程 ----------
@@ -232,11 +374,13 @@ async function startRead() {
     if (status === 'ready' || status === 'partial') {
       _cards[url] = {
         url,
+        documentId: res.documentId || '',
         title: (res.title || title || filenameFromUrl(url)),
         state: 'ready',
         serverStatus: status,
         charCount: res.charCount || 0,
         truncated: !!res.truncated,
+        suggestions: Array.isArray(res.suggestions) ? res.suggestions : [],
         updatedAt: Date.now()
       };
     } else {
@@ -261,8 +405,91 @@ async function startRead() {
     clearReadingTimers();
     _reading = null;
     await saveCards();
-    // 读取期间用户可能已切走标签页：仅当仍在同一 PDF 上才刷新展示
-    if (_current && _current.url === url) render();
+    // 读取期间用户可能已切走标签页：仅当仍在同一文档上才刷新展示
+    if (_current && _current.url === url) {
+      // 读取成功自动展开一次引导（见方案决策 2）；用户可手动收起，下次读取不再打扰
+      if (_cards[url] && _cards[url].state === 'ready') _expanded = true;
+      render();
+    }
+  }
+}
+
+// ---------- 本地文件访问引导卡（B4） ----------
+// 证据驱动触发：活动标签页拿不到可识别地址（tab.url 缺失，或为内置查看器的
+// chrome-extension:// 扩展页）且"允许访问文件网址"未授权 → 显示引导卡——无论
+// 根因是开关还是其他异常，扩展都拿不到真实文件地址，文档卡无从谈起；tab.url
+// 为 file:// PDF 时正常走文档卡（该形态不受开关影响，见核实测）。
+// Chrome 无 API 可程序化授予该开关，"去设置"一键直达扩展详情页，面板内轮询
+// 开关状态，授权后自动收卡并重跑识别。
+let _faTimer = null; // 授权轮询计时器（引导卡显示期间每秒探测）
+
+function isAllowedFileScheme() {
+  return new Promise((resolve) => {
+    try {
+      chrome.extension.isAllowedFileSchemeAccess((ok) => resolve(!!ok));
+    } catch {
+      resolve(true); // API 不可用的环境按已授权处理，不弹引导
+    }
+  });
+}
+
+// 页面地址不可识别：扩展页（内置 PDF 查看器自报形态）或地址缺失。
+function isUnidentifiableUrl(url) {
+  return !url || /^chrome-extension:\/\//i.test(url);
+}
+
+function fileAccessCardEl() {
+  return document.getElementById('fileAccessCard');
+}
+
+function hideFileAccess() {
+  stopFileAccessPoll();
+  const card = fileAccessCardEl();
+  if (card) {
+    card.hidden = true;
+    card.textContent = '';
+  }
+}
+
+// 渲染引导卡（dock 内复用 docbar 白底卡片视觉）：图标 + 标题/说明 + 去设置
+function showFileAccess() {
+  const card = fileAccessCardEl();
+  if (!card) return;
+  if (!card.hidden && card.childElementCount) {
+    startFileAccessPoll(); // 已在展示，仅确保轮询在跑
+    return;
+  }
+  card.textContent = '';
+  card.hidden = false;
+  card.append(fileIcon(DOC_TYPES.pdf));
+  const body = el('div', 'fa-body');
+  body.append(el('div', 'fa-title', t('fileaccess.title')));
+  body.append(el('div', 'fa-desc', t('fileaccess.desc')));
+  const btn = el('button', 'fa-btn', t('fileaccess.btn'));
+  btn.type = 'button';
+  btn.addEventListener('click', () => {
+    chrome.tabs.create({ url: `chrome://extensions/?id=${chrome.runtime.id}` });
+  });
+  body.append(btn);
+  card.append(body);
+  card.append(el('div', 'fa-hint', t('fileaccess.hint')));
+  startFileAccessPoll();
+}
+
+function startFileAccessPoll() {
+  if (_faTimer) return;
+  _faTimer = setInterval(async () => {
+    if (await isAllowedFileScheme()) {
+      hideFileAccess();
+      refresh(); // 授权后重新识别：file:// 地址现在应可见，文档卡接管
+    }
+  }, 1000);
+}
+
+function stopFileAccessPoll() {
+  if (_faTimer) {
+    clearInterval(_faTimer);
+    _faTimer = null;
   }
 }
 
@@ -271,19 +498,40 @@ async function refresh() {
   if (!_container) return;
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab && tab.url && isPdfUrl(tab.url)) {
+    const type = tab && tab.url ? detectDocType(tab.url) : null;
+    if (tab && tab.url && type) {
+      hideFileAccess(); // 可识别文档页：引导卡让位文档卡
       // 读取完成回填过服务端标题（res.title），但展示名优先用标签页实时标题
+      const prevUrl = _current && _current.url;
       _current = { url: tab.url, title: tab.title || '' };
-      _container.hidden = false;
+      // 活动文档变化（含从非文档页切回）：× 隐藏自动失效；同一文档原地刷新
+      // （如标题更新）不恢复，避免误触 × 后立刻复显
+      if (prevUrl !== tab.url) _dismissed = null;
+      if (_dismissed === tab.url) {
+        render();
+        return;
+      }
     } else {
       _current = null;
       _container.hidden = true;
       _container.textContent = '';
+      clearMini();
+      // 引导卡判定：地址不可识别 + 开关未授权 → 引导；其余（普通网页/chrome://
+      // 页/已授权异常态）保持隐藏不弹
+      // 导航过渡态（loading / pendingUrl 在途）不作为引导证据：新开 tab 的 url
+      // 短暂为空是正常加载窗口，此时弹卡会闪现误报，等导航完成后再判定
+      const navigating = tab && (tab.status === 'loading' || tab.pendingUrl);
+      if (!navigating && isUnidentifiableUrl(tab && tab.url) && !(await isAllowedFileScheme())) {
+        showFileAccess();
+      } else {
+        hideFileAccess();
+      }
       return;
     }
   } catch {
     _current = null;
     _container.hidden = true;
+    clearMini();
     return;
   }
   render();
@@ -294,10 +542,11 @@ async function refresh() {
 export async function initDocCard({ ask }) {
   _ask = ask || null;
   _container = document.getElementById('docCard');
+  _miniEl = document.getElementById('docMiniSlot');
   if (!_container) return;
   await loadCards();
   await refresh();
-  // 切换/导航标签页实时刷新卡片（SW 不参与，监听在面板页自身上下文）
+  // 切换/导航标签页实时刷新工具栏（SW 不参与，监听在面板页自身上下文）
   chrome.tabs.onActivated.addListener(() => { refresh(); });
   chrome.tabs.onUpdated.addListener((_tabId, info) => {
     if (info.url || info.title) refresh();

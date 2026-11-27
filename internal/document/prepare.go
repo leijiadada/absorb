@@ -7,15 +7,17 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	neturl "net/url"
 	"strings"
 	"time"
 
 	"absorb-agent/internal/document/extract"
 	"absorb-agent/internal/log"
+	"absorb-agent/internal/retrieval"
 	"absorb-agent/internal/store/storage"
-	retriever "absorb-agent/tool/pageretriever"
 )
 
 // Service 文档准备服务：SSRF 校验 → 提取 → 状态分类 → documents 锚点 +
@@ -24,6 +26,7 @@ type Service struct {
 	app, user string
 	st        storage.Storage
 	extractor extract.Extractor
+	embedder  retrieval.Embedder // M3：nil = 语义向量禁用（纯词法）
 }
 
 // NewService 构建文档准备服务。extractor 为 PDF 提取器（未来格式经同一接缝注入）。
@@ -33,7 +36,33 @@ func NewService(st storage.Storage, ex extract.Extractor, app, user string) *Ser
 
 // extractionVersion 提取器版本：升级提取逻辑（如换 PDF 解析库）后 +1，
 // 配合 content_hash 支撑未来的按版本重提取。
-const extractionVersion = 1
+// v2（2026-11-17）：PDF 提取引入 poppler(pdftotext) 双跑择优（poppler.go），
+// 缺 ToUnicode 字体的书从拒绝入库变为完整可读。
+// v3（2026-11-17）：docling 结构叠加（structure.go）——章节树按页号模糊匹配
+// 回注 markdown 标题行，chunker v4 面包屑对 PDF 生效。
+// v4（2026-11-18）：择优打分器加入行内乱序项（rareBigramRate，P1 实验）——
+// dslipak 组装缺陷的行内交错文本现在会被识别并切到干净的 pdftotext 文本；
+// 结构叠加改为仅对主路保留文本生效（干净 poppler 文本上叠加稳定 -7pp）。
+// v5（2026-11-18）：目录页剥离（extract/toc.go，P5）——页级整删（poppler 分页
+// 文本密度判定）+ 行级条目行剥离，清掉目录块噪音命中/面包屑污染/向量空间浪费；
+// 主路书的叠加匹配也不再落目录页。落在结构叠加之后，保页号匹配窗口有效。
+// v6（2026-11-18）：结构进元数据（F3a）——docling 章节树不再注入正文，改为
+// HeadingMark 元数据（rune 偏移+层级+面包屑）随正文落库，BuildIndex 切块后
+// 按中点规则赋 SectionPath。正文一个字节不动：块边界/分词/块内容与 v5 产物
+// 逐位一致，结构只进元数据层（FTS section_path 加权 + 展示/回链；向量纯正文见 F3c）。
+// v7（2026-11-19）：撤销 marks 门控——切 poppler 干净文本的书也生成 HeadingMark，
+// 章节导航全 PDF 覆盖。正文/块边界/向量均不变，仅 SectionPath 元数据层变化；存量
+// 文档在下次 prepare 时靠「重算面包屑 vs 库内现存」比对原地刷新（不 re-embed）。
+// v8（2026-11-19，F8）：书签树 hybrid——用 PDF 原生 /Outlines 的完整标题/层级
+// 修正 docling Path（断行/错配），只改 Path 文案，Offset/Title/正文/向量不变。
+// v9（2026-11-21）：docling 升级 v1.6.3（上游 #9/#10，leijiadada 报告）——伪字符
+// 独立解码确认、中文合成字距抑制、同位置重绘去除、坏字/碎行标题过滤、可选
+// Poppler 回退。缺 ToUnicode 书（人月神话）标题恢复可读、iTextSharp 逐字 span
+// 书（Go 程序设计语言）伪标题不再泛滥；存量文档重 prepare 时经 content_hash
+// 变化自动重建索引。
+// v10（2026-11-23）：版式家具过滤（furniture.go）——pdftotext 分页文本上按
+// 邻接指纹剔除页眉/页脚重复行；主路连续文本（无 \f）跳过。
+const extractionVersion = 10
 
 // PrepareResult 准备结果：状态与元信息。不含正文——正文只落库，扩展端仅持
 // documentId 与状态，避免大文本经扩展消息对象/chrome.storage 往返。
@@ -48,12 +77,17 @@ type PrepareResult struct {
 	ByteSize    int64  `json:"byteSize"`
 	Truncated   bool   `json:"truncated"`
 	Message     string `json:"message,omitempty"`
+	// Suggestions 动态建议提问（doc-suggestions-design.md）：章节树双通道
+	// 直出的成句问题，ready/partial 才产出；无素材不产出字段（扩展不渲染
+	// 建议提问小节）。
+	Suggestions []string `json:"suggestions,omitempty"`
 }
 
-// Prepare 准备文档。ready/partial 时正文完整落库（partial 表示注入问答时只能
-// 覆盖部分正文，全文不受影响）；失败状态不落库（扩展端持临时状态，重试即重新
-// 准备）。对外 documentId = 原始 URL：documents 表 (app,user,url) 唯一锚点，
-// 第一版原样存 URL 不做规范化，扩展端提问时原样带回。
+// Prepare 准备文档。ready/partial 时正文完整落库（partial 仅表示获取侧截断，
+// 与注入上下文的长度限制无关——20.9 万字全文照存，检索增强是后续增强项）；
+// 失败状态不落库（扩展端持临时状态，重试即重新准备）。对外 documentId =
+// documents.id（UUID，M0 统一身份）：chunks/摘要/知识来源回链共用同一稳定键；
+// 扩展端旧卡片持 URL 的情况由问答链路按 URL 回退兼容。
 func (s *Service) Prepare(ctx context.Context, rawURL, title string) (*PrepareResult, error) {
 	url := strings.TrimSpace(rawURL)
 	title = strings.TrimSpace(title)
@@ -63,6 +97,13 @@ func (s *Service) Prepare(ctx context.Context, rawURL, title string) (*PrepareRe
 	if url == "" {
 		base.Status, base.Message = extract.StatusInvalidURL, "URL 不能为空"
 		return &base, nil
+	}
+	// file:// 本地文档分流：本地文件不走公网 SSRF 校验（validateFileURL 是
+	// 另一类信任边界，见 localfile.go），提取走 poppler 单引擎（ExtractLocal）。
+	// 注意 ssrf.go 的 Host=="" 拒绝先于 scheme 判断，分流必须在 ValidatePublicURL
+	// 之前。
+	if u, perr := neturl.Parse(url); perr == nil && u.Scheme == "file" {
+		return s.prepareLocalFile(ctx, url, title, start, base)
 	}
 	if err := ValidatePublicURL(url); err != nil {
 		base.Status, base.Message = extract.StatusInvalidURL, err.Error()
@@ -82,6 +123,48 @@ func (s *Service) Prepare(ctx context.Context, rawURL, title string) (*PrepareRe
 		return &base, nil
 	}
 
+	return s.persist(ctx, res, url, title, start, base)
+}
+
+// localExtractor 本地文件提取接缝：extract.Extractor 的可选扩展能力，仅
+// PDFExtractor 实现（ExtractLocal）。其他格式提取器接入时本地语义自行跟进。
+type localExtractor interface {
+	ExtractLocal(ctx context.Context, rawURL string) (*extract.Result, error)
+}
+
+// prepareLocalFile 本地文档准备：validateFileURL → ExtractLocal → 与远程
+// 路径同一落库段（persist）。失败形态与远程一致——校验/提取失败返回带状态
+// 的结果不落库，扩展端渲染文案并可重试。
+func (s *Service) prepareLocalFile(ctx context.Context, url, title string, start time.Time, base PrepareResult) (*PrepareResult, error) {
+	if err := validateFileURL(url); err != nil {
+		base.Status, base.Message = extract.StatusInvalidURL, err.Error()
+		log.Warnf("[Absorb] local document rejected | url=%q status=%s dur=%s msg=%q",
+			url, base.Status, time.Since(start).Round(time.Millisecond), base.Message)
+		return &base, nil
+	}
+	lex, ok := s.extractor.(localExtractor)
+	if !ok {
+		base.Status, base.Message = extract.StatusInvalidURL, "当前提取器不支持本地文件"
+		return &base, nil
+	}
+	res, err := lex.ExtractLocal(ctx, url)
+	if err != nil {
+		var ee *extract.Error
+		if errors.As(err, &ee) {
+			base.Status, base.Message = ee.Status, ee.Message
+		} else {
+			base.Status, base.Message = extract.StatusNetworkError, err.Error()
+		}
+		log.Warnf("[Absorb] local document prepare failed | url=%q status=%s dur=%s msg=%q",
+			url, base.Status, time.Since(start).Round(time.Millisecond), base.Message)
+		return &base, nil
+	}
+	return s.persist(ctx, res, url, title, start, base)
+}
+
+// persist 提取产物落库段（远程与本地路径共用）：空文本守卫 → 正文库 +
+// documents 锚点 + 索引 → 组装 ready 结果（含动态建议提问）。
+func (s *Service) persist(ctx context.Context, res *extract.Result, url, title string, start time.Time, base PrepareResult) (*PrepareResult, error) {
 	text := res.Content
 	if strings.TrimSpace(text) == "" {
 		base.Status, base.Message = extract.StatusNoText, "未提取到文本内容（可能是扫描件或图片型 PDF）"
@@ -90,10 +173,11 @@ func (s *Service) Prepare(ctx context.Context, rawURL, title string) (*PrepareRe
 	}
 
 	charCount := len([]rune(text))
-	// partial 语义：进入问答上下文时只能覆盖部分正文（超 PageTextMaxLen 注入截断，
-	// 或获取侧已静默截断）；全文仍完整落库，长文档检索是后续增强项。
+	// partial 语义（M0 修正）：仅表达「获取侧已静默截断」（提取完整度）。
+	// 超过 PageTextMaxLen 属上下文交付限制（注入时截断、缓存只存开头），
+	// 不再混入提取状态——全文完整落库的文档不应被判为 partial。
 	status := extract.StatusReady
-	if res.Truncated || charCount > retriever.PageTextMaxLen {
+	if res.Truncated {
 		status = extract.StatusPartial
 	}
 	sum := sha256.Sum256([]byte(text))
@@ -107,17 +191,24 @@ func (s *Service) Prepare(ctx context.Context, rawURL, title string) (*PrepareRe
 		ExtractionStatus:  status,
 		ExtractionVersion: extractionVersion,
 		Truncated:         res.Truncated,
+		HeadingMarks:      encodeHeadingMarks(res.Marks),
 		FetchedAt:         time.Now(),
 	}
-	// documents 锚点（未来知识来源回链复用）+ 正文缓存
-	if _, err := s.st.UpsertDocument(ctx, s.app, s.user, url, title); err != nil {
+	// documents 锚点（知识来源回链 / 未来 chunks 关联复用）+ 正文缓存；
+	// documentId 取锚点 UUID，替代早期的「URL 即 documentId」语义。
+	doc, err := s.st.UpsertDocument(ctx, s.app, s.user, url, title)
+	if err != nil {
 		return nil, fmt.Errorf("保存文档锚点失败: %w", err)
 	}
+	base.DocumentID = doc.ID
 	if err := s.st.SaveDocumentContent(ctx, s.app, s.user, dc); err != nil {
 		return nil, fmt.Errorf("保存文档正文失败: %w", err)
 	}
-	log.Infof("[Absorb] document prepared | url=%q status=%s type=%q chars=%d bytes=%d dur=%s",
-		url, status, res.ContentType, charCount, dc.ByteSize, time.Since(start).Round(time.Millisecond))
+	// M1：构建检索索引（分块+分词+FTS）。索引是派生数据，失败只标 failed
+	// 不影响本次准备结果；重建由下次读取或 index_state 调度触发。
+	s.BuildIndex(ctx, base.DocumentID, dc)
+	log.Infof("[Absorb] document prepared | url=%q status=%s type=%q chars=%d bytes=%d dur=%s extract{%s}",
+		url, status, res.ContentType, charCount, dc.ByteSize, time.Since(start).Round(time.Millisecond), res.Diagnostics)
 
 	base.FinalURL = res.FinalURL
 	base.ContentType = res.ContentType
@@ -125,5 +216,22 @@ func (s *Service) Prepare(ctx context.Context, rawURL, title string) (*PrepareRe
 	base.CharCount = charCount
 	base.ByteSize = dc.ByteSize
 	base.Truncated = res.Truncated
+	// 动态建议提问（doc-suggestions）：BuildIndex 已同步完成（或幂等快路径
+	// chunks 已在库），双通道素材在此时点可查；失败/为空不产出字段。
+	base.Suggestions = buildSuggestions(ctx, s.app, s.user, base.DocumentID, dc, s.st.LoadDocumentSections)
 	return &base, nil
+}
+
+// encodeHeadingMarks 结构 marks 落库序列化（F3a）：空 = ""（HTML 路径/旧文档
+// 全链路行为不变）。序列化失败按无结构处理（marks 是派生元数据，宁缺勿错）。
+func encodeHeadingMarks(marks []extract.HeadingMark) string {
+	if len(marks) == 0 {
+		return ""
+	}
+	b, err := json.Marshal(marks)
+	if err != nil {
+		log.Warnf("[Absorb] heading_marks encode failed (ignored): %v", err)
+		return ""
+	}
+	return string(b)
 }

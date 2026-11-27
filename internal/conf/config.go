@@ -35,8 +35,31 @@ type Config struct {
 	Upgrade    UpgradeConfig    `yaml:"upgrade"`
 	Proxy      ProxyConfig      `yaml:"proxy"`
 	Fetch      FetchConfig      `yaml:"fetch"`
+	Embedding  EmbeddingConfig  `yaml:"embedding"`
 	Log        LogConfig        `yaml:"logs"`
 	Telemetry  TelemetryConfig  `yaml:"telemetry"`
+}
+
+// EmbeddingConfig 语义向量检索配置（M3 混合检索）。api_key 为空 = 整体禁用，
+// 检索链路自动降级为纯词法（FTS5+BM25）。云 OpenAI 兼容 /v1/embeddings API
+// （Qwen3-Embedding-4B 等；bge 时代 local llama-server 子进程模式已移除）。
+type EmbeddingConfig struct {
+	APIKey    string `yaml:"api_key"`    // 云密钥
+	BaseURL   string `yaml:"base_url"`   // 云地址，空 = https://api.siliconflow.cn/v1
+	Model     string `yaml:"model"`      // 空 = BAAI/bge-m3
+	BatchSize int    `yaml:"batch_size"` // 索引期单批文本数，0 = 默认 32
+
+	// 精排（Reranker）：对 RRF 融合候选 top-N 按查询-文档相关度重排后再进
+	// 多样性层。rerank_model 为云模型名（如 Qwen/Qwen3-Reranker-8B），鉴权与
+	// base_url 复用上方 api_key / base_url（硅基流动同款 /v1/rerank 风格）。
+	// 空 = 禁用精排（纯融合序），延迟 <1s。
+	RerankModel string `yaml:"rerank_model"` // 云 rerank 模型名，空 = 不用精排
+	RerankTopN  int    `yaml:"rerank_top_n"` // 精排候选数，0 = 默认 16（F4b 验证口径）
+
+	// 精排池词法种子数（F11，design/5.md 2026-11-20 转正）：BM25 榜头并入精排池，
+	// 救「词法可见、embedding 盲」条目。0/未配置 = 默认 25（A 档，两书两轮转正
+	// 口径），50 = B 档（增益更大、池/延迟更大）。
+	RerankLexSeed int `yaml:"rerank_lex_seed"`
 }
 
 // TelemetryConfig 生产可观测性（框架链路追踪）配置（默认关闭）。
@@ -58,7 +81,7 @@ type TelemetryConfig struct {
 type WorkingSetConfig struct {
 	Enabled     *bool `yaml:"enabled"`       // 指针三态：未设置=启用，显式 false 关闭
 	L1MaxRounds int   `yaml:"l1_max_rounds"` // 全局最近完整问答轮数上限，0=默认 2
-	L1MaxTokens int   `yaml:"l1_max_tokens"` // L1 注入估算 token 预算，超限本轮可读报错（不裁剪），0=默认 16000
+	L1MaxTokens int   `yaml:"l1_max_tokens"` // L1 注入估算 token 预算，超限降级：从最旧轮剔除直到入限，0=默认 16000
 }
 
 // On 返回开关有效值（未设置 = 启用）。

@@ -229,7 +229,8 @@ CREATE INDEX IF NOT EXISTS idx_token_usage_ts ON token_usage(ts);
 // encrypted/invalid_url/network_error，见 internal/document/extract）；失败状态
 // 不落库（扩展端持临时状态，重试即重新准备），落库的只有可复用正文。
 // UNIQUE(app,user,url) 与 documents 同聚合键；content_hash 供未来变更检测；
-// extraction_version 标记提取器版本（升级提取逻辑后可按版本重提取）。
+// extraction_version 标记提取器版本（升级提取逻辑后可按版本重提取）；
+// byte_size 为提取正文的 UTF-8 字节长度（len(content_text)，非原始 PDF 文件大小）。
 // 无 FOREIGN KEY 同全库约定。
 const documentContentsDDL = `
 CREATE TABLE IF NOT EXISTS document_contents (
@@ -244,15 +245,104 @@ CREATE TABLE IF NOT EXISTS document_contents (
 	extraction_status   TEXT NOT NULL DEFAULT '',
 	extraction_version  INTEGER NOT NULL DEFAULT 1,
 	truncated           INTEGER NOT NULL DEFAULT 0,
+	heading_marks       TEXT NOT NULL DEFAULT '',
 	fetched_at          INTEGER NOT NULL,
 	updated_at          INTEGER NOT NULL,
 	PRIMARY KEY (app_name, user_id, url)
 );
 `
 
+// documentIndexDDL 文档检索索引三件套（M1，doc2 方案 §3）：
+//   - document_chunks：检索片段（事实数据的派生物，可随时整体重建）。
+//     document_id = documents.id（M0 统一身份），app/user 冗余同全库租户约定
+//     （无外键，隔离由每条查询显式携带）；content 保存原文供 LLM，
+//     search_text 保存分词后文本供索引——原文与检索文本必须分离（重分词/引用回链）。
+//     start_offset/end_offset 为正文 rune 偏移，支撑"展示前后原文"回链
+//     document_contents.content_text（当前提取器无可靠页码，偏移比页码可靠）。
+//   - document_chunks_fts：FTS5 全文倒排索引（unicode61——中文已由 GSE 切成
+//     空格分隔词项）。bm25 权重按列序 (chunk_id=0, title=4, section_path=2,
+//     search_text=1)，bm25() 返回值越小越相关。普通 FTS 表优先简单可靠，
+//     外部内容表留待后续减重复存储时再评估。
+//   - document_index_state：索引生命周期（提取事实与派生索引分离）。
+//     indexed_content_hash 比对 document_contents.content_hash 判定待重建；
+//     chunker/tokenizer 版本变化同样触发重建。重建在事务内整体替换，
+//     失败保留旧索引并标 failed（不留新旧混杂中间态）。
+//     vector_* 四列为向量域状态（0010 起，与词法 index_status 解耦）：
+//     词法 ready 不代表向量完整——缺失/失败/换模型由 embedChunks 独立补建。
+const documentIndexDDL = `
+CREATE TABLE IF NOT EXISTS document_chunks (
+	id                 TEXT PRIMARY KEY,
+	app_name           TEXT NOT NULL,
+	user_id            TEXT NOT NULL,
+	document_id        TEXT NOT NULL,
+	chunk_index        INTEGER NOT NULL,
+	section_path       TEXT NOT NULL DEFAULT '',
+	content            TEXT NOT NULL,
+	search_text        TEXT NOT NULL DEFAULT '',
+	start_offset       INTEGER NOT NULL DEFAULT 0,
+	end_offset         INTEGER NOT NULL DEFAULT 0,
+	token_count        INTEGER NOT NULL DEFAULT 0,
+	content_hash       TEXT NOT NULL DEFAULT '',
+	chunker_version    INTEGER NOT NULL DEFAULT 1,
+	tokenizer_version  TEXT NOT NULL DEFAULT '',
+	created_at         INTEGER NOT NULL,
+	UNIQUE(document_id, chunk_index)
+);
+CREATE INDEX IF NOT EXISTS idx_document_chunks_doc
+ON document_chunks(app_name, user_id, document_id, chunk_index);
+CREATE VIRTUAL TABLE IF NOT EXISTS document_chunks_fts USING fts5(
+	chunk_id UNINDEXED,
+	title,
+	section_path,
+	search_text,
+	tokenize = 'unicode61'
+);
+CREATE TABLE IF NOT EXISTS document_index_state (
+	app_name             TEXT NOT NULL,
+	user_id              TEXT NOT NULL,
+	document_id          TEXT NOT NULL,
+	indexed_content_hash TEXT NOT NULL DEFAULT '',
+	index_status         TEXT NOT NULL DEFAULT 'pending',
+	chunker_version      INTEGER NOT NULL DEFAULT 0,
+	tokenizer_version    TEXT NOT NULL DEFAULT '',
+	chunk_count          INTEGER NOT NULL DEFAULT 0,
+	indexed_at           INTEGER NOT NULL DEFAULT 0,
+	error_message        TEXT NOT NULL DEFAULT '',
+	vector_model         TEXT NOT NULL DEFAULT '',
+	vector_status        TEXT NOT NULL DEFAULT '',
+	vector_count         INTEGER NOT NULL DEFAULT 0,
+	vector_error         TEXT NOT NULL DEFAULT '',
+	PRIMARY KEY (app_name, user_id, document_id)
+);
+`
+
 // schemaDDL 全新库的建库文本：基础表 + 知识表 + 资料表 + 追踪表 + 扩展镜像表 +
-// token 用量表 + 文档正文表（升级库由 0002~0007 迁移补建）。
-const schemaDDL = baseSchemaDDL + knowledgeTablesDDL + documentsDDL + TraceTablesDDL + extMirrorDDL + tokenUsageDDL + documentContentsDDL
+// token 用量表 + 文档正文表 + 文档检索索引表（含向量状态列）+ chunk 向量表
+// （升级库由 0002~0010 迁移补齐）。
+const schemaDDL = baseSchemaDDL + knowledgeTablesDDL + documentsDDL + TraceTablesDDL + extMirrorDDL + tokenUsageDDL + documentContentsDDL + documentIndexDDL + chunkVectorsDDL
+
+// chunkVectorsDDL 文档 chunk 向量表（M3 语义召回）：
+//   - 与 document_chunks 按 chunk_id 关联，app/user/document_id 冗余同租户约定；
+//   - vector 为 float32 LE 打包 BLOB，dims 记维度（余弦计算时校验）；
+//   - model 入库且复合主键 (chunk_id, model)：跨模型向量不可比，加载按当前
+//     配置模型过滤；换模型重新嵌入写新模型行（旧模型行由下次 chunks 重建清空），
+//     单列 chunk_id 主键会让换模型嵌入撞 UNIQUE 约束（0010 修复）。
+const chunkVectorsDDL = `
+CREATE TABLE IF NOT EXISTS document_chunk_vectors (
+	chunk_id     TEXT NOT NULL,
+	app_name     TEXT NOT NULL,
+	user_id      TEXT NOT NULL,
+	document_id  TEXT NOT NULL,
+	chunk_index  INTEGER NOT NULL,
+	dims         INTEGER NOT NULL,
+	model        TEXT NOT NULL,
+	vector       BLOB NOT NULL,
+	created_at   INTEGER NOT NULL,
+	PRIMARY KEY (chunk_id, model)
+);
+CREATE INDEX IF NOT EXISTS idx_chunk_vectors_doc
+ON document_chunk_vectors(app_name, user_id, document_id, model);
+`
 
 // migrateTraceTable 0004：建 request_traces 链路追踪表（obs sqlite 落库形态）。
 // 只追加新表，不触碰任何既有表/行；DDL 与 schemaDDL、obs exporter 共用

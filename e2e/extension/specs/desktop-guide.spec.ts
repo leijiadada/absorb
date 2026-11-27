@@ -4,7 +4,7 @@
 // 注：真实 connectNative 分类（native-connection.js）不在 E2E 范围（测试钩子绕开管道）。
 import { test, expect, MOCK_PORT, closeTestPages, type BrowserContext, type Worker } from '../fixtures/extension.fixture';
 
-const DOWNLOAD_URL = 'https://gitee.com/leij1/absorb/releases';
+const DOWNLOAD_URL = 'https://github.com/leijiadada/absorb/releases';
 
 // 覆盖 SW 测试钩子（fixture 默认 testBridgePort=MOCK_PORT + installed）
 async function setHostMock(worker: Worker, hostStatus: string, port = 0) {

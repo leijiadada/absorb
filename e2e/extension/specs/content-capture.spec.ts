@@ -93,7 +93,9 @@ test.describe('划词采集', () => {
     expect(String(q.url)).toBe(ARTICLE_URL);
     expect(String(q.pageMd)).toContain('absorb-fixture-alpha-marker');
     // 注：isComplete 只影响 grab 是否抓段落，不随 quote 持久化（存储形状见 quote-queue.js）
-    expect(Object.keys(q).sort()).toEqual(['id', 'pageContext', 'pageMd', 'paragraph', 'text', 'url']);
+    // contentStatus 随 grab 采集结果上送（fixture 文章完整提取 → full），断言 key 集防字段丢失
+    expect(String(q.contentStatus)).toBe('full');
+    expect(Object.keys(q).sort()).toEqual(['contentStatus', 'id', 'pageContext', 'pageMd', 'paragraph', 'text', 'url']);
 
     // 面板消费：storage.onChanged → 输入框出现 quote chip（chip 可见文本会被 chipText 截断，
     // 全文在 .chip-text 的 title 上，按 title 定位）

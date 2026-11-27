@@ -122,6 +122,8 @@ func newUpgradeService(cfg conf.Config, host upgrade.Host, opts ...upgrade.Optio
 }
 
 // newUpgradeHTTPClient 升级链路 HTTP 客户端：跟随配置代理，否则跟随系统代理（与 fetch 一致）。
+// 代理值统一经 NormalizeProxyServer 规范化——裸 "host:port"（WinINET 或手填）直接
+// url.Parse 会报错；解析仍失败时记日志并回退环境变量，绝不静默直连。
 func newUpgradeHTTPClient(cfg conf.Config) *http.Client {
 	proxyURL := strings.TrimSpace(cfg.Proxy.URL)
 	if proxyURL == "" {
@@ -129,10 +131,14 @@ func newUpgradeHTTPClient(cfg conf.Config) *http.Client {
 			proxyURL = server
 		}
 	}
+	proxyURL = fetch.NormalizeProxyServer(proxyURL)
 	transport := &http.Transport{}
 	if proxyURL != "" {
 		if u, err := url.Parse(proxyURL); err == nil {
 			transport.Proxy = http.ProxyURL(u)
+		} else {
+			log.Warnf("[Absorb] upgrade proxy %q unparseable (%v), fallback to env proxy", proxyURL, err)
+			transport.Proxy = http.ProxyFromEnvironment
 		}
 	} else {
 		transport.Proxy = http.ProxyFromEnvironment

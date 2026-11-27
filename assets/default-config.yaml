@@ -17,8 +17,24 @@ memory:
     enabled: true
     file_path: "./data/profile.md"
 
+# 多 Scope 工作集上下文（第一阶段仅 L1）：每轮请求前注入最近完整问答轮次
+working_set:
+  enabled: true        # 总开关：关闭则回退单 scope 行为
+  l1_max_rounds: 4     # 注入的最近完整问答轮数上限（user + 最终回答，轮内工具调用折叠为一行标记）
+  l1_max_tokens: 30000 # L1 注入估算 token 预算，须 ≥ 轮数 × 单轮峰值（整页正文轮约 6K），超限从最旧轮剔除
+
 proxy:
   url: ""             # 全局 HTTP 代理（如 http://127.0.0.1:7897），空=跟随系统代理/环境变量
+
+embedding:
+  api_key: ""         # 硅基流动 API Key，空 = 禁用语义检索（纯词法兜底）
+  # base_url: ""      # 空 = https://api.siliconflow.cn/v1（OpenAI 兼容 /v1/embeddings）
+  # model: ""         # 空 = BAAI/bge-m3
+  # batch_size: 32    # 索引期单批文本数
+
+  # 精排（可选）：rerank_model 为云模型名（复用上方 api_key/base_url，/v1/rerank）
+  # rerank_model: ""  # 如 BAAI/bge-reranker-v2-m3；空 = 禁用精排
+  # rerank_top_n: 16  # 精排候选数（F4b 验证口径：融合 top16 ∪ 向量 top40）
 
 fetch:
   timeout_seconds: 30

@@ -95,7 +95,7 @@ const zh = {
   },
   // 软提示（建议性）
   soft: {
-    roundsWarn: '已 {rounds} 轮对话，建议点「＋新」新建会话以节省 token（历史会话保留在列表中）',
+    roundsWarn: '已 {rounds} 轮对话，建议新建会话以节省 token（历史会话保留在列表中）',
   },
   // 占位提示
   placeholders: {
@@ -138,13 +138,35 @@ const zh = {
     metaReady: '正文已提取 · {chars} 字 · 文本层可读取',
     metaPartial: '正文部分提取 · {chars} 字',
     suggestTitle: '从理解这份文档开始',
-    suggest1: '帮我建立这篇文档的整体理解框架',
-    suggest2: '提炼核心观点、论据和结论',
-    suggest3: '有哪些观点值得质疑或进一步思考？',
     reread: '重新读取',
-    openOriginal: '打开原文',
     errorGeneric: '读取失败，请稍后重试。',
     errorTimeout: '读取超时，请检查网络后重试。',
+  },
+  // 本地文件访问引导卡（B4）：扩展拿不到本地文件地址且未授权时显示
+  fileaccess: {
+    title: '需要开启本地文件访问',
+    desc: '读取本地 PDF 需要授权扩展访问文件网址。当前无法获取本地文件地址。',
+    btn: '去设置',
+    hint: '打开「允许访问文件网址」开关后回到此面板，会自动继续。',
+  },
+  // 网页建议 chips（doc-suggestions §4.4）：普通网页空态区，pageMd 标题组句
+  webchips: {
+    title: '你可能想了解',
+    question: '文中〈{title}〉这部分讲了什么？',
+  },
+  // 文档工具栏（PR4：输入框上方单行条 + 展开面板）
+  docbar: {
+    chars: '{chars} 字',
+    expand: '展开文档信息',
+    collapse: '收起',
+    hide: '隐藏本文档工具栏',
+    restore: '恢复文档工具栏',
+    infoTitle: '文档信息',
+    rowName: '文件名称',
+    rowChars: '正文提取',
+    rowStatus: '内容状态',
+    statusReady: '已提取',
+    statusPartial: '部分提取（完整性以解析结果为准）',
   },
   // 按钮文案
   buttons: {
@@ -181,15 +203,13 @@ const zh = {
   // HTML 静态文案（sidepanel.html 经 data-i18n* 属性替换）
   ui: {
     docTitle: 'Absorb 阅读助手',
-    history: '历史',
-    newShort: '＋新',
     historyTip: '查看历史',
     restoreHistory: '拉取历史会话',
     remoteLoadFailed: '加载失败，请确认桌面端已启动',
     newTip: '新对话',
     historyTitle: '历史对话',
-    emptyTip1: '右键划词后,会以标签插入输入框;可多段划词,针对标签提问即可。',
-    emptyTip2: '回答将在此流式显示。',
+    emptyTitle: '从阅读开始，深入理解',
+    emptyTip1: '围绕当前网页提问，探索内容背后的观点与知识。',
     removeChip: '移除该标签',
     webSource: '网页',
     me: '我',
@@ -333,13 +353,37 @@ const en = {
     metaReady: 'Text extracted · {chars} chars · text layer readable',
     metaPartial: 'Text partially extracted · {chars} chars',
     suggestTitle: 'Start by understanding this document',
-    suggest1: 'Build an overall framework of this document for me',
-    suggest2: 'Extract the core points, arguments and conclusions',
-    suggest3: 'Which viewpoints are worth questioning or thinking further about?',
     reread: 'Read again',
-    openOriginal: 'Open original',
     errorGeneric: 'Read failed. Please try again later.',
     errorTimeout: 'Read timed out. Check your network and retry.',
+  },
+  // Local file access guide card (B4): shown when the extension cannot obtain
+  // the local file address and access is not granted yet
+  fileaccess: {
+    title: 'Local file access required',
+    desc: 'Reading local PDFs requires granting the extension access to file URLs. The local file address is currently unavailable.',
+    btn: 'Open settings',
+    hint: 'Turn on "Allow access to file URLs", then come back to this panel to continue automatically.',
+  },
+  // Web suggestion chips (doc-suggestions §4.4): empty-state on plain pages,
+  // questions composed from pageMd headings
+  webchips: {
+    title: 'You may want to know',
+    question: 'What does the section "{title}" cover?',
+  },
+  // Document toolbar (PR4: single-row bar above the input + expandable panel)
+  docbar: {
+    chars: '{chars} chars',
+    expand: 'Expand document info',
+    collapse: 'Collapse',
+    hide: 'Hide this document toolbar',
+    restore: 'Restore document toolbar',
+    infoTitle: 'Document info',
+    rowName: 'File name',
+    rowChars: 'Text extracted',
+    rowStatus: 'Content status',
+    statusReady: 'Extracted',
+    statusPartial: 'Partially extracted (completeness depends on parsing)',
   },
   buttons: {
     ask: 'Send',
@@ -372,15 +416,13 @@ const en = {
   },
   ui: {
     docTitle: 'Absorb Reading Assistant',
-    history: 'History',
-    newShort: '＋ New',
     historyTip: 'View history',
     restoreHistory: 'Pull history',
     remoteLoadFailed: 'Load failed. Make sure the desktop app is running',
     newTip: 'New conversation',
     historyTitle: 'History',
-    emptyTip1: 'Select text and right-click to pin it as a chip in the input box. Pin multiple selections and ask about them together.',
-    emptyTip2: 'Answers will stream in here.',
+    emptyTitle: 'Start reading, go deeper',
+    emptyTip1: 'Ask about the current page to explore the ideas and knowledge behind the content.',
     removeChip: 'Remove chip',
     webSource: 'Web',
     me: 'Me',
@@ -422,7 +464,8 @@ export function t(key, params = {}) {
 // 把 HTML 静态文案按当前语言替换（浏览器不会替换 HTML 里的 __MSG_*__，只能 JS 注入）：
 // data-i18n → textContent；data-i18n-placeholder → 写回 data-placeholder
 // （contenteditable 占位由 CSS attr(data-placeholder) 渲染）；
-// data-i18n-title → title，且原有 aria-label 一并同步
+// data-i18n-tip → 写回 data-tip（自定义 CSS 气泡文案）；
+// data-i18n-aria → aria-label（图标按钮的无障碍名，不再借道原生 title）
 export function applyDomI18n(root = document) {
   document.documentElement.lang = uiLang;
   root.querySelectorAll('[data-i18n]').forEach((el) => {
@@ -430,6 +473,12 @@ export function applyDomI18n(root = document) {
   });
   root.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
     el.dataset.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+  root.querySelectorAll('[data-i18n-tip]').forEach((el) => {
+    el.dataset.tip = t(el.dataset.i18nTip);
+  });
+  root.querySelectorAll('[data-i18n-aria]').forEach((el) => {
+    el.setAttribute('aria-label', t(el.dataset.i18nAria));
   });
   root.querySelectorAll('[data-i18n-title]').forEach((el) => {
     const v = t(el.dataset.i18nTitle);

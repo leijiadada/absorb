@@ -88,17 +88,18 @@ func (ss *sqliteStore) SaveDocumentContent(ctx context.Context, app, user string
 	_, err := ss.db.ExecContext(ctx,
 		`INSERT INTO document_contents
 			(app_name, user_id, url, content_text, char_count, content_type, byte_size,
-			 content_hash, extraction_status, extraction_version, truncated, fetched_at, updated_at)
-		 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+			 content_hash, extraction_status, extraction_version, truncated, heading_marks, fetched_at, updated_at)
+		 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 		 ON CONFLICT(app_name, user_id, url) DO UPDATE SET
 			content_text=excluded.content_text, char_count=excluded.char_count,
 			content_type=excluded.content_type, byte_size=excluded.byte_size,
 			content_hash=excluded.content_hash, extraction_status=excluded.extraction_status,
 			extraction_version=excluded.extraction_version, truncated=excluded.truncated,
+			heading_marks=excluded.heading_marks,
 			fetched_at=excluded.fetched_at, updated_at=excluded.updated_at`,
 		app, user, dc.URL, dc.ContentText, dc.CharCount, dc.ContentType, dc.ByteSize,
 		dc.ContentHash, dc.ExtractionStatus, dc.ExtractionVersion, dc.Truncated,
-		dc.FetchedAt.Unix(), now)
+		dc.HeadingMarks, dc.FetchedAt.Unix(), now)
 	return err
 }
 
@@ -111,10 +112,38 @@ func (ss *sqliteStore) LoadDocumentContent(ctx context.Context, app, user, url s
 	var fetched, updated int64
 	err := ss.db.QueryRowContext(ctx,
 		`SELECT url, content_text, char_count, content_type, byte_size, content_hash,
-			extraction_status, extraction_version, truncated, fetched_at, updated_at
+			extraction_status, extraction_version, truncated, COALESCE(heading_marks, ''), fetched_at, updated_at
 		 FROM document_contents WHERE app_name=? AND user_id=? AND url=?`,
 		app, user, url).Scan(&dc.URL, &dc.ContentText, &dc.CharCount, &dc.ContentType, &dc.ByteSize,
-		&dc.ContentHash, &dc.ExtractionStatus, &dc.ExtractionVersion, &dc.Truncated, &fetched, &updated)
+		&dc.ContentHash, &dc.ExtractionStatus, &dc.ExtractionVersion, &dc.Truncated, &dc.HeadingMarks, &fetched, &updated)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	dc.FetchedAt = time.Unix(fetched, 0)
+	dc.UpdatedAt = time.Unix(updated, 0)
+	return &dc, nil
+}
+
+// LoadDocumentContentByID 按 documents.id（UUID）读取提取正文：JOIN 关联
+// document_contents（同 app/user/url 聚合键）。查无返回 (nil, nil)——调用方
+// 据此决定是否按 URL 回退（M0 前 documentId=URL 的旧扩展卡片兼容）。
+func (ss *sqliteStore) LoadDocumentContentByID(ctx context.Context, app, user, documentID string) (*storage.DocumentContent, error) {
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
+	var dc storage.DocumentContent
+	var fetched, updated int64
+	err := ss.db.QueryRowContext(ctx,
+		`SELECT dc.url, dc.content_text, dc.char_count, dc.content_type, dc.byte_size, dc.content_hash,
+			dc.extraction_status, dc.extraction_version, dc.truncated, COALESCE(dc.heading_marks, ''), dc.fetched_at, dc.updated_at
+		 FROM document_contents dc
+		 JOIN documents d
+		   ON d.app_name = dc.app_name AND d.user_id = dc.user_id AND d.url = dc.url
+		 WHERE d.app_name=? AND d.user_id=? AND d.id=?`,
+		app, user, documentID).Scan(&dc.URL, &dc.ContentText, &dc.CharCount, &dc.ContentType, &dc.ByteSize,
+		&dc.ContentHash, &dc.ExtractionStatus, &dc.ExtractionVersion, &dc.Truncated, &dc.HeadingMarks, &fetched, &updated)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}

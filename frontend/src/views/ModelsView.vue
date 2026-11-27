@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ArrowRight, Eye, EyeOff, Pencil, Plus, Trash2 } from 'lucide-vue-next'
+import { ArrowRight, Box, Eye, EyeOff, Pencil, Plus, Trash2 } from 'lucide-vue-next'
 import {
   addModelConfig,
   deleteModelConfig,
@@ -327,8 +327,8 @@ const confirmMeta = computed(() => list.value.find((m) => m.id === confirmId.val
               <span v-if="p.icon" class="flex h-7 w-7 shrink-0 items-center justify-center">
                 <img :src="p.icon" :alt="p.name" class="h-6 w-6 object-contain" />
               </span>
-              <span v-else class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-xs font-semibold text-primary">
-                {{ p.logo }}
+              <span v-else class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <Box :size="16" />
               </span>
               <span class="truncate text-sm">{{ p.name }}</span>
             </button>
@@ -358,7 +358,7 @@ const confirmMeta = computed(() => list.value.find((m) => m.id === confirmId.val
 
             <label class="block">
               <span class="mb-1 block text-sm">展示名</span>
-              <input v-model.trim="form.displayName" class="input" placeholder="如 GLM-4.6 主力" />
+              <input v-model.trim="form.displayName" class="input" placeholder="请输入模型展示名称" />
             </label>
 
             <label class="block">

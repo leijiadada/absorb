@@ -6,7 +6,9 @@ package sqlite
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
+	"encoding/json"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -14,7 +16,9 @@ import (
 	"strings"
 	"testing"
 
+	"trpc.group/trpc-go/trpc-agent-go/event"
 	"trpc.group/trpc-go/trpc-agent-go/model"
+	"trpc.group/trpc-go/trpc-agent-go/session"
 )
 
 // mkImageDataURL 生成 w×h 测试图片 dataURL（红/蓝随横坐标渐变），format: "jpeg"|"png"。
@@ -166,6 +170,104 @@ func TestDownscaleImagePart(t *testing.T) {
 			Image: &model.Image{URL: "data:image/webp;base64,AAAA"}}
 		if downscaleImagePart(&p) {
 			t.Error("解码失败（webp 等不支持格式）应丢弃，维持旧策略")
+		}
+	})
+}
+
+// thumbStoredEvent 读回会话库中该会话唯一一条事件的 JSON 并反序列化。
+func thumbStoredEvent(t *testing.T, st *sqliteStore, key session.Key) event.Event {
+	t.Helper()
+	var raw string
+	if err := st.db.QueryRow(
+		`SELECT event FROM session_events WHERE app_name=? AND user_id=? AND session_id=?`,
+		key.AppName, key.UserID, key.SessionID).Scan(&raw); err != nil {
+		t.Fatalf("读回落库事件: %v", err)
+	}
+	var evt event.Event
+	if err := json.Unmarshal([]byte(raw), &evt); err != nil {
+		t.Fatalf("落库 JSON 反序列化: %v", err)
+	}
+	return evt
+}
+
+// TestAppendEventDegradeThumbnail 验证 AppendEvent 落库降级钩子的端到端接线（方案 A）：
+// 大图 dataURL 落库后替换为 jpeg 缩略图且原图不出现在库内；解码失败图整体丢弃但文本保留；
+// 传入 evt 不被原地改写——原图必须在当轮内存中存活（SDK 请求/工具轮上下文用原图，
+// 仅跨轮历史消费落库缩略图，见 shallowDowngradeEvent）。
+func TestAppendEventDegradeThumbnail(t *testing.T) {
+	ctx := context.Background()
+	key := session.Key{AppName: "app", UserID: "user", SessionID: "s-thumb"}
+
+	mustSession := func(st *sqliteStore) *session.Session {
+		t.Helper()
+		s, err := st.CreateSession(ctx, key, nil)
+		if err != nil {
+			t.Fatalf("CreateSession: %v", err)
+		}
+		return s
+	}
+
+	t.Run("大图落库缩略且内存evt保留原图", func(t *testing.T) {
+		st := newRoundsTestStore(t)
+		s := mustSession(st)
+		original := mkImageDataURL(t, 800, 600, "png")
+		evt := &event.Event{Version: event.CurrentVersion, FilterKey: "https://a.com", Response: &model.Response{
+			Choices: []model.Choice{{Message: model.Message{
+				Role:    model.RoleUser,
+				Content: "看这张图",
+				ContentParts: []model.ContentPart{
+					{Type: model.ContentType("image"), Image: &model.Image{URL: original}},
+				},
+			}}},
+		}}
+		if err := st.AppendEvent(ctx, s, evt); err != nil {
+			t.Fatalf("AppendEvent: %v", err)
+		}
+
+		if got := evt.Response.Choices[0].Message.ContentParts[0].Image.URL; got != original {
+			t.Errorf("内存 evt 被原地改写，当轮请求将只见缩略图: %.60s", got)
+		}
+
+		stored := thumbStoredEvent(t, st, key)
+		msg := stored.Response.Choices[0].Message
+		if msg.Content != "看这张图" {
+			t.Errorf("落库文本 = %q, want 看这张图", msg.Content)
+		}
+		if len(msg.ContentParts) != 1 {
+			t.Fatalf("落库 parts = %d, want 1", len(msg.ContentParts))
+		}
+		thumb := msg.ContentParts[0].Image.URL
+		if !strings.HasPrefix(thumb, "data:image/jpeg;base64,") {
+			t.Errorf("落库图应替换为 jpeg 缩略: %.60s", thumb)
+		}
+		if w, h := thumbDims(t, thumb); w != 192 || h != 144 { // 800x600 等比 → 192x144
+			t.Errorf("缩略 dims = %dx%d, want 192x144", w, h)
+		}
+	})
+
+	t.Run("解码失败图丢弃文本保留", func(t *testing.T) {
+		st := newRoundsTestStore(t)
+		s := mustSession(st)
+		evt := &event.Event{Version: event.CurrentVersion, FilterKey: "https://a.com", Response: &model.Response{
+			Choices: []model.Choice{{Message: model.Message{
+				Role:    model.RoleUser,
+				Content: "坏图轮",
+				ContentParts: []model.ContentPart{
+					{Type: model.ContentType("image"), Image: &model.Image{URL: "data:image/webp;base64,AAAA"}},
+				},
+			}}},
+		}}
+		if err := st.AppendEvent(ctx, s, evt); err != nil {
+			t.Fatalf("AppendEvent: %v", err)
+		}
+
+		stored := thumbStoredEvent(t, st, key)
+		msg := stored.Response.Choices[0].Message
+		if msg.Content != "坏图轮" {
+			t.Errorf("文本应保留: %q", msg.Content)
+		}
+		if len(msg.ContentParts) != 0 {
+			t.Errorf("解码失败图应丢弃，落库 parts = %d", len(msg.ContentParts))
 		}
 	})
 }

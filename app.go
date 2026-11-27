@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -44,6 +45,7 @@ type App struct {
 	bridge    *bridge.Bridge
 	upg       *upgrade.Service // 升级服务（配置关闭时为 nil；由 wiring 层装配）
 	startedAt time.Time
+	quitting  atomic.Bool // 托盘「退出」置位：OnBeforeClose 据此放行真实退出（否则转隐藏到托盘）
 }
 
 // NewApp 组装桌面端绑定层。upg 为升级服务（nil = 升级功能关闭）。
@@ -59,8 +61,23 @@ func NewApp(cfgH *conf.Handle, cfgPath, dataRoot string, r runner.Runner, ps cha
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-	go desktop.RunTray(ctx, appIconPNG)
+	go desktop.RunTray(appIconPNG, desktop.ShowMainWindow, a.QuitApp)
 	a.startUpdateCheck(ctx)
+}
+
+// QuitApp 托盘「退出」入口：置位放行标志后走标准 Quit（OnBeforeClose 放行真实退出）。
+func (a *App) QuitApp() {
+	a.quitting.Store(true)
+	runtime.Quit(a.ctx)
+}
+
+// HideToTray 关窗到托盘（前端 X 按钮绑定调用）。官方运行时 JS API 无 WindowClose，
+// 前端发起关闭只能走绑定的 Go 方法；隐藏细节见 desktop.HideToTray。
+// 广播 window:hidden：隐藏时指针停在关闭按钮上，恢复显示后 Chromium 会按该
+// 过期位置重算 :hover 使按钮先红一下，前端据此事件关闭 hover 门禁。
+func (a *App) HideToTray() {
+	desktop.HideToTray()
+	runtime.EventsEmit(a.ctx, "window:hidden")
 }
 
 // startUpdateCheck 启动时后台检查更新（节流内跳过；发现新版经 Wails 事件通知前端，
@@ -77,8 +94,8 @@ func (a *App) startUpdateCheck(ctx context.Context) {
 }
 
 func (a *App) onSecondInstance(data options.SecondInstanceData) {
-	runtime.WindowUnminimise(a.ctx)
-	runtime.WindowShow(a.ctx)
+	// 单实例唤醒：还原并显示主窗口（含 TOOLWINDOW 样式清理，任务栏按钮回归）
+	desktop.ShowMainWindow()
 }
 
 func (a *App) shutdown(ctx context.Context) {

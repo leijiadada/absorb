@@ -15,7 +15,7 @@
   --red-soft: #fdecec;
 
   /* ---- Semantic：用途别名 ---- */
-  --bg: var(--gray-50);
+  --bg: rgb(252, 252, 252); /* 页面底色：微灰于纯白，与白卡片（--surface）靠边框分层 */
   --surface: var(--white);
   --border: var(--gray-100);
   --border-strong: var(--gray-300);
@@ -47,6 +47,8 @@
   --ease: cubic-bezier(.4, 0, .2, 1);
   --dur: .18s;
   --icon-sm: 16px;
+  /* header 固定高度：融合滚动布局的让位基准（.main 上拉量 / .messages 顶部留白） */
+  --header-h: 38px;
   --icon-md: 20px;
 }
 
@@ -101,23 +103,19 @@ button {
 }
 
 /* ---------- Header ----------
-   方案 A：单行工具条。品牌全名由系统标题栏承担，页面侧仅 logo 图形锚点 */
+   单行工具条：品牌由系统标题栏承担，页面内不放 logo，仅右侧操作按钮 */
 .app-header {
+  height: var(--header-h);
+  padding: 0 14px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 6px 14px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  justify-content: flex-end;
+  /* 与内容同底色，纯色遮盖滚入 header 下方的内容（无虚化、无渐隐）；
+     消息区经 .main 负 margin 上拉，z-index 保证图标浮于内容上 */
+  background: var(--bg);
+  position: relative;
+  z-index: 1;
   flex-shrink: 0;
-}
-
-.logo {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  object-fit: cover;
-  display: block;
 }
 
 .header-actions {
@@ -131,6 +129,23 @@ button {
   color: var(--text-2);
   padding: 5px 10px;
   font-size: 12px;
+}
+
+/* 历史/新会话按钮：纯图标无框（同 #imageBtn），收紧内边距保持点击区 */
+#toggleHistory,
+#newSession {
+  border: none;
+  padding: 5px 8px;
+}
+
+/* 图片上传按钮：无边框纯图标，置于操作行右侧（发送旁） */
+#imageBtn {
+  border: none;
+  padding: 5px 6px;
+}
+
+#imageBtn:hover {
+  border: none;
 }
 
 .icon-btn:hover {
@@ -176,13 +191,38 @@ button {
   to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
+/* header 图标按钮：气泡显示在按钮下方（ChatGPT 式；底部工具栏空间不足仍显示在上方） */
+.app-header .icon-btn[data-tip]:hover::after {
+  top: calc(100% + 8px);
+  bottom: auto;
+  animation: tip-in-below var(--dur) var(--ease);
+}
+@keyframes tip-in-below {
+  from { opacity: 0; transform: translateX(-50%) translateY(-2px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* 贴边按钮（图片上传位于操作行最左）：气泡左对齐锚定并向右展开，
+   避免居中定位后左溢出面板边缘被裁剪；动画同样去掉水平位移 */
+#imageBtn[data-tip]:hover::after {
+  left: 0;
+  transform: none;
+  animation: tip-in-left var(--dur) var(--ease);
+}
+@keyframes tip-in-left {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /* ---------- Main ---------- */
 .main {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 12px 14px;
+  /* 上拉至 header 下方：负 margin 让消息滚动区顶端与视口顶对齐，内容得以滚入 header 渐隐遮罩下 */
+  margin-top: calc(-1 * var(--header-h));
+  padding: 0 14px 12px;
   min-height: 0;
 }
 
@@ -296,10 +336,19 @@ button {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   min-height: 0;
   overflow-y: auto;
-  padding-bottom: 16px;
+  /* 抵消 .main 的 14px 水平 padding：滚动区撑满视口让滚动条贴面板右缘，
+     内容缩进由自身左右 padding 补偿（文字位置与之前一致） */
+  margin-left: -14px;
+  margin-right: -14px;
+  padding-left: 14px;
+  padding-right: 14px;
+  /* 顶部留白 = header 高度：静止时首条内容恰好位于 header 下缘；滚动后内容穿过遮罩淡出 */
+  padding-top: var(--header-h);
+  /* 底部呼吸带（ChatGPT 同款）：内容滚到底时与输入框之间留出余白，作"内容结束"信号 */
+  padding-bottom: 115px;
 }
 
 .empty-tip {
@@ -307,11 +356,18 @@ button {
   text-align: center;
   color: var(--muted);
   font-size: 13px;
-  padding: 24px 12px;
+  padding: 48px 12px 24px;
 }
 
 .empty-tip p {
   margin: 6px 0;
+}
+
+.empty-tip .empty-title {
+  margin: 16px 0 6px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
 }
 
 .empty-tip .muted {
@@ -325,9 +381,10 @@ button {
   display: inline-flex;
 }
 
-.empty-illustration svg {
-  width: 44px;
-  height: 44px;
+.empty-illustration img {
+  width: 140px;
+  height: 140px;
+  display: block;
 }
 
 /* ---------- 桌面端未安装引导卡片（desktop-guide.js，未安装时渲染于空态区） ---------- */
@@ -437,6 +494,10 @@ button {
   border-radius: 0;
   max-width: 100%;
   padding: 4px 2px;
+  /* 正文排版对齐主流 AI 侧板（16px/1.75 中密度档）：一屏有效字数 ~400，
+     与用户气泡的 13px 形成层级区分 */
+  font-size: 16px;
+  line-height: 1.75;
 }
 
 .bubble {
@@ -450,7 +511,7 @@ button {
 
 /* Markdown 渲染样式 */
 .msg.assistant .bubble p {
-  margin: 0.4em 0;
+  margin: 16px 0;
 }
 
 .msg.assistant .bubble p:first-child {
@@ -484,7 +545,7 @@ button {
 }
 
 .msg.assistant .bubble pre {
-  margin: 0.6em 0;
+  margin: 16px 0;
   padding: 10px 12px;
   background: rgba(127, 127, 127, 0.07);
   border-radius: var(--radius-sm);
@@ -579,59 +640,60 @@ button {
 
 .msg.assistant .bubble ul,
 .msg.assistant .bubble ol {
-  margin: 0.4em 0;
+  margin: 12px 0 16px;
   padding-left: 1.6em;
 }
 
 .msg.assistant .bubble li {
-  margin: 0.2em 0;
+  margin: 8px 0;
 }
 
 .msg.assistant .bubble blockquote {
-  margin: 0.5em 0;
-  padding: 2px 0 2px 12px;
+  margin: 16px 0;
+  padding: 4px 0 4px 12px;
   border-left: 3px solid var(--border-strong);
   color: var(--text-2);
 }
 
 .msg.assistant .bubble blockquote p {
-  margin: 0.2em 0;
+  margin: 8px 0;
 }
 
 .msg.assistant .bubble h1,
 .msg.assistant .bubble h2,
 .msg.assistant .bubble h3,
 .msg.assistant .bubble h4 {
-  margin: 0.6em 0 0.3em;
+  margin: 20px 0 8px;
   font-weight: 600;
   line-height: 1.4;
 }
 
+/* 侧板级标题克制：h3 与正文同字号靠字重区分，h1 罕见保底 */
 .msg.assistant .bubble h1 {
-  font-size: 1.2em;
+  font-size: 20px;
 }
 
 .msg.assistant .bubble h2 {
-  font-size: 1.1em;
+  font-size: 18px;
 }
 
 .msg.assistant .bubble h3 {
-  font-size: 1.05em;
+  font-size: 16px;
 }
 
 .msg.assistant .bubble h4 {
-  font-size: 1em;
+  font-size: 15px;
 }
 
 .msg.assistant .bubble hr {
-  margin: 0.8em 0;
+  margin: 16px 0;
   border: none;
   border-top: 1px solid var(--border);
 }
 
 .msg.assistant .bubble table {
   border-collapse: collapse;
-  margin: 0.5em 0;
+  margin: 16px 0;
   font-size: 0.92em;
   width: 100%;
 }
@@ -901,6 +963,15 @@ button {
   padding: 10px 10px;
 }
 
+/* 输入区上方公共区块（dock）：灰底内容域（透明透出 body --bg），仅承载子元素
+   排布；间距由子元素自身 margin 承担，全部隐藏时零占位 */
+.dock {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 14px;
+}
+
 #questionInput {
   display: block;
   width: 100%;
@@ -927,10 +998,28 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
-  /* 图片按钮与提问按钮之间留间距 */
-  justify-content: flex-end;
-  /* 提示文案已移除，按钮保持靠右 */
+  /* 左：图片上传（+×隐藏后的文档迷你圆标）；右：发送（margin-left:auto 推到行尾） */
+  justify-content: flex-start;
   margin-top: 8px;
+}
+
+/* 迷你圆标显示时：auto margin 移到圆标上 → 圆标贴发送左侧；隐藏时发送兜底靠右 */
+#docMiniSlot:not([hidden]) {
+  margin-left: auto;
+}
+
+#docMiniSlot:not([hidden]) + #askBtn {
+  margin-left: 0;
+}
+
+#askBtn {
+  margin-left: auto;
+  /* 纯图标发送键：正圆钮（全局 pill 圆角），18px 箭头 + 8px 内边距 ≈ 34px，命中区与参考设计相当 */
+  padding: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
 }
 
 
@@ -2043,128 +2132,253 @@ button {
   box-shadow: 0 0 0 2px var(--ring);
 }
 
-/* ---------- 文档卡（PDF 解读 PR3：未读取/读取中/已就绪/失败四态） ---------- */
-.doccard {
-  flex-shrink: 0;
-  padding: 14px 16px;
+/* ---------- 文档工具栏（PDF 解读 PR4：dock 区块内的白底卡片 + 展开面板） ---------- */
+.docbar {
+  margin-bottom: var(--sp-2);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  overflow: hidden;
 }
 
-/* 头部：PDF 红图标 + 标题/文件名 + 右上状态 badge */
-.dc-head {
+/* ---------- 本地文件访问引导卡（B4：dock 内白底卡片，复用 docbar 视觉） ---------- */
+/* 布局：类型图标 | 标题/说明纵向块（右侧弹性）| 去设置按钮；底部一行指引文案 */
+.file-access {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
+  padding: 10px 10px 8px;
 }
 
-.dc-fileicon {
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
-  border-radius: 5px;
+.file-access .db-fileicon {
+  width: 24px;
+  height: 24px;
+  margin-top: 1px;
 }
 
-.dc-label {
+.fa-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.fa-title {
   font-size: 13px;
   font-weight: 600;
   color: var(--text);
 }
 
-.dc-title {
-  margin-top: 8px;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text);
-  word-break: break-all;
-  line-height: 1.35;
+.fa-desc {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-2);
 }
 
-/* 读取中/就绪/失败态：文件名收进头部行内 */
-.dc-title-inline {
-  margin-top: 0;
-  font-size: 14px;
+.fa-btn {
+  align-self: flex-start;
+  margin-top: 5px;
+  padding: 4px 12px;
+  font-size: 12px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+  transition: transform .12s var(--ease), opacity .12s var(--ease);
+}
+
+.fa-btn:hover { opacity: .9; }
+.fa-btn:active { transform: scale(.97); }
+.fa-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--ring); }
+
+.fa-hint {
+  padding: 6px 10px 2px 42px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+/* × 隐藏态：迷你圆标（仅文档图标，位于 composer 操作行），点击恢复完整工具栏 */
+.db-mini {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform .12s var(--ease), opacity .12s var(--ease);
+  opacity: .75;
+}
+
+.db-mini:hover { opacity: 1; transform: scale(1.08); }
+.db-mini:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--ring); }
+.db-mini .db-fileicon { width: 20px; height: 20px; }
+
+/* 单行工具栏：类型图标 + 文件名 + 状态 badge + 字数 + 展开/关闭 */
+.db-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px 7px 10px;
+}
+
+.db-fileicon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  border-radius: 5px;
+}
+
+.db-name {
   min-width: 0;
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  flex: 1;
 }
 
-.dc-badge {
+.db-badge {
   flex-shrink: 0;
-  margin-left: auto;
   font-size: 11px;
   font-weight: 500;
   padding: 2px 9px;
   border-radius: var(--radius-pill);
 }
 
-.dc-badge-orange { color: #b25e09; background: #fdf0dd; }
-.dc-badge-blue { color: #1b66c9; background: #e8f1fd; }
-.dc-badge-green { color: #1e7b34; background: #e5f5ea; }
-.dc-badge-gray { color: var(--text-2); background: var(--gray-100); }
+.db-badge-orange { color: #b25e09; background: #fdf0dd; }
+.db-badge-blue { color: #1b66c9; background: #e8f1fd; }
+.db-badge-green { color: #1e7b34; background: #e5f5ea; }
+.db-badge-gray { color: var(--text-2); background: var(--gray-100); }
 
-.dc-meta {
-  margin-top: 4px;
+/* 就绪态字数（读取中/失败/未读取不显示，省一行高度） */
+.db-chars {
+  flex-shrink: 0;
   font-size: 12px;
   color: var(--muted);
-  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
 }
 
-.dc-divider {
-  height: 1px;
-  background: var(--border);
-  margin: 12px 0;
+/* 未读取态：行内主入口（读取文档），收起时保持可见 */
+.db-bar-cta {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--white);
+  background: var(--primary);
+  border: none;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background .15s var(--ease);
 }
 
-.dc-desc {
+.db-bar-cta:hover { background: var(--primary-hover); }
+.db-bar-cta:active { transform: scale(.98); }
+
+/* 行内小按钮：展开箭头 / 关闭 × */
+.db-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background .15s var(--ease), color .15s var(--ease);
+}
+
+.db-btn:hover { background: var(--gray-100); color: var(--text); }
+.db-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--ring); }
+
+/* 展开箭头随展开旋转 */
+.db-toggle svg { transition: transform .2s var(--ease); }
+.docbar.expanded .db-toggle svg { transform: rotate(180deg); }
+
+/* 展开面板：grid-rows 0fr→1fr 过渡（高度自适应内容，收起时零占位） */
+.db-expand {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows .22s var(--ease);
+}
+
+.docbar.expanded .db-expand { grid-template-rows: 1fr; }
+.db-expand > div { overflow: hidden; min-height: 0; }
+
+/* 展开内容：状态各异，统一上限内滚动（窄面板不顶满） */
+.db-panel {
+  border-top: 1px solid var(--border);
+  padding: 12px;
+  max-height: 45vh;
+  overflow-y: auto;
+}
+
+/* 小节标题（文档信息 / 建议提问） */
+.db-sec {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.db-panel > .db-sec:not(:first-child) { margin-top: 12px; }
+
+/* 文档信息行（展开面板：文件名称 / 正文提取 / 内容状态） */
+.db-info {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+}
+
+.db-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.db-row-k {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.db-row-v {
+  font-size: 12px;
+  color: var(--text);
+  text-align: right;
+  word-break: break-all;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 失败/未读取说明文案 */
+.db-desc {
   font-size: 13px;
   line-height: 1.55;
   color: var(--text-2);
 }
 
-/* 底部：左侧格式 chip + 右侧主操作胶囊 */
-.dc-foot {
-  display: flex;
-  align-items: center;
-  margin-top: 12px;
-}
-
-.dc-chip {
-  font-size: 11px;
-  color: var(--link);
-  border: 1px solid var(--link);
-  border-radius: var(--radius-pill);
-  padding: 1px 9px;
-}
-
-.dc-cta {
-  margin-left: auto;
-  padding: 9px 26px;
-  font-size: 13px;
-  color: var(--white);
-  background: var(--primary);
-  border: none;
-  border-radius: var(--radius-pill);
-  transition: background .15s var(--ease);
-}
-
-.dc-cta:hover { background: var(--primary-hover); }
-.dc-cta:active { transform: scale(.98); }
-
 /* 读取中：编号步骤列表（当前步高亮，未到步弱化） */
-.dc-steps {
-  margin-top: 12px;
+.db-steps {
   display: flex;
   flex-direction: column;
   gap: 7px;
 }
 
-.dc-step {
+.db-step {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -2172,38 +2386,33 @@ button {
   color: var(--muted);
 }
 
-.dc-stepnum {
+.db-stepnum {
   width: 14px;
   text-align: center;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 
-.dc-step.active { color: var(--text); font-weight: 600; }
-.dc-step.done { color: var(--text-2); }
+.db-step.active { color: var(--text); font-weight: 600; }
+.db-step.done { color: var(--text-2); }
 
-.dc-hint {
-  margin-top: 12px;
+.db-hint {
+  margin-top: 10px;
   font-size: 12px;
   color: var(--muted);
 }
 
 /* 已就绪：建议问题列表 */
-.dc-suggest-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.dc-suggest {
+.db-suggest {
+  margin-top: 4px;
   display: flex;
   flex-direction: column;
 }
 
-.dc-suggest-item {
+.db-suggest-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  /* 箭头贴近问题文本（Trae 式），不顶到行尾 */
   gap: 8px;
   width: 100%;
   padding: 9px 0;
@@ -2215,18 +2424,31 @@ button {
   text-align: left;
 }
 
-.dc-suggest-item:hover { color: var(--text); }
-.dc-suggest-item .arr { color: var(--muted); flex-shrink: 0; }
-.dc-suggest-item:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--ring); border-radius: var(--radius-sm); }
+.db-suggest-item:hover { color: var(--text); }
+.db-suggest-item .arr { color: var(--muted); flex-shrink: 0; }
+.db-suggest-item:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--ring); border-radius: var(--radius-sm); }
 
-/* 就绪态底部双描边按钮 */
-.dc-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
+/* ---------- 网页建议问题块（doc-suggestions §4.4）：视觉归属内容框 ---------- */
+/* 挂在 dock 公共区块（composer 之外）：背景透出内容区灰底（--bg），与内容框相融；
+   与输入区的边界由 composer 白底 + 上缘分隔线产生，问题块自身不画框 */
+.web-chips {
+  width: 100%;
+  margin: 0 0 4px;
+  text-align: left;
 }
 
-.dc-action-btn {
+.web-chips .wc-title {
+  margin-bottom: 6px;
+}
+
+/* 面板底部操作行：双描边按钮（重新读取 / 打开原文） */
+.db-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.db-act-btn {
   flex: 1;
   padding: 8px 0;
   font-size: 13px;
@@ -2237,5 +2459,19 @@ button {
   transition: background .15s var(--ease);
 }
 
-.dc-action-btn:hover { background: var(--primary-soft); }
-.dc-action-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--ring); }
+.db-act-btn:hover { background: var(--primary-soft); }
+.db-act-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--ring); }
+
+/* 主操作胶囊（读取文档 / 重试） */
+.db-cta {
+  padding: 9px 26px;
+  font-size: 13px;
+  color: var(--white);
+  background: var(--primary);
+  border: none;
+  border-radius: var(--radius-pill);
+  transition: background .15s var(--ease);
+}
+
+.db-cta:hover { background: var(--primary-hover); }
+.db-cta:active { transform: scale(.98); }

@@ -3,9 +3,11 @@
 export const STORAGE_KEY = 'absorb-state';
 export const SETTINGS_KEY = 'absorb-settings';
 export const DRAFT_KEY = 'absorb-draft';   // 输入框草稿（序列化快照，关面板不丢）
-// 文档卡状态表（PDF 解读 PR3）：documentId(=URL) → {state, charCount, ...}。
+// 文档卡状态表（PDF 解读 PR3）：url → {state, documentId, charCount, ...}；
+// documentId 为服务端 documents.id UUID（M0 前记录无此字段，提问回退传 URL）。
 // 只持久化终态（ready/error）；reading 是内存态（面板关闭 fetch 即中断，恢复无意义）
 export const DOCCARDS_KEY = 'absorb-doccards';
 // 桌面端下载落地页（未安装引导卡片跳转）：指向 releases 页而非直链安装包，
-// 版本不写死在扩展里。GitHub 迁移完成后切换为 https://github.com/vleij/absorb/releases
-export const DESKTOP_DOWNLOAD_URL = 'https://gitee.com/leij1/absorb/releases';
+// 版本不写死在扩展里。GitHub 权威仓库（与 README / 升级清单安装包直链一致）；
+// Gitee（gitee.com/leij1/absorb）为发布管线维护的国内镜像，仅作 README 备选口径
+export const DESKTOP_DOWNLOAD_URL = 'https://github.com/leijiadada/absorb/releases';

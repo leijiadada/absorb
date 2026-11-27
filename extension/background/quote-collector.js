@@ -49,6 +49,7 @@ export async function handleMenuClick(info, tab, skipPanelOpen = false) {
     pageContext: '',
     url: tab?.url || '',
     pageMd: '',
+    contentStatus: '',
     isComplete: true
   };
   try {
@@ -63,7 +64,12 @@ export async function handleMenuClick(info, tab, skipPanelOpen = false) {
       // location.href 是查看器扩展页地址（chrome-extension://.../edge_pdf/
       // index.html），真实文档地址在顶层 tab.url。不纠正会污染 scope 归组、
       // 摘要与知识保存的来源归属（grab.js 用 location.href 自报，无法自救）。
-      if (tab?.url && /^https?:/i.test(tab.url) && /^(chrome|moz)-extension:/i.test(ctx.url || '')) {
+      // 条件放宽为"自报地址非网页地址"：除扩展页地址外，同时覆盖 about:/空/
+      // 其他异常自报；本地 file:// PDF 查看器场景 tab.url 为 file URL，同样
+      // 作为纠正目标（划词来源归属本地文件）；合法场景（跨域 iframe 自报
+      // http(s) 子页 URL）原样保留。
+      if (tab?.url && /^(https?|file):/i.test(tab.url) && !/^(https?|file):/i.test(ctx.url || '')) {
+        console.warn('[Absorb] 划词来源 URL 非网页地址（查看器场景），纠正为标签页 URL:', ctx.url, '->', tab.url);
         ctx.url = tab.url;
       }
     }

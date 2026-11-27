@@ -16,16 +16,18 @@ import (
 
 // AskContext 划词提问上下文（由 askReq 转换而来，不含会话状态）
 type AskContext struct {
-	SelectedText      string // 用户划选的句子（首轮非空，追问为空）
-	Paragraph         string // 所在段落上下文（可空）
-	PageContext       string // 页面级上下文：标题/标题路径/meta 描述（可空），锚定术语所属领域
-	URL               string // 来源 URL
-	PageTitle         string // 当前浏览页标题（无划词提问时随 URL 注入，可空）
-	PageMd            string // 当前页整页结构化文本（无划词提问时扩展端采集，非空则注入 <page_content> 并免 fetch_page）
-	DocumentID        string // /api/page/prepare 产物（PDF 解读）：非空表示 PageMd 为文档正文（划词提问也注入 <page_content>）
-	ContentStatus     string // 页面正文完整度（full/partial/selected_only/unavailable，空=不上报不渲染）
-	Question          string // 用户提问
-	ReferenceMaterial string // 会话参考材料：首轮=SelectedText，追问=从历史查得（追问重申机制）
+	SelectedText      string       // 用户划选的句子（首轮非空，追问为空）
+	QuoteTexts        []string     // 多引用全部文本（含第一条，序号=chip 输入顺序；空=旧扩展单引用）
+	Paragraph         string       // 所在段落上下文（可空）
+	PageContext       string       // 页面级上下文：标题/标题路径/meta 描述（可空），锚定术语所属领域
+	URL               string       // 来源 URL
+	PageTitle         string       // 当前浏览页标题（无划词提问时随 URL 注入，可空）
+	PageMd            string       // 当前页整页结构化文本（无划词提问时扩展端采集，非空则注入 <page_content> 并免 fetch_page）
+	DocumentID        string       // /api/page/prepare 产物（PDF 解读）：= documents.id UUID（M0 前为 URL），非空表示 PageMd 为文档正文（划词提问也注入 <page_content>）
+	DocType           kind.DocType // 材料形态（DocTypeWeb/PDF，空=未判定）：PDF 时来源行标注"（PDF 文档）"且工具引导指向 search_document（文档轮 read_page 无页面缓存，必失败）
+	ContentStatus     string       // 页面正文完整度（full/partial/selected_only/unavailable，空=不上报不渲染）
+	Question          string       // 用户提问
+	ReferenceMaterial string       // 会话参考材料：首轮=SelectedText，追问=从历史查得（追问重申机制）
 }
 
 // PromptStrategy 按模型族差异化的提示词构建策略。
@@ -245,14 +247,41 @@ func (s *glmStrategy) userProfileBlock() string {
 }
 
 // pageContentHeadRunes <page_content> 注入的头部预算：首屏/导语通常在此范围内，
-// 全量内容已入页面缓存，更多细节由模型按需 expand_context 检索（避免 prompt 膨胀）。
+// 更多内容已入页面缓存（缓存本身按 PageTextMaxLen 截断，超出部分检索不可达），
+// 细节由模型按需 expand_context 检索（避免 prompt 膨胀）。
 const pageContentHeadRunes = 6000
+
+// referenceMaterialBlock 渲染 <reference_material> 内容：QuoteTexts 多条时按
+// 【引用n】逐条分节（编号与 question 里的 [[n]] 锚点一致，追问恢复按整块原文重申，
+// 分节边界随之保留）；单条/空退化为原文直出，与历史格式逐字节一致。
+// 同页多引用共享 context 主源的页面级字段，材料间无需来源区分。
+func referenceMaterialBlock(primary string, quotes []string) string {
+	texts := make([]string, 0, len(quotes))
+	for _, q := range quotes {
+		if s := strings.TrimSpace(q); s != "" {
+			texts = append(texts, s)
+		}
+	}
+	if len(texts) <= 1 {
+		if len(texts) == 1 {
+			return texts[0]
+		}
+		return strings.TrimSpace(primary)
+	}
+	var b strings.Builder
+	for i, s := range texts {
+		if i > 0 {
+			b.WriteString("\n\n")
+		}
+		fmt.Fprintf(&b, "【引用%d】\n%s", i+1, s)
+	}
+	return b.String()
+}
 
 // pageContentBlock 扩展端采集到页面内容时注入 <page_content>：LLM 直接看到正文，
 // 无需再调 fetch_page（对 SPA/内网页面，HTTP 抓取本就拿不到渲染态内容）。
 // 网页划词时不注入——划词即来源于页面正文，页面全文与参考材料冗余；
-// 文档划词（DocumentID 非空）例外：划词只是文档一小段，全文才是回答关键
-// （实测 flash 模型不会主动调 expand_context，正文不在场就答"不知道"）。
+// 文档划词（DocumentID 非空）例外：划词只是文档一小段，全文才是回答关键。
 func pageContentBlock(c AskContext) string {
 	if strings.TrimSpace(c.PageMd) == "" {
 		return ""
@@ -264,11 +293,24 @@ func pageContentBlock(c AskContext) string {
 	tail := ""
 	if len(md) > pageContentHeadRunes {
 		md = md[:pageContentHeadRunes]
-		tail = "\n（以上为页面开头部分；完整内容已缓存，如需更多细节可调用 expand_context 工具按关键词检索）"
+		// 如实标注：缓存有上限（PageTextMaxLen），不能声称"完整内容已缓存"
+		if c.DocType == kind.DocTypePDF {
+			// 文档轮（PDF）：read_page 依赖的页面缓存不写文档正文（invocation 侧
+			// isDocTurn 跳过），引导只会白费一轮调用；改指 search_document 并点破
+			// 划词标题可直接作查询词（DB 实证模型会因划词只是一句小标题而放弃检索）
+			tail = "\n（以上为文档开头部分；如未覆盖所需细节，可用 search_document 工具按关键词检索全文证据，例如以划词标题、章节名、概念名作为查询词，不受上述篇幅上限约束；如仍未命中请如实说明）"
+		} else {
+			tail = "\n（以上为页面开头部分；后续内容可调 read_page 工具查看章节目录并按节阅读；如仍未覆盖所需细节请如实说明）"
+		}
 	}
 	var b strings.Builder
+	src := c.URL
+	if c.DocType == kind.DocTypePDF {
+		// 显式材料标识：模型无需靠 URL 后缀猜测来源形态
+		src += "（PDF 文档）"
+	}
 	b.WriteString("<page_content>\n")
-	b.WriteString("来源：" + c.URL + "\n\n")
+	b.WriteString("来源：" + src + "\n\n")
 	b.WriteString(string(md))
 	b.WriteString(tail)
 	b.WriteString("\n</page_content>\n\n")
@@ -329,7 +371,7 @@ func (s *glmStrategy) buildUserMessageBase(c AskContext) string {
 		// 回答关键（网页划词由 pageContentBlock 内部跳过，维持原冗余规避）
 		b.WriteString(pageContentBlock(c))
 		b.WriteString("<reference_material>\n")
-		b.WriteString(c.SelectedText)
+		b.WriteString(referenceMaterialBlock(c.SelectedText, c.QuoteTexts))
 		b.WriteString("\n</reference_material>\n\n")
 		if strings.TrimSpace(c.Paragraph) != "" {
 			b.WriteString("<paragraph_context>\n")

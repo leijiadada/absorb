@@ -100,8 +100,43 @@ type Storage interface {
 
 	// 文档提取正文缓存（PDF 解读 PR2）：SaveDocumentContent 按 (app,user,url)
 	// 幂等覆盖写（重新读取即刷新）；LoadDocumentContent 查无返回 (nil, nil)。
+	// LoadDocumentContentByID 按 documents.id（UUID）JOIN 读取，供 M0 统一身份
+	// 后的问答链路使用；查无同样返回 (nil, nil)（调用方自行决定是否按 URL 回退）。
 	SaveDocumentContent(ctx context.Context, app, user string, dc *DocumentContent) error
 	LoadDocumentContent(ctx context.Context, app, user, url string) (*DocumentContent, error)
+	LoadDocumentContentByID(ctx context.Context, app, user, documentID string) (*DocumentContent, error)
+
+	// 文档检索索引（M1）：chunk 与 FTS 是派生数据，ReplaceDocumentIndex 在单事务内
+	// 整体替换（删旧插新 + 覆盖 index_state，失败回滚不留中间态）；chunks 为 nil 时
+	// 仅写 index_state（构建失败标记用）。SearchDocumentChunks 为 FTS5 + bm25 检索，
+	// query 须为分词后的 OR 表达式；documentIDs 为空查当前用户全部已索引文档，
+	// 返回按 bm25 升序（越小越相关）；查无返回空切片。
+	ReplaceDocumentIndex(ctx context.Context, app, user, documentID string, chunks []*DocumentChunk, state *DocumentIndexState) error
+	LoadDocumentIndexState(ctx context.Context, app, user, documentID string) (*DocumentIndexState, error)
+	SearchDocumentChunks(ctx context.Context, app, user, query string, documentIDs []string, limit int) ([]DocumentChunkHit, error)
+	// LoadDocumentChunks 读取文档现有 chunks（chunk_index 升序）：词法索引就绪但
+	// 向量缺失/换模型时的补建路径用——复用 chunks，不重写词法索引。
+	LoadDocumentChunks(ctx context.Context, app, user, documentID string) ([]*DocumentChunk, error)
+	// LoadDocumentSections 返回文档 chunk 的去重 section_path（按首现 chunk_index
+	// 排序，空面包屑不计）——动态建议提问（doc-suggestions）通道 B 素材。
+	// 查无返回空切片。
+	LoadDocumentSections(ctx context.Context, app, user, documentID string) ([]string, error)
+	// UpdateSectionPaths 原地刷新 chunk 的章节面包屑元数据（仅 document_chunks /
+	// document_chunks_fts 的 section_path 两列，不动 chunk_id/content/search_text，
+	// 向量以 chunk_id 关联故不受影响）。撤销 marks 门控后存量文档重算面包屑用——
+	// 正文未变无需重建 chunk/re-embed。paths 键为 chunk_id，值为新面包屑。
+	UpdateSectionPaths(ctx context.Context, app, user, documentID string, paths map[string]string) error
+	// UpdateDocumentVectorState 只覆盖 document_index_state 的 vector_* 四列
+	// （向量域状态，独立于词法 index_status）：embedChunks 成功/失败后调用。
+	UpdateDocumentVectorState(ctx context.Context, app, user, documentID string, vs DocumentVectorState) error
+
+	// 文档 chunk 向量（M3 语义召回）：ReplaceDocumentVectors 单事务整体替换
+	// 文档级向量（chunks 重建后必须重建向量，键为 chunk_id）；LoadDocumentVectors
+	// /LoadAllVectors 按 model 过滤（跨模型向量不可比），查无返回空切片。
+	// VectorHit 携带 chunk 原文与标题（JOIN chunks/documents），供融合层直接用。
+	ReplaceDocumentVectors(ctx context.Context, app, user, documentID, model string, vectors []*ChunkVectorRow) error
+	LoadDocumentVectors(ctx context.Context, app, user, documentID, model string) ([]ChunkVectorRow, error)
+	LoadVectorHits(ctx context.Context, app, user, model string, documentIDs []string) ([]DocumentChunkHit, []ChunkVectorRow, error)
 
 	// 知识持久化（M1）：item 可编辑（title/ai_summary/user_understanding），source 为不可变证据。
 	// CreateKnowledge 幂等：同 (app,user,dedup_key) 已存在时不新增、不触碰既有 sources，

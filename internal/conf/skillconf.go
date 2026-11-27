@@ -39,7 +39,12 @@ func NewSkillsOptions(root string) ([]llmagent.Option, []string, error) {
 	if err != nil {
 		return nil, nil, fmt.Errorf("skills repo: %w", err)
 	}
-	return []llmagent.Option{llmagent.WithSkills(repo)}, warns, nil
+	// 技能正文改挂 skill_load 的 tool result（而非 system message）：
+	// system message 是请求第一个消息，内容稳定才能让服务端前缀缓存命中后续历史
+	return []llmagent.Option{
+		llmagent.WithSkills(repo),
+		llmagent.WithSkillsLoadedContentInToolResults(true),
+	}, warns, nil
 }
 
 // materializeBundledSkills 把编译期内嵌技能解压到用户缓存目录 absorb/skills，

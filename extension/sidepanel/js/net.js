@@ -126,8 +126,9 @@ export async function fetchCapabilities() {
 //   broken=true 表示 SSE 流中途断开(未收到 done 事件)，由调用方提供手动重试入口
 // externalSignal:调用方传入的 AbortSignal,用户点"停止"时 abort,停止本地读取仅影响渲染
 // ctxQuotes: 本次引用的划词数组 [{seq,text,paragraph,pageContext,url,pageMd}]（按输入顺序）
-//   后端当前只认单条 context: context 取第一条(供页面缓存/参考),其余引用文本以编号拼进 question。
-//   TODO: 后端支持多引用后,question 传占位 [[seq]] + 完整 quotes 数组。
+//   后端当前只认单条 context: context 取第一条(供页面缓存/参考)，全部引用文本以
+//   quoteTexts 数组随行，由后端统一渲染进 <reference_material>（分节编号）。
+//   question 只承载用户问题，[[n]] 占位替换为引用锚点。
 // page: 当前浏览页 {url,title,pageMd} | null（无划词提问时后端注入 <page_content>/
 // <page_url>：pageMd 非空注入页面内容（省 fetch_page），空则仅 URL 提示模型按需 fetch_page）
 export async function callAgent(sendQ, ctxQuotes, sessionId, onToken, onReasoning, externalSignal, onSession, page, images = [], onPhase = null) {
@@ -146,7 +147,7 @@ export async function callAgent(sendQ, ctxQuotes, sessionId, onToken, onReasonin
   } else {
     question = (sendQ || '').replace(/\[\[(\d+)\]\]/g, (_, n) => `【引用${n}】`);
   }
-  // context：有划词取第一条（供页面缓存/参考）；
+  // context：有划词取第一条（供页面缓存/参考），全部引用文本以 quoteTexts 随行；
   // 无划词但采集到当前页内容（page.pageMd 非空）→ 构造纯页面 context，
   // Go 端同链路写缓存并注入 <page_content>，LLM 无需再调 fetch_page
   const context = quotes.length ? {
@@ -154,21 +155,19 @@ export async function callAgent(sendQ, ctxQuotes, sessionId, onToken, onReasonin
     paragraph: quotes[0].paragraph || '',
     pageContext: quotes[0].pageContext || '',
     url: quotes[0].url,
-    pageMd: quotes[0].pageMd || ''
+    pageMd: quotes[0].pageMd || '',
+    contentStatus: quotes[0].contentStatus || '',
+    quoteTexts: quotes.map((q) => String(q.text || ''))
   } : (page && page.pageMd ? {
     text: '',
     paragraph: '',
     pageContext: '',
     url: page.url,
-    pageMd: page.pageMd
+    pageMd: page.pageMd,
+    contentStatus: page.contentStatus || ''
   } : null);
-  // 多条引用时把各标签全文以编号拼到问题前，供模型一次看到全部引用
-  const material = quotes.length > 1
-    ? quotes.map((q) => `【引用${q.seq}】\n${q.text}`).join('\n\n')
-    : '';
-  const finalQuestion = material ? material + '\n\n' + question : question;
   const payload = {
-    question: finalQuestion,
+    question,
     context,
     sessionId: sessionId || ''
   };
@@ -388,7 +387,8 @@ export async function saveKnowledge(payload) {
 }
 
 // 文档准备（PDF 解读 PR3）：POST /api/page/prepare，服务端获取并提取文档正文
-// 后落库，返回 {documentId,url,finalUrl,title,contentType,status,charCount,byteSize,truncated,message}。
+// 后落库，返回 {documentId,url,finalUrl,title,contentType,status,charCount,byteSize,truncated,message}
+// （documentId = documents.id UUID，M0 起不再是 URL）。
 // 分类状态（needs_auth/too_large 等）是 200 + status 产品语义，由调用方渲染；仅
 // 请求体解析失败 400、内部错误 500。不加连接重试：这是最长 10 分钟的长操作
 // （与服务端 prepareTimeout 对齐），失败重试由用户在文档卡上显式点"重试"。

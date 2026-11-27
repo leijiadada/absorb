@@ -658,16 +658,24 @@ export function isNearBottom() {
   return el.scrollHeight - el.scrollTop - el.clientHeight < SNAP_THRESHOLD;
 }
 
-// 提问按钮双态:空闲=提问(蓝,依输入决定 disabled);流式中=停止(红,可点触发 abort)
-// 实心红避免蓝→描边闪烁突变;停止后 catch 分支统一清理,此处只管按钮外观
+// 提问按钮双态:空闲=向上箭头 SVG(同形于参考设计,粗描边+currentColor 随状态适配);流式中=停止方块(红,可点触发 abort)
+// 实心红避免蓝→描边闪烁突变;停止后 catch 分支统一清理,此处只管按钮外观。
+// 图标内嵌于 innerHTML,故文案只能走 title/aria-label（data-i18n 的 textContent 替换会清掉图标）
+const ASK_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"/><path d="M12 19V5"/></svg>';
+const STOP_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/></svg>';
+
 export function updateAskBtn() {
   if (getStreaming()) {
-    els.askBtn.textContent = t('buttons.stop');
+    els.askBtn.innerHTML = STOP_ICON;
+    els.askBtn.title = t('buttons.stop');
+    els.askBtn.setAttribute('aria-label', t('buttons.stop'));
     els.askBtn.classList.add('danger');
     els.askBtn.disabled = false;
     return;
   }
-  els.askBtn.textContent = t('buttons.ask');
+  els.askBtn.innerHTML = ASK_ICON;
+  els.askBtn.title = t('buttons.ask');
+  els.askBtn.setAttribute('aria-label', t('buttons.ask'));
   els.askBtn.classList.remove('danger');
   // contenteditable 有文本、有划词标签、或附了图片，即视为可提问
   const el = els.questionInput;

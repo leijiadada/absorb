@@ -1,0 +1,102 @@
+{
+  "evalSetId": "m1-search-callrate",
+  "name": "m1-search-callrate",
+  "_note": "M1 验收（doc2 §八）：search_document 实际调用率观测。需配合 -db 直连已建索引的文档库副本（AgenticSE Book CN，20.9 万字）使用。用例问题全部指向 6000 字注入窗口之外的文档细节，检索是可答的唯一路径；评分阈值故意宽松——本评测只统计工具调用率（日志 search_document call# 行数 / 用例数），不考核回答质量。",
+  "evalCases": [
+    {
+      "evalId": "m1-01-book-structure",
+      "conversation": [
+        {
+          "invocationId": "m1-01-1",
+          "userContent": {"role": "user", "content": "这本书除了开头这几段，整体讲了哪些主题？请列出后文章节的要点。"},
+          "finalResponse": {"role": "assistant", "content": "本书围绕智能体工程展开，后续章节涵盖软件工程实践与 AI 协作模式等内容。"}
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "absorb-user",
+        "state": {
+          "page_url": "https://agenticse-book.github.io/pdf/AgenticSE_Book_CN.pdf",
+          "page_title": "AgenticSE Book CN",
+          "document_id": "b39165dc-9827-4748-b006-4752899f1100"
+        }
+      }
+    },
+    {
+      "evalId": "m1-02-agent-definition",
+      "conversation": [
+        {
+          "invocationId": "m1-02-1",
+          "userContent": {"role": "user", "content": "书里是怎么定义「智能体工程」的？给出书中的原文表述。"},
+          "finalResponse": {"role": "assistant", "content": "智能体工程在书中有系统定义，涉及规划、工具与记忆等要素。"}
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "absorb-user",
+        "state": {
+          "page_url": "https://agenticse-book.github.io/pdf/AgenticSE_Book_CN.pdf",
+          "page_title": "AgenticSE Book CN",
+          "document_id": "b39165dc-9827-4748-b006-4752899f1100"
+        }
+      }
+    },
+    {
+      "evalId": "m1-03-engineer-role",
+      "conversation": [
+        {
+          "invocationId": "m1-03-1",
+          "userContent": {"role": "user", "content": "作者认为 AI 时代软件工程师的职责发生了什么变化？依据在书的后半部分。"},
+          "finalResponse": {"role": "assistant", "content": "作者认为工程师职责转向编排与验证 AI 产出，工程能力重心从写代码转向定义问题与把关质量。"}
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "absorb-user",
+        "state": {
+          "page_url": "https://agenticse-book.github.io/pdf/AgenticSE_Book_CN.pdf",
+          "page_title": "AgenticSE Book CN",
+          "document_id": "b39165dc-9827-4748-b006-4752899f1100"
+        }
+      }
+    },
+    {
+      "evalId": "m1-04-concrete-practice",
+      "conversation": [
+        {
+          "invocationId": "m1-04-1",
+          "userContent": {"role": "user", "content": "书中介绍了哪些具体的人机协作开发实践或案例？翻一下全文再回答。"},
+          "finalResponse": {"role": "assistant", "content": "书中给出了人机协作开发的具体实践，如 AI 辅助的需求拆解与代码评审等场景。"}
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "absorb-user",
+        "state": {
+          "page_url": "https://agenticse-book.github.io/pdf/AgenticSE_Book_CN.pdf",
+          "page_title": "AgenticSE Book CN",
+          "document_id": "b39165dc-9827-4748-b006-4752899f1100"
+        }
+      }
+    },
+    {
+      "evalId": "m1-05-closing-chapter",
+      "conversation": [
+        {
+          "invocationId": "m1-05-1",
+          "userContent": {"role": "user", "content": "这本书结尾部分的核心结论是什么？"},
+          "finalResponse": {"role": "assistant", "content": "结尾章节总结了对软件工程与 AI 协作的展望，强调工程方法在智能体时代的延续与演进。"}
+        }
+      ],
+      "sessionInput": {
+        "appName": "absorb-reader",
+        "userId": "absorb-user",
+        "state": {
+          "page_url": "https://agenticse-book.github.io/pdf/AgenticSE_Book_CN.pdf",
+          "page_title": "AgenticSE Book CN",
+          "document_id": "b39165dc-9827-4748-b006-4752899f1100"
+        }
+      }
+    }
+  ]
+}

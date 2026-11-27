@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"trpc.group/trpc-go/trpc-agent-go/model"
 	"trpc.group/trpc-go/trpc-agent-go/runner"
 
@@ -188,7 +189,8 @@ func AskHandler(r runner.Runner, ps PromptStrategy, sessionSvc *store.SessionSer
 		// 中断恢复（P1）：会话末事件悬挂 tool_calls（上一轮在工具调用阶段被停止/超时
 		// 打断）→ 先跑恢复轮确定性补执行并续答，再按用户输入决定是否继续正常轮。
 		// 交互对齐 Trae：无按钮、无协议字段，用户只管说话；返回 true 表示本轮已终结。
-		if resumeIfDangling(ctx, r, sessionSvc, app, user, sessionID, body.Question, reg, appCtx, span, w, flusher) {
+		if resumeIfDangling(ctx, r, sessionSvc, app, user, sessionID, body.Question, reg,
+			&sseEnv{w: w, flusher: flusher, span: span, appCtx: appCtx}) {
 			return
 		}
 
@@ -242,8 +244,7 @@ func AskHandler(r runner.Runner, ps PromptStrategy, sessionSvc *store.SessionSer
 				if pendingAsk != nil {
 					continue
 				}
-				norm := errs.FromModel(evt.Error, appCtx)
-				span.SetStatus(codes.Error, norm.Message)
+				norm := emitModelErr(w, flusher, span, evt.Error, appCtx)
 				if norm.Code != "" {
 					span.SetAttributes(attribute.String("error.code", string(norm.Code)))
 				}
@@ -254,7 +255,6 @@ func AskHandler(r runner.Runner, ps PromptStrategy, sessionSvc *store.SessionSer
 				}
 				log.Errorf("[Absorb] model error | provider=%s code=%s session=%s raw_code=%v raw_msg=%q",
 					appCtx.Provider, norm.Code, sessionID, rawCode, evt.Error.Message)
-				writeSSE(w, map[string]any{"type": "error", "code": string(norm.Code), "message": norm.Message})
 				break
 			}
 			if evt.Response != nil && len(evt.Response.Choices) > 0 {
@@ -293,20 +293,8 @@ func AskHandler(r runner.Runner, ps PromptStrategy, sessionSvc *store.SessionSer
 						sentError = true
 					}
 				}
-				// 思考过程流式推送:与 token 互斥(思考阶段 ReasoningContent 有值/Content 空;回答阶段反之)
-				if rc := c.Delta.ReasoningContent; rc != "" {
-					writeSSE(w, map[string]any{"type": "reasoning", "content": rc})
-					if flusher != nil {
-						flusher.Flush()
-					}
-				}
-				content := c.Delta.Content
-				if content != "" {
-					writeSSE(w, map[string]any{"type": "token", "content": content})
-					if flusher != nil {
-						flusher.Flush()
-					}
-				}
+				// 思考与正文增量互斥下发（思考阶段 ReasoningContent 有值/Content 空，回答阶段反之）
+				forwardDelta(w, flusher, c)
 			}
 			if pendingAsk == nil && !sentDone && evt.IsFinalResponse() {
 				// 已因异常 finish_reason 下发错误提示时不再发 done；仍继续 drain，
@@ -443,6 +431,36 @@ func emitAssociationsIfAny(ctx context.Context, ks *knowledge.Service, app, user
 func writeSSE(w http.ResponseWriter, data any) {
 	b, _ := json.Marshal(data)
 	fmt.Fprintf(w, "data: %s\n\n", b)
+}
+
+// forwardDelta 流式增量转发：思考与正文互斥（思考阶段 ReasoningContent 有值/
+// Content 空，回答阶段反之），逐块写出并 flush。
+func forwardDelta(w http.ResponseWriter, flusher http.Flusher, c model.Choice) {
+	if rc := c.Delta.ReasoningContent; rc != "" {
+		writeSSE(w, map[string]any{"type": "reasoning", "content": rc})
+		if flusher != nil {
+			flusher.Flush()
+		}
+	}
+	if content := c.Delta.Content; content != "" {
+		writeSSE(w, map[string]any{"type": "token", "content": content})
+		if flusher != nil {
+			flusher.Flush()
+		}
+	}
+}
+
+// emitModelErr 模型错误的统一出口：错误归一化 → span 标记 → SSE 下发。
+// 返回归一化错误，供调用方落各自口径的技术日志（含原始厂商码）与补挂
+// error.code span 属性；问答/续答/恢复三条链路共用。
+func emitModelErr(w http.ResponseWriter, flusher http.Flusher, span trace.Span, evtErr *model.ResponseError, appCtx errs.ModelContext) *errs.Norm {
+	norm := errs.FromModel(evtErr, appCtx)
+	span.SetStatus(codes.Error, norm.Message)
+	writeSSE(w, map[string]any{"type": "error", "code": string(norm.Code), "message": norm.Message})
+	if flusher != nil {
+		flusher.Flush()
+	}
+	return norm
 }
 
 // writeJSON 写普通 JSON 响应（非 SSE，用于 /api/cancel）

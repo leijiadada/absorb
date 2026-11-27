@@ -26,7 +26,7 @@ import (
 
 // schemaVersion 本版本代码所支持的数据库 schema 版本。
 // 每次增改表结构或数据语义：migrations 追加一条，并把此常量 +1。
-const schemaVersion = 7
+const schemaVersion = 11
 
 // migration 一条前向迁移。Up 在单个事务内执行。
 type migration struct {
@@ -74,6 +74,129 @@ var migrations = []migration{
 		Name:    "document_contents",
 		Up:      migrateDocumentContents,
 	},
+	{
+		Version: 8,
+		Name:    "document_index",
+		Up:      migrateDocumentIndex,
+	},
+	{
+		Version: 9,
+		Name:    "document_chunk_vectors",
+		Up:      migrateChunkVectors,
+	},
+	{
+		Version: 10,
+		Name:    "document_vector_state",
+		Up:      migrateDocumentVectorState,
+	},
+	{
+		Version: 11,
+		Name:    "document_content_heading_marks",
+		Up:      migrateDocumentHeadingMarks,
+	},
+}
+
+// migrateDocumentHeadingMarks 0011：document_contents 增加章节标题元数据列
+// （F3a 结构进元数据）。heading_marks 存 []extract.HeadingMark 的 JSON（rune
+// 偏移+层级+标题+面包屑链），可空——旧文档空值 = 全链路行为不变。正文一个
+// 字节不动，结构只进元数据层；Marks 随正文落库（BuildIndex 只有文本无 PDF
+// 字节，docling 无法重算）。
+func migrateDocumentHeadingMarks(ctx context.Context, tx *sql.Tx) error {
+	var cols int
+	if err := tx.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM pragma_table_info('document_contents') WHERE name='heading_marks'`).Scan(&cols); err != nil {
+		return err
+	}
+	if cols > 0 {
+		return nil // 新库：DDL 已含该列
+	}
+	_, err := tx.ExecContext(ctx, `ALTER TABLE document_contents ADD COLUMN heading_marks TEXT`)
+	return err
+}
+
+// migrateDocumentVectorState 0010：词法与向量索引生命周期解耦（P0 修复）。
+// 1）document_index_state 增加向量索引状态四列（vector_model/vector_status/
+//
+//	vector_count/vector_error）：向量缺失/失败/换模型可被独立检测并补建，
+//	不再被词法 ready 挡住；chunks 重建时向量随事务一并作废。
+//
+// 2）document_chunk_vectors 主键 chunk_id → (chunk_id, model)：旧单列主键下
+//
+//	同一 chunk 只能存一个模型向量，换模型重新嵌入撞 UNIQUE(chunk_id)，向量
+//	永远无法随模型更换重建。SQLite 改主键无原地 ALTER，走建新表 → 拷行 →
+//	删旧 → 改名。新库 DDL 已是目标形态，两项均 pragma 守卫幂等跳过。
+func migrateDocumentVectorState(ctx context.Context, tx *sql.Tx) error {
+	for _, col := range []struct {
+		name string
+		ddl  string
+	}{
+		{"vector_model", `ALTER TABLE document_index_state ADD COLUMN vector_model TEXT NOT NULL DEFAULT ''`},
+		{"vector_status", `ALTER TABLE document_index_state ADD COLUMN vector_status TEXT NOT NULL DEFAULT ''`},
+		{"vector_count", `ALTER TABLE document_index_state ADD COLUMN vector_count INTEGER NOT NULL DEFAULT 0`},
+		{"vector_error", `ALTER TABLE document_index_state ADD COLUMN vector_error TEXT NOT NULL DEFAULT ''`},
+	} {
+		var cols int
+		if err := tx.QueryRowContext(ctx,
+			`SELECT COUNT(*) FROM pragma_table_info('document_index_state') WHERE name='`+col.name+`'`).Scan(&cols); err != nil {
+			return err
+		}
+		if cols > 0 {
+			continue // 新库：DDL 已含该列
+		}
+		if _, err := tx.ExecContext(ctx, col.ddl); err != nil {
+			return err
+		}
+	}
+	// 向量表复合主键重建：model 不在主键中 = 旧结构
+	var modelPK int
+	if err := tx.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM pragma_table_info('document_chunk_vectors') WHERE name='model' AND pk>0`).Scan(&modelPK); err != nil {
+		return err
+	}
+	if modelPK > 0 {
+		return nil // 新库：DDL 已是 (chunk_id, model) 复合主键
+	}
+	_, err := tx.ExecContext(ctx, `
+	CREATE TABLE document_chunk_vectors_new (
+		chunk_id     TEXT NOT NULL,
+		app_name     TEXT NOT NULL,
+		user_id      TEXT NOT NULL,
+		document_id  TEXT NOT NULL,
+		chunk_index  INTEGER NOT NULL,
+		dims         INTEGER NOT NULL,
+		model        TEXT NOT NULL,
+		vector       BLOB NOT NULL,
+		created_at   INTEGER NOT NULL,
+		PRIMARY KEY (chunk_id, model)
+	);
+	INSERT INTO document_chunk_vectors_new
+		SELECT chunk_id, app_name, user_id, document_id, chunk_index, dims, model, vector, created_at
+		FROM document_chunk_vectors;
+	DROP TABLE document_chunk_vectors;
+	ALTER TABLE document_chunk_vectors_new RENAME TO document_chunk_vectors;
+	CREATE INDEX IF NOT EXISTS idx_chunk_vectors_doc
+	ON document_chunk_vectors(app_name, user_id, document_id, model);
+	`)
+	return err
+}
+
+// migrateChunkVectors 0009：文档 chunk 向量表（M3 混合检索语义召回路）。
+// vector 存 float32 little-endian 打包 BLOB（SQLite 无原生向量类型，内存暴力
+// 扫描足够——万级 chunk × 1024 维 ≈ 数十 MB）。model 入库：不同模型的向量
+// 不可比，加载按当前模型过滤，换模型即等效未建（待重建）。
+func migrateChunkVectors(ctx context.Context, tx *sql.Tx) error {
+	_, err := tx.ExecContext(ctx, chunkVectorsDDL)
+	return err
+}
+
+// migrateDocumentIndex 0008：建文档检索索引三件套（M1）——document_chunks、
+// document_chunks_fts（FTS5）、document_index_state。只追加新表，不触碰任何
+// 既有表/行；DDL 与 schemaDDL 共用 documentIndexDDL 单一文本源；
+// CREATE TABLE/VTABLE IF NOT EXISTS 幂等，新库上为空操作，可安全重跑。
+// FTS5 可用性已在 modernc.org/sqlite v1.29.0 实测（虚拟表+中文 MATCH+bm25）。
+func migrateDocumentIndex(ctx context.Context, tx *sql.Tx) error {
+	_, err := tx.ExecContext(ctx, documentIndexDDL)
+	return err
 }
 
 // migrateModelConfigs 0001：补 model_configs 新列，并把 thinking 的旧布尔语义

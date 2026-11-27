@@ -32,7 +32,7 @@ const showOverride = ref(false)
 
 // 版本号截去括号里的构建时间，与底栏口径一致
 const versionText = computed(() =>
-  (view.current || form.value.version || '—').split(' (')[0],
+  (view.value.current || form.value.version || '—').split(' (')[0],
 )
 
 onMounted(async () => {

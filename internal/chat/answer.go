@@ -77,12 +77,8 @@ func AnswerHandler(r runner.Runner, ps PromptStrategy, sessionSvc *store.Session
 		)
 
 		update := askuser.BuildAnswerUpdate(body.TicketID, body.Answer)
-		eventChan, err := r.Run(ctx, user, body.SessionID, model.NewUserMessage(update), []agent.RunOption{
-			agent.WithRequestID(requestID),
-			agent.WithDetachedCancel(true),
-			agent.WithMaxRunDuration(maxRunDuration),
-			agent.WithEventFilterKey(filterKey),
-		}...)
+		eventChan, err := r.Run(ctx, user, body.SessionID, model.NewUserMessage(update),
+			newRunOpts(requestID, agent.WithEventFilterKey(filterKey))...)
 		if err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			writeJSON(w, http.StatusInternalServerError, map[string]any{"code": 1, "message": "续答启动失败: " + err.Error()})
@@ -103,30 +99,13 @@ func AnswerHandler(r runner.Runner, ps PromptStrategy, sessionSvc *store.Session
 		sentDone := false
 		for evt := range eventChan {
 			if evt.Error != nil {
-				norm := errs.FromModel(evt.Error, appCtx)
-				span.SetStatus(codes.Error, norm.Message)
+				norm := emitModelErr(w, flusher, span, evt.Error, appCtx)
 				log.Errorf("[Absorb] answer model error | provider=%s code=%s session=%s",
 					appCtx.Provider, norm.Code, body.SessionID)
-				writeSSE(w, map[string]any{"type": "error", "code": string(norm.Code), "message": norm.Message})
-				if flusher != nil {
-					flusher.Flush()
-				}
 				return
 			}
 			if evt.Response != nil && len(evt.Response.Choices) > 0 {
-				c := evt.Response.Choices[0]
-				if rc := c.Delta.ReasoningContent; rc != "" {
-					writeSSE(w, map[string]any{"type": "reasoning", "content": rc})
-					if flusher != nil {
-						flusher.Flush()
-					}
-				}
-				if content := c.Delta.Content; content != "" {
-					writeSSE(w, map[string]any{"type": "token", "content": content})
-					if flusher != nil {
-						flusher.Flush()
-					}
-				}
+				forwardDelta(w, flusher, evt.Response.Choices[0])
 			}
 			if !sentDone && evt.IsFinalResponse() {
 				writeSSE(w, map[string]any{"done": true, "requestId": requestID})

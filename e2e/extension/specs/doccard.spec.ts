@@ -1,7 +1,8 @@
-// PDF 解读 PR3：文档卡。PDF 标签页识别 → 未读取态 → 读取（mock /api/page/prepare）
-// → 已就绪态 → 建议问题透传 documentId；失败态（needs_auth）文案与重试。
+// PDF 解读 PR4：文档工具栏（输入框上方单行条 + 展开面板）。PDF 标签页识别 →
+// 未读取态（行内读取按钮）→ 读取（mock /api/page/prepare）→ 已就绪态（自动展开
+// 一次，建议问题透传 documentId）；失败态（needs_auth）展开面板文案与重试。
 // PDF 标签页用 route fulfill 的 text/html 页面模拟（URL 以 .pdf 结尾即可触发
-// isPdfUrl；真 PDF 在 headless 下会走下载，tab.url 不可靠）。
+// detectDocType；真 PDF 在 headless 下会走下载，tab.url 不可靠）。
 import { test, expect, FIXTURE_BASE, MOCK_PORT, closeTestPages, type Page, type BrowserContext, type Worker } from '../fixtures/extension.fixture';
 
 const PDF_URL = `${FIXTURE_BASE}/sample.pdf`;
@@ -86,10 +87,10 @@ test.describe('文档卡（PDF 解读）', () => {
     await pdf.bringToFront();
     await expectPdfActive(serviceWorker);
 
-    // 卡片出现：未读取态（badge 橙色 + 文件名 + 主按钮）
+    // 工具栏出现：未读取态（badge 橙色 + 文件名 + 行内读取按钮）
     await expect(sidepanel.locator('#docCard')).toBeVisible();
-    await expect(sidepanel.locator('#docCard .dc-badge-orange')).toHaveText('尚未读取');
-    await expect(sidepanel.locator('#docCard .dc-title')).toHaveText(PDF_TITLE);
+    await expect(sidepanel.locator('#docCard .db-badge-orange')).toHaveText('尚未读取');
+    await expect(sidepanel.locator('#docCard .db-name')).toHaveText(PDF_TITLE);
 
     // 未读取时提问：payload.page 不带 documentId（维持原降级行为）
     await sidepanel.evaluate((q: string) => {
@@ -104,34 +105,56 @@ test.describe('文档卡（PDF 解读）', () => {
     expect(probe.question).toContain(PROBE_QUESTION);
     expect(probe.documentId).toBe('');
 
-    // 点读取：mock 桥默认 ready（28,450 字）→ 已就绪态
+    // 点读取：mock 桥默认 ready（28,450 字）→ 已就绪态（自动展开一次）
     await sidepanel.evaluate(() => {
-      const btn = [...document.querySelectorAll('#docCard .dc-cta')]
+      const btn = [...document.querySelectorAll('#docCard .db-bar-cta')]
         .find((b) => b.textContent === '读取文档') as HTMLButtonElement | undefined;
       btn?.click();
     });
     await pollLastPrepare(sidepanel);
-    await expect(sidepanel.locator('#docCard .dc-badge-green')).toHaveText('已就绪');
-    await expect(sidepanel.locator('#docCard .dc-meta')).toContainText('28,450');
-    await expect(sidepanel.locator('#docCard .dc-suggest-item')).toHaveCount(3);
+    await expect(sidepanel.locator('#docCard .db-badge-green')).toHaveText('已就绪');
+    await expect(sidepanel.locator('#docCard .db-chars')).toContainText('28,450');
+    await expect(sidepanel.locator('#docCard .db-suggest-item')).toHaveCount(3);
 
     // 建议问题点击 → 走提问链路并携带 documentId。
     // 先重置 mock 记录态：lastAsk 里还留着上面的探针数据，不重置 poll 会立即命中陈旧值
     await resetMock();
     await sidepanel.evaluate(() => {
-      (document.querySelector('#docCard .dc-suggest-item') as HTMLButtonElement).click();
+      (document.querySelector('#docCard .db-suggest-item') as HTMLButtonElement).click();
     });
     await expect(sidepanel.locator('.msg.assistant').last()).toBeVisible();
     const asked = await pollLastAsk(sidepanel);
-    expect(asked.question).toContain('帮我建立这篇文档的整体理解框架');
+    // 动态建议（doc-suggestions）：问题为服务端双通道直出的成句文本，原样发送
+    expect(asked.question).toContain('书中〈检索增强生成〉这部分讲了什么？');
     expect(asked.documentId).toBe(PDF_URL);
+  });
+
+  test('prepare 无 suggestions 字段 → 不渲染建议提问小节（无固定兜底）', async ({ context, serviceWorker }) => {
+    const pdf = await openPdfTab(context);
+    await pdf.bringToFront();
+    await expectPdfActive(serviceWorker);
+    // 注入 ready 响应但不带 suggestions 字段（服务端无素材的 mock 形态）
+    await fetch(`http://127.0.0.1:${MOCK_PORT}/__prepare-script`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'ready', charCount: 12000, message: '' }),
+    });
+    await sidepanel.evaluate(() => {
+      const btn = [...document.querySelectorAll('#docCard .db-bar-cta')]
+        .find((b) => b.textContent === '读取文档') as HTMLButtonElement | undefined;
+      btn?.click();
+    });
+    await pollLastPrepare(sidepanel);
+    await expect(sidepanel.locator('#docCard .db-badge-green')).toHaveText('已就绪');
+    // 就绪自动展开：建议提问小节整段不渲染（文档信息 + 操作仍在）
+    await expect(sidepanel.locator('#docCard .db-suggest')).toHaveCount(0);
+    await expect(sidepanel.locator('#docCard .db-act-btn')).toHaveCount(1);
   });
 
   test('失败态（needs_auth）渲染原因文案，重试后转已就绪', async ({ context, serviceWorker }) => {
     const pdf = await openPdfTab(context);
     await pdf.bringToFront();
     await expectPdfActive(serviceWorker);
-    await expect(sidepanel.locator('#docCard .dc-badge-orange')).toHaveText('尚未读取');
+    await expect(sidepanel.locator('#docCard .db-badge-orange')).toHaveText('尚未读取');
 
     // 注入 needs_auth 分类状态（200 + status，产品语义非协议错误）
     await fetch(`http://127.0.0.1:${MOCK_PORT}/__prepare-script`, {
@@ -142,14 +165,16 @@ test.describe('文档卡（PDF 解读）', () => {
       }),
     });
     await sidepanel.evaluate(() => {
-      const btn = [...document.querySelectorAll('#docCard .dc-cta')]
+      const btn = [...document.querySelectorAll('#docCard .db-bar-cta')]
         .find((b) => b.textContent === '读取文档') as HTMLButtonElement | undefined;
       btn?.click();
     });
     await pollLastPrepare(sidepanel);
-    await expect(sidepanel.locator('#docCard .dc-badge-orange')).toHaveText('需要登录');
-    await expect(sidepanel.locator('#docCard .dc-desc')).toContainText('桌面端不会继承浏览器 Cookie');
-    await expect(sidepanel.locator('#docCard .dc-cta')).toHaveText('重试');
+    await expect(sidepanel.locator('#docCard .db-badge-orange')).toHaveText('需要登录');
+    // 失败态不自动展开：手动展开面板看原因文案与重试按钮
+    await sidepanel.locator('#docCard .db-toggle').click();
+    await expect(sidepanel.locator('#docCard .db-desc')).toContainText('桌面端不会继承浏览器 Cookie');
+    await expect(sidepanel.locator('#docCard .db-cta')).toHaveText('重试');
 
     // 重试：恢复默认 ready 响应 → 已就绪
     await fetch(`http://127.0.0.1:${MOCK_PORT}/__prepare-script`, {
@@ -157,9 +182,9 @@ test.describe('文档卡（PDF 解读）', () => {
       body: JSON.stringify(null),
     });
     await sidepanel.evaluate(() => {
-      (document.querySelector('#docCard .dc-cta') as HTMLButtonElement).click();
+      (document.querySelector('#docCard .db-cta') as HTMLButtonElement).click();
     });
-    await expect(sidepanel.locator('#docCard .dc-badge-green')).toHaveText('已就绪');
+    await expect(sidepanel.locator('#docCard .db-badge-green')).toHaveText('已就绪');
   });
 
   test('非 PDF 标签页不显示文档卡', async ({ context, serviceWorker }) => {

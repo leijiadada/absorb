@@ -1,11 +1,13 @@
 package document
 
 // Prepare 服务与 /api/page/prepare 端点测试：状态矩阵（ready/partial/失败态）、
-// 落库语义（成功才落库、documentId=URL、归属隔离）、SSRF 拦截、HTTP 协议行为。
+// 落库语义（成功才落库、documentId=documents.id UUID、归属隔离）、SSRF 拦截、
+// HTTP 协议行为。
 
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -59,7 +61,8 @@ func TestPrepareReady(t *testing.T) {
 	if res.Status != extract.StatusReady || res.CharCount != len([]rune("第一段正文。\n第二段正文。")) {
 		t.Fatalf("unexpected result: %+v", res)
 	}
-	if res.DocumentID != testURL || res.ContentType != "application/pdf" || res.Title != "研究论文" {
+	// documentId = documents.id UUID（M0 统一身份）：非空且不再是 URL
+	if res.DocumentID == "" || res.DocumentID == testURL || res.ContentType != "application/pdf" || res.Title != "研究论文" {
 		t.Fatalf("metadata mismatch: %+v", res)
 	}
 	// 正文落库（完整正文，未注入截断）
@@ -70,10 +73,17 @@ func TestPrepareReady(t *testing.T) {
 	if dc.ContentText != "第一段正文。\n第二段正文。" || dc.ExtractionStatus != extract.StatusReady || dc.ContentHash == "" {
 		t.Fatalf("stored content mismatch: %+v", dc)
 	}
+	// 按 UUID 读取（M0 新路径）与按 URL 读取同物
+	dcByID, err := st.LoadDocumentContentByID(context.Background(), "app", "user", res.DocumentID)
+	if err != nil || dcByID == nil || dcByID.URL != testURL || dcByID.ContentHash != dc.ContentHash {
+		t.Fatalf("load by id mismatch: (%+v, %v)", dcByID, err)
+	}
 }
 
-func TestPreparePartialLongText(t *testing.T) {
+func TestPreparePartialOnlyOnFetchTruncation(t *testing.T) {
 	st := newTestStore(t)
+	// M0 语义修正：超 PageTextMaxLen 但获取侧未截断 → ready（全文完整落库，
+	// 注入截断属上下文交付，不改变提取状态）
 	long := strings.Repeat("字", retriever.PageTextMaxLen+100) // 超 30k rune
 	fx := &fakeExtractor{res: &extract.Result{Content: long, ContentType: "application/pdf"}}
 	svc := NewService(st, fx, "app", "user")
@@ -82,16 +92,16 @@ func TestPreparePartialLongText(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Prepare: %v", err)
 	}
-	if res.Status != extract.StatusPartial {
-		t.Fatalf("status = %s, want partial", res.Status)
+	if res.Status != extract.StatusReady {
+		t.Fatalf("long non-truncated status = %s, want ready", res.Status)
 	}
-	// 全文仍完整落库（partial 只表达注入截断语义）
+	// 全文完整落库
 	dc, _ := st.LoadDocumentContent(context.Background(), "app", "user", testURL)
 	if dc == nil || dc.CharCount != retriever.PageTextMaxLen+100 || dc.ContentText != long {
 		t.Fatalf("full text must be stored, got char_count=%d", dc.CharCount)
 	}
 
-	// 获取侧静默截断（HTML 达上限）同样标 partial
+	// 获取侧静默截断（HTML 达上限）→ partial
 	fx2 := &fakeExtractor{res: &extract.Result{Content: "短文本", ContentType: "text/html", Truncated: true}}
 	svc2 := NewService(st, fx2, "app", "user")
 	res2, err := svc2.Prepare(context.Background(), "https://example.com/page.html", "")
@@ -100,6 +110,10 @@ func TestPreparePartialLongText(t *testing.T) {
 	}
 	if res2.Status != extract.StatusPartial {
 		t.Fatalf("truncated html status = %s, want partial", res2.Status)
+	}
+	dc2, _ := st.LoadDocumentContent(context.Background(), "app", "user", "https://example.com/page.html")
+	if dc2 == nil || dc2.ExtractionStatus != extract.StatusPartial || !dc2.Truncated {
+		t.Fatalf("partial stored mismatch: %+v", dc2)
 	}
 }
 
@@ -210,13 +224,22 @@ func TestPagePrepareHTTP(t *testing.T) {
 		return resp.StatusCode, buf.String()
 	}
 
-	// 正常准备：200 + 状态与 documentId（=URL），响应不含正文
+	// 正常准备：200 + 状态与 documentId（=documents.id UUID，非 URL），响应不含正文
 	code, body := do("POST", `{"url":"`+testURL+`","title":"论文"}`)
 	if code != 200 {
 		t.Fatalf("prepare status = %d, body=%s", code, body)
 	}
-	if !strings.Contains(body, `"status":"ready"`) || !strings.Contains(body, `"documentId":"`+testURL+`"`) {
-		t.Fatalf("response missing fields: %s", body)
+	if !strings.Contains(body, `"status":"ready"`) {
+		t.Fatalf("response missing status: %s", body)
+	}
+	var prep struct {
+		DocumentID string `json:"documentId"`
+	}
+	if err := json.Unmarshal([]byte(body), &prep); err != nil {
+		t.Fatalf("parse prepare response: %v", err)
+	}
+	if prep.DocumentID == "" || prep.DocumentID == testURL {
+		t.Fatalf("documentId should be UUID, got %q", prep.DocumentID)
 	}
 	if strings.Contains(body, "正文内容") {
 		t.Fatal("response must not contain content text")

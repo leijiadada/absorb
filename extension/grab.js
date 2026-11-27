@@ -161,7 +161,7 @@ function pruneNoise(rawHtml) {
 // 整页 HTML → 结构化文本（pageMd），grabContextInPage 与 grabPageOnly 共用。
 // 转换器缺失/异常/产出为空均返回空串（本次无页面缓存，宁缺勿错）。
 function convertPageHtml(rawHtml) {
-  if (!rawHtml) return '';
+  if (!rawHtml) return { md: '', capture: '' };
   rawHtml = pruneNoise(rawHtml);
   if (typeof globalThis.__absorbPageConvert === 'object' && globalThis.__absorbPageConvert) {
     try {
@@ -169,21 +169,23 @@ function convertPageHtml(rawHtml) {
       if (md.length > MAX_PAGE_TEXT_CHARS) {
         console.log('[Absorb] pageMd 超限截断:', md.length, '→', MAX_PAGE_TEXT_CHARS);
         md = md.slice(0, MAX_PAGE_TEXT_CHARS);
+        return { md, capture: 'partial' };
       }
-      return md;
+      return { md, capture: 'full' };
     } catch (e) {
       console.warn('[Absorb] 页面转换失败，本次无页面缓存:', e);
-      return '';
+      return { md: '', capture: '' };
     }
   }
   console.warn('[Absorb] pageconvert 未注入，本次无页面缓存');
-  return '';
+  return { md: '', capture: '' };
 }
 
 // 无划词形态的页面采集（sidepanel 无划词提问时注入执行）：
 // 仅取整页结构化文本，无选区/段落上下文。grabPageHtml(null) 走 Defuddle/选择器/body 链。
 function grabPageOnly() {
-  return { url: location.href, pageMd: convertPageHtml(grabPageHtml(null)) };
+  const r = convertPageHtml(grabPageHtml(null));
+  return { url: location.href, pageMd: r.md, contentStatus: r.capture };
 }
 
 // 判定划词是否已是完整语句/段落
@@ -221,13 +223,13 @@ function grabContextInPage() {
   // 见 pageconvert.js），Go 端免转换直读入页面缓存。
   // 转换不可用或产出为空 → pageMd 为空，本次划词无页面缓存（宁缺勿错：
   // expand_context 返回无缓存信号，主问答不受影响）；grabPageHtml 仍三级降级取最优内容区。
-  const pageMd = convertPageHtml(grabPageHtml(sel));
+  const conv = convertPageHtml(grabPageHtml(sel));
 
   const complete = isComplete(text);
   if (DEBUG) console.log('[Absorb] 选中句:', JSON.stringify(text), '长度', text.length, 'isComplete =', complete);
   if (complete) {
     console.log('[Absorb] 判定完整，不抓段落');
-    return { text: finalText, paragraph: '', pageContext, url, pageMd, isComplete: true };
+    return { text: finalText, paragraph: '', pageContext, url, pageMd: conv.md, contentStatus: conv.capture, isComplete: true };
   }
 
   // 找选区所在的块级元素：每轮必向上走，避免死循环
@@ -242,13 +244,13 @@ function grabContextInPage() {
       if (full && full !== text) {
         const para = full.length < 1200 ? full : windowSlice(full, text, 300, 300);
         if (DEBUG) console.log('[Absorb] 采用作段落上下文，para:', para);
-        return { text: finalText, paragraph: para, pageContext, url, pageMd, isComplete: false };
+        return { text: finalText, paragraph: para, pageContext, url, pageMd: conv.md, contentStatus: conv.capture, isComplete: false };
       }
     }
     el = el.parentElement; // 必向上，最终 el=null 退出
   }
   console.log('[Absorb] 向上遍历', depth, '层未找到更大块级元素，paragraph 为空');
-  return { text: finalText, paragraph: '', pageContext, url, pageMd, isComplete: true };
+  return { text: finalText, paragraph: '', pageContext, url, pageMd: conv.md, contentStatus: conv.capture, isComplete: true };
 }
 
 // 注入即执行（executeScript 的 result）：

@@ -28,16 +28,24 @@ import (
 	"trpc.group/trpc-go/trpc-agent-go/session"
 )
 
-// capture 线程安全地记录假端点收到的请求体。
+// capture 线程安全地记录假端点收到的请求体与请求次数。
 type capture struct {
 	mu   sync.Mutex
 	body []byte
+	n    int
 }
 
 func (c *capture) get() string {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return string(c.body)
+}
+
+// count 返回假端点被请求的累计次数（重试守卫：1210 只提示不重试，带图请求应恰好 1 次）。
+func (c *capture) count() int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.n
 }
 
 // 默认成功流：一段正常 token + [DONE]，finish_reason 为 null（无异常）。
@@ -83,6 +91,7 @@ func setup(t *testing.T, provider string, imageSupport, failWith1210 bool, okStr
 		b, _ := io.ReadAll(r.Body)
 		c.mu.Lock()
 		c.body = b
+		c.n++
 		c.mu.Unlock()
 		if failWith1210 {
 			w.WriteHeader(http.StatusBadRequest)
@@ -126,7 +135,8 @@ func setup(t *testing.T, provider string, imageSupport, failWith1210 bool, okStr
 	if err != nil {
 		t.Fatalf("NewPromptStrategy: %v", err)
 	}
-	r, err := NewRunner(cfg, func() string { return "" }, ps, svc, NewMemoryGate(false))
+	dm := NewDynamicModel(svc, func() string { return "" })
+	r, err := NewRunner(cfg, func() string { return "" }, dm, ps, svc, NewMemoryGate(false))
 	if err != nil {
 		t.Fatalf("NewRunner: %v", err)
 	}
@@ -184,6 +194,9 @@ func TestAskHandler_Multimodal(t *testing.T) {
 		}
 		if !strings.Contains(out, `"type":"error"`) {
 			t.Fatalf("bigmodel 1210 应作为 type:error 回显，实际 SSE: %s", out)
+		}
+		if n := c.count(); n != 1 {
+			t.Errorf("带图请求应恰好 1 次（1210 只提示不重试），实际 %d", n)
 		}
 	})
 

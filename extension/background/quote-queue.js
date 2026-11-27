@@ -31,13 +31,21 @@ export async function appendPendingQuote(quote) {
     if (DEBUG) console.log('[Absorb] 存在未消费的同文划词，跳过入队:', quote.text);
     return;
   }
+  // 同 URL pageMd 去重：未消费窗口（id > cursor）内已有该页整页文本时，新条目置空
+  // 引用之——同一页面连续划词不重复存整页副本（storage.local 10MB 配额下 N 份副本
+  // 会触发剥 pageMd 降级，连真副本一起丢）。只比对未消费条目：消费推进游标后，
+  // 同页重新划词仍入全量 pageMd，保证新消费批次的首条引用有料可回填。
+  // 置空条目的 pageMd 由消费侧（state.js consumePendingQuotes）从批内先到者回填。
+  const hasUnconsumedPageMd = (quote.url || '') !== '' && list.some((q) =>
+    q.url === quote.url && q.pageMd && typeof q.id === 'number' && q.id > cursor);
   list.push({
     id: nextQuoteId(),
     text: quote.text,
     paragraph: (quote.paragraph || ''),
     pageContext: (quote.pageContext || ''),
     url: (quote.url || ''),
-    pageMd: (quote.pageMd || '')
+    pageMd: hasUnconsumedPageMd ? '' : (quote.pageMd || ''),
+    contentStatus: (quote.contentStatus || '')
   });
   if (list.length > MAX_PENDING_QUOTES) list.splice(0, list.length - MAX_PENDING_QUOTES);
   try {

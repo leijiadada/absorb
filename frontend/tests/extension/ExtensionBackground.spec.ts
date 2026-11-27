@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { storageStub } from './fixtures/chrome-stub'
 
 // background 模块顶层即执行 connectNative/alarms 注册，需先装 chrome 桩再动态导入入口
 function stubChrome() {
@@ -138,28 +139,12 @@ describe('get-port 应答过滤', () => {
 })
 
 // storage.local 桩：set 可编程失败（模拟配额溢出），get 从 backing Map 读取。
+// 语义由共享 fixture（fixtures/chrome-stub.ts）提供，此处只包一层保持调用点形状。
 // 不传 setImpl 时 set 默认写回 backing（正常路径用例依赖）。
 // 模块级定义：存储降级 / quote-queue / 划词消费多组用例共用。
 function stubStorage(setImpl?: (obj: Record<string, unknown>) => Promise<void>) {
-  const backing = new Map<string, unknown>()
-  const defaultSet = async (obj: Record<string, unknown>) => {
-    for (const [k, v] of Object.entries(obj)) backing.set(k, v)
-  }
-  const set = vi.fn(setImpl ?? defaultSet)
-  const chromeStub = {
-    storage: {
-      local: {
-        get: vi.fn(async (keys: string | string[]) => {
-          const ks = Array.isArray(keys) ? keys : [keys]
-          const out: Record<string, unknown> = {}
-          for (const k of ks) if (backing.has(k)) out[k] = backing.get(k)
-          return out
-        }),
-        set,
-      },
-    },
-  }
-  return { backing, set, chromeStub }
+  const { backing, set, local } = storageStub(setImpl)
+  return { backing, set, chromeStub: { storage: { local } } }
 }
 
 describe('存储降级（配额防护）', () => {
@@ -172,21 +157,23 @@ describe('存储降级（配额防护）', () => {
     })
     vi.stubGlobal('chrome', chromeStub)
     const { appendPendingQuote } = await import('../../../extension/background/quote-queue.js')
-    await appendPendingQuote({ text: '术语解释', pageMd: '超大页面的结构化文本' })
+    await appendPendingQuote({ text: '术语解释', pageMd: '超大页面的结构化文本', contentStatus: 'full' })
     expect(calls.length).toBe(2)
-    const list = calls[1].pendingQuotes as Array<{ text: string; pageMd: string }>
+    const list = calls[1].pendingQuotes as Array<{ text: string; pageMd: string; contentStatus: string }>
     expect(list[0].text).toBe('术语解释')
     expect(list[0].pageMd).toBe('')
+    expect(list[0].contentStatus).toBe('full') // 降级只剥 pageMd，其余字段保全
   })
 
   it('appendPendingQuote 正常路径整包入队（含 pageMd）', async () => {
     const { chromeStub, backing } = stubStorage()
     vi.stubGlobal('chrome', chromeStub)
     const { appendPendingQuote } = await import('../../../extension/background/quote-queue.js')
-    await appendPendingQuote({ text: '术语', pageMd: '页面文本' })
-    const list = backing.get('pendingQuotes') as Array<{ pageMd: string }>
+    await appendPendingQuote({ text: '术语', pageMd: '页面文本', contentStatus: 'full' })
+    const list = backing.get('pendingQuotes') as Array<{ pageMd: string; contentStatus: string }>
     expect(list).toHaveLength(1)
     expect(list[0].pageMd).toBe('页面文本')
+    expect(list[0].contentStatus).toBe('full') // grab.js 产出的完整度上报不得在入队层丢失
   })
 
   it('appendPendingQuote 同文未消费划词跳过入队', async () => {
@@ -292,6 +279,40 @@ describe('quote-queue 容量与 id', () => {
     expect(list).toHaveLength(2)
     expect(list[1].id).toBeGreaterThan(100) // 新条目 id 必须大于游标才能被再次消费
   })
+
+  it('同 URL 未消费条目已带 pageMd 时，新条目置空引用（批量划词不重复存整页文本）', async () => {
+    const { chromeStub, backing } = stubStorage()
+    vi.stubGlobal('chrome', chromeStub)
+    const { appendPendingQuote } = await import('../../../extension/background/quote-queue.js')
+    await appendPendingQuote({ text: '第一段', url: 'http://a', pageMd: '整页文本' })
+    await appendPendingQuote({ text: '第二段', url: 'http://a', pageMd: '整页文本' })
+    const list = backing.get('pendingQuotes') as Array<{ pageMd: string }>
+    expect(list).toHaveLength(2)
+    expect(list[0].pageMd).toBe('整页文本') // 未消费窗口内同页首条带全量副本
+    expect(list[1].pageMd).toBe('') // 后续条目置空，消费时回填
+  })
+
+  it('已消费窗口的同 URL 划词重新入队仍带全量 pageMd（新批次首条有料）', async () => {
+    const { chromeStub, backing } = stubStorage()
+    backing.set('pendingQuotes', [{ id: 50, text: '旧词', url: 'http://a', pageMd: '整页文本' }])
+    backing.set('pendingCursor', 100)
+    vi.stubGlobal('chrome', chromeStub)
+    const { appendPendingQuote } = await import('../../../extension/background/quote-queue.js')
+    await appendPendingQuote({ text: '新词', url: 'http://a', pageMd: '整页文本' })
+    const list = backing.get('pendingQuotes') as Array<{ id: number; pageMd: string }>
+    expect(list[1].pageMd).toBe('整页文本') // 游标已推进：不与已消费条目去重
+  })
+
+  it('不同 URL 不互相去重 pageMd', async () => {
+    const { chromeStub, backing } = stubStorage()
+    vi.stubGlobal('chrome', chromeStub)
+    const { appendPendingQuote } = await import('../../../extension/background/quote-queue.js')
+    await appendPendingQuote({ text: '甲页划词', url: 'http://a', pageMd: '页面A' })
+    await appendPendingQuote({ text: '乙页划词', url: 'http://b', pageMd: '页面B' })
+    const list = backing.get('pendingQuotes') as Array<{ pageMd: string }>
+    expect(list[0].pageMd).toBe('页面A')
+    expect(list[1].pageMd).toBe('页面B')
+  })
 })
 
 describe('划词消费（游标推进 + 串行尾链）', () => {
@@ -335,5 +356,35 @@ describe('划词消费（游标推进 + 串行尾链）', () => {
     expect(r2).toBeNull() // 第二次调用读到已推进的游标 → 无增量
     const st = backing.get('absorb-state') as { sessions: Array<{ quotes: unknown[] }> }
     expect(st.sessions[0].quotes).toHaveLength(2) // 无重复 chip
+  })
+
+  it('批内同 URL pageMd 回填：入队置空条目消费时补齐整页文本', async () => {
+    const { chromeStub, backing } = stubStorage()
+    // 形状同 quote-queue 去重后的存储：同页首条带 pageMd，后续条目置空
+    backing.set('pendingQuotes', [
+      { id: 10, text: '甲', url: 'http://a', pageMd: '整页文本' },
+      { id: 20, text: '乙', url: 'http://a', pageMd: '' },
+      { id: 30, text: '丙', url: 'http://b', pageMd: '' }, // 异页且无来源：保持为空
+    ])
+    vi.stubGlobal('chrome', chromeStub)
+    const { consumePendingQuotes } = await import('../../../extension/sidepanel/js/state.js')
+    const fresh = (await consumePendingQuotes()) as Array<{ id: number; pageMd: string }>
+    expect(fresh.find((q) => q.id === 10)!.pageMd).toBe('整页文本')
+    expect(fresh.find((q) => q.id === 20)!.pageMd).toBe('整页文本') // 从批内先到者回填
+    expect(fresh.find((q) => q.id === 30)!.pageMd).toBe('') // 异页无来源，宁缺勿错
+    const st = backing.get('absorb-state') as { sessions: Array<{ quotes: Array<{ pageMd: string }> }> }
+    expect(st.sessions[0].quotes.find((q) => q.pageMd === '整页文本')).toBeTruthy()
+  })
+
+  it('会话已有同页引用时，跨批消费从已有引用回填新批置空条目', async () => {
+    const { chromeStub, backing } = stubStorage()
+    backing.set('pendingQuotes', [{ id: 20, text: '乙', url: 'http://a', pageMd: '' }])
+    vi.stubGlobal('chrome', chromeStub)
+    const { consumePendingQuotes, state } = await import('../../../extension/sidepanel/js/state.js')
+    // 预置会话：上一批消费的同页引用带 pageMd（标签未提交未清空）
+    state.sessions = [{ id: 's1', sessionId: '', title: '', quotes: [{ id: 10, text: '甲', url: 'http://a', pageMd: '整页文本' }], messages: [], createdAt: 1, updatedAt: 1 }]
+    state.currentSessionId = 's1'
+    const fresh = (await consumePendingQuotes()) as Array<{ pageMd: string }>
+    expect(fresh[0].pageMd).toBe('整页文本') // 从会话已有引用回填
   })
 })

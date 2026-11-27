@@ -63,17 +63,18 @@ test.describe('SSE 问答', () => {
     // 用户气泡立即出现
     await expect(sidepanel.locator('.msg.user').filter({ hasText: QUESTION })).toBeVisible();
 
-    // 流式期间：assistant 气泡带 .streaming，按钮切"停止"
+    // 流式期间：assistant 气泡带 .streaming，按钮切停止（红色方块图标，danger 态）
     await expect(sidepanel.locator('.msg.assistant')).toBeVisible();
     await expect(sidepanel.locator('.msg.assistant.streaming')).toBeVisible();
-    await expect(sidepanel.locator('#askBtn')).toHaveText('停止');
+    await expect(sidepanel.locator('#askBtn')).toHaveClass(/danger/);
+    await expect(sidepanel.locator('#askBtn svg[aria-hidden="true"]')).toBeVisible();
 
     // token 流完整渲染（默认脚本两段 token），流结束后 .streaming 移除、按钮复原
     await expect(
       sidepanel.locator('.msg.assistant').filter({ hasText: 'mock 后端固定回复' }),
     ).toBeVisible();
     await expect(sidepanel.locator('.msg.assistant.streaming')).toHaveCount(0);
-    await expect(sidepanel.locator('#askBtn')).toHaveText('发送');
+    await expect(sidepanel.locator('#askBtn:not(.danger) svg')).toBeVisible();
 
     // 提交 payload 断言：问题与 sessionId 原样上送
     const lastAsk = await sidepanel.evaluate(async (base) => {
@@ -103,7 +104,8 @@ test.describe('SSE 问答', () => {
 
     await ask(sidepanel, '长问题');
     await expect(sidepanel.locator('.msg.assistant.streaming')).toBeVisible();
-    await expect(sidepanel.locator('#askBtn')).toHaveText('停止');
+    await expect(sidepanel.locator('#askBtn')).toHaveClass(/danger/);
+    await expect(sidepanel.locator('#askBtn svg[aria-hidden="true"]')).toBeVisible();
 
     await sidepanel.locator('#askBtn').click();
 
@@ -111,6 +113,6 @@ test.describe('SSE 问答', () => {
     await expect(sidepanel.locator('.msg.assistant').filter({ hasText: '前半段回答' })).toBeVisible();
     await expect(sidepanel.locator('.stop-mark')).toHaveText('⏹ 已停止');
     await expect(sidepanel.locator('.msg.assistant.streaming')).toHaveCount(0);
-    await expect(sidepanel.locator('#askBtn')).toHaveText('发送');
+    await expect(sidepanel.locator('#askBtn:not(.danger) svg')).toBeVisible();
   });
 });

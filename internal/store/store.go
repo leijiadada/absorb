@@ -136,6 +136,17 @@ func (s *SessionService) LoadPageText(ctx context.Context, app, user, sessionID,
 	return s.store.LoadPageText(ctx, app, user, sessionID, scopeID)
 }
 
+// LoadDocumentContentByID 按 documents.id（UUID）读文档正文（M0 统一身份）。
+// 查无返回 (nil, nil)；PDF 解读组装层据此注入 <page_content>。
+func (s *SessionService) LoadDocumentContentByID(ctx context.Context, app, user, documentID string) (*storage.DocumentContent, error) {
+	return s.store.LoadDocumentContentByID(ctx, app, user, documentID)
+}
+
+// LoadDocumentContent 按 URL 读文档正文（M0 前旧语义，兼容窗口内回退查询用）。
+func (s *SessionService) LoadDocumentContent(ctx context.Context, app, user, url string) (*storage.DocumentContent, error) {
+	return s.store.LoadDocumentContent(ctx, app, user, url)
+}
+
 // RecentPageURL 查询某会话历史中最近一次 <page_url> 块的 URL 值。
 // 用于追问（无新划词/无页面）时继承上一轮的文章 scope（filterKey）。
 func (s *SessionService) RecentPageURL(ctx context.Context, app, user, sessionID string) (string, error) {

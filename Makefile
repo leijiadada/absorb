@@ -3,8 +3,8 @@
 APP       := absorb-agent-desktop
 APP_CLI   := absorb-agent-cli
 BIN_DIR   := build/bin
-# 命令行可覆盖: make installer VERSION=0.2.0
-VERSION   ?= 0.1.0
+# 命令行可覆盖: make installer VERSION=0.2.1
+VERSION   ?= 0.2.0
 # 评测入口可覆盖: make eval SET=knowledge-relevance RUNS=2
 SET       ?= understanding-basic
 RUNS      ?= 3
@@ -29,7 +29,7 @@ ISCC ?= $(shell powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/
 EXE_PATH  := $(BIN_DIR)/$(APP).exe
 
 .DEFAULT_GOAL := build
-.PHONY: build build-cli build-eval build-web pack-assets sync-version ensure-iscc installer release test test-go test-web test-extension-e2e vet lint govuln eval fmt run run-cli clean
+.PHONY: build build-cli build-eval build-web pack-assets sync-version ensure-iscc installer genicon release test test-go test-web test-visual test-extension-e2e vet lint govuln eval fmt run run-cli clean
 
 NM_STAMP := frontend/node_modules/.absorb-install-stamp
 $(NM_STAMP): frontend/package.json frontend/package-lock.json
@@ -40,10 +40,10 @@ $(E2E_STAMP): e2e/package.json e2e/package-lock.json
 	@$(PS) "cd e2e; npm ci; if (\$$LASTEXITCODE -ne 0) { exit 1 }; New-Item -ItemType File -Path 'node_modules\.absorb-install-stamp' -Force | Out-Null"
 
 build-web: $(NM_STAMP) ## 构建前端 dist
-	$(PS) "cd frontend; npm run build"
+	$(PS) "cd frontend; npm run build; if (\$$LASTEXITCODE -ne 0) { exit 1 }"
 
 pack-assets: build-web ## 打包内嵌资源：扩展 bundle zip（依赖前端 dist）
-	$(PS) "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/pack-extension.ps1"
+	@powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/pack-extension.ps1
 
 # 版本元数据同步：VERSION 是唯一权威，构建前写入各产物（wails.json 的 PE 版本资源 /
 # package.json / 扩展 manifest 的四段版本）。必须排在 pack-assets 之前——manifest 的
@@ -67,12 +67,15 @@ test-go: pack-assets ## 运行 Go 单元测试（禁用缓存，失败即停）
 	$(GO) test -count=1 -timeout 300s -failfast ./...
 
 test-web: $(NM_STAMP) ## 运行前端与扩展单元测试（vitest，tests/desktop + tests/extension）
-	$(PS) "cd frontend; npx vitest run"
+	$(PS) "cd frontend; npx vitest run; if (\$$LASTEXITCODE -ne 0) { exit 1 }"
 
 test-extension-e2e: $(E2E_STAMP) ## 扩展 E2E（Playwright 真实 Chromium；有头调试：先设 ABSORB_E2E_HEADED=1）
 	$(PS) "cd e2e; npx playwright test -c extension/playwright.config.ts"
 
-test: test-go test-web ## 运行全部测试（Go + 前端 + 扩展；E2E 慢，用 make test-extension-e2e 单独跑）
+test-visual: ## 运行 Visual Explanation 纯 JS 单测（node --test，tests/visual，零依赖免 npm install）
+	$(PS) "node --test 'tests/visual/*.test.mjs'; if (\$$LASTEXITCODE -ne 0) { exit 1 }"
+
+test: test-go test-web test-visual ## 运行全部测试（Go + 前端 + 扩展 + 可视化；E2E 慢，用 make test-extension-e2e 单独跑）
 
 vet: pack-assets ## 运行 Go 静态分析（go vet ./...）
 	$(GO) vet ./...
@@ -92,7 +95,10 @@ build-eval: ## 构建评测工具到 build/bin（开发期工具，不进安装�
 fmt: ## 格式化 Go 源码（gofmt -s -w）
 	$(GOFMT) -s -w .
 
-release: pack-assets vet test installer ## 发布流水线：静态分析 + 全量测试 + 安装程序
+genicon: ## 从 build/appicon.png 重新生成 build/windows/icon.ico（换图标后使用）
+	$(GO) run ./cmd/genicon -src build/appicon.png -out build/windows/icon.ico
+
+release: sync-version pack-assets vet test installer ## 发布流水线：版本同步 + 静态分析 + 全量测试 + 安装程序
 
 run: build ## 构建并启动桌面端
 	@$(PS) "Stop-Process -Name $(APP) -Force -ErrorAction SilentlyContinue; Start-Sleep 1; Start-Process -FilePath '$(EXE_PATH)'; Start-Sleep 6"

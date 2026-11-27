@@ -128,6 +128,72 @@ func TestGLMStrategy_BuildUserMessage_FollowUpWithReferenceMaterial(t *testing.T
 	}
 }
 
+// 多引用（同页）：材料在 <reference_material> 块内按【引用n】分节，编号与 question
+// 中 [[n]] 替换出的锚点一致；问题段不再拼接材料文本（旧版拼接进 question 的行为已移除）。
+func TestGLMStrategy_BuildUserMessage_MultiQuote(t *testing.T) {
+	s := &glmStrategy{}
+	ctx := AskContext{
+		SelectedText: "第一条",
+		QuoteTexts:   []string{"第一条", "第二条", "第三条"},
+		URL:          "https://example.com/a",
+		Question:     "对比 [[1]] 和 [[2]]",
+	}
+	got := s.BuildUserMessage(ctx)
+
+	for _, want := range []string{"【引用1】\n第一条", "【引用2】\n第二条", "【引用3】\n第三条"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("reference_material 应含分节 %q。got: %q", want, got)
+		}
+	}
+	// 材料与问题的边界：问题段只有用户问题（不含材料原文）
+	questionIdx := strings.Index(got, "问题：")
+	if questionIdx < 0 {
+		t.Fatalf("应包含问题前缀。got: %q", got)
+	}
+	questionPart := got[questionIdx:]
+	for _, leak := range []string{"第一条", "第二条", "第三条"} {
+		if strings.Contains(questionPart, leak) {
+			t.Errorf("问题段不应包含材料文本 %q。问题段: %q", leak, questionPart)
+		}
+	}
+}
+
+// 兼容回归：QuoteTexts 为空（旧扩展单引用）或单元素时，<reference_material> 内容
+// 与历史格式逐字节一致——原文直出、无【引用1】编号（追问恢复正则依赖该格式）。
+func TestGLMStrategy_BuildUserMessage_SingleQuoteCompat(t *testing.T) {
+	s := &glmStrategy{}
+	for name, quotes := range map[string][]string{
+		"QuoteTexts为空":       nil,
+		"QuoteTexts单元素": {"第二条"},
+	} {
+		ctx := AskContext{
+			SelectedText: "第二条",
+			QuoteTexts:   quotes,
+			Question:     "这个词什么意思",
+		}
+		got := s.BuildUserMessage(ctx)
+		if !strings.Contains(got, "<reference_material>\n第二条\n</reference_material>") {
+			t.Errorf("%s：reference_material 应为原文直出。got: %q", name, got)
+		}
+		if strings.Contains(got, "【引用1】") {
+			t.Errorf("%s：单引用不应产生分节编号。got: %q", name, got)
+		}
+	}
+}
+
+// 追问轮重申：材料块含多节分节文本时，恢复的整块原样重申（分节边界保留）。
+func TestGLMStrategy_BuildUserMessage_FollowUpMultiQuoteBlock(t *testing.T) {
+	s := &glmStrategy{}
+	ctx := AskContext{
+		ReferenceMaterial: "【引用1】\n第一条\n\n【引用2】\n第二条",
+		Question:          "再对比一次",
+	}
+	got := s.BuildUserMessage(ctx)
+	if !strings.Contains(got, "<reference_material>\n【引用1】\n第一条\n\n【引用2】\n第二条\n</reference_material>") {
+		t.Errorf("追问应整块重申分节材料。got: %q", got)
+	}
+}
+
 func TestGLMStrategy_BuildUserMessage_NoParagraph(t *testing.T) {
 	s := &glmStrategy{}
 	ctx := AskContext{
@@ -483,8 +549,8 @@ func TestPageContentBlock_HeadBudget(t *testing.T) {
 	if n > 7000 {
 		t.Errorf("<page_content> 应截断注入（got %d runes）", n)
 	}
-	if !strings.Contains(got, "expand_context") {
-		t.Errorf("截断时应带 expand_context 检索提示")
+	if !strings.Contains(got, "read_page") {
+		t.Errorf("截断时应带 read_page 章节阅读提示")
 	}
 }
 
