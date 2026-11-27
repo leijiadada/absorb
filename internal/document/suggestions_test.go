@@ -94,7 +94,7 @@ func TestBuildSuggestionsChannelBFallback(t *testing.T) {
 	}
 	sections := []string{
 		"前言 > 安装 > 配置", // 末级「配置」
-		"快速开始",           // 无分隔符，整串即末级
+		"快速开始",         // 无分隔符，整串即末级
 		"",
 		"深入 > 并发模型",
 		"深入 > 测试",

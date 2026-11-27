@@ -370,8 +370,8 @@ func breadcrumbPaths(headings []heading) []string {
 		}
 		stack = append(stack, node{h.level, h.title})
 		parts := make([]string, 0, len(stack))
-		for _, nd := range stack {
-			parts = append(parts, truncateRunes(nd.title, headingTitleMax))
+		for _, node := range stack {
+			parts = append(parts, truncateRunes(node.title, headingTitleMax))
 		}
 		out[k] = truncatePath(strings.Join(parts, " > "))
 	}

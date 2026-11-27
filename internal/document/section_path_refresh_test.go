@@ -16,7 +16,9 @@ func TestSectionPathsRefreshInPlace(t *testing.T) {
 	st, cleanup := newTestStore(t)
 	defer cleanup()
 	ctx := context.Background()
-	const (app, user = "app", "user")
+	const (
+		app, user = "app", "user"
+	)
 
 	// 合成正文：导语 + 两个标题分区，足够长切出多块。
 	body := "导语区" + strings.Repeat("甲", 1000) + "\n" +

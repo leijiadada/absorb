@@ -249,7 +249,9 @@ func TestF5NeighborContextBook2(t *testing.T) {
 	if err != nil {
 		t.Fatalf("extract: %v", err)
 	}
-	const (app, user = "absorb-reader", "absorb-user")
+	const (
+		app, user = "absorb-reader", "absorb-user"
+	)
 	doc, _ := st.UpsertDocument(ctx, app, user, book2URL, "人月神话（文字版）")
 	sum := sha256.Sum256([]byte(res.Content))
 	dc := &storage.DocumentContent{URL: book2URL, ContentText: res.Content, CharCount: len([]rune(res.Content)),
@@ -302,7 +304,9 @@ func TestF5NeighborContextBook1(t *testing.T) {
 	}
 	defer st.Close()
 	ctx := context.Background()
-	const (app, user = "absorb-reader", "absorb-user")
+	const (
+		app, user = "absorb-reader", "absorb-user"
+	)
 	// 用主书原本文档（URL 无后缀）：冻结同义集锚点即出自该书，且开发库副本中
 	// 带索引/向量的是主文档；?poppler-eval=1 镜像文档在副本里无索引（F5 首轮
 	// 因选错 URL 被 Skip）——此处修正为原文档。

@@ -98,8 +98,8 @@ func TestReadSectionBudget(t *testing.T) {
 // TestSplitSectionsHeadingLevel 标题级别识别：# 到 ###### 有效，非标题行返回 0。
 func TestSplitSectionsHeadingLevel(t *testing.T) {
 	cases := map[string]int{
-		"# 一级":   1,
-		"###### 六级": 6,
+		"# 一级":       1,
+		"###### 六级":  6,
 		"####### 七级": 0, // 7 个 # 不是标题
 		"#NoSpace":   0, // # 后无空格
 		"正文段落":       0,

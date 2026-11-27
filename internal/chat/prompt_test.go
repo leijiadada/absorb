@@ -163,7 +163,7 @@ func TestGLMStrategy_BuildUserMessage_MultiQuote(t *testing.T) {
 func TestGLMStrategy_BuildUserMessage_SingleQuoteCompat(t *testing.T) {
 	s := &glmStrategy{}
 	for name, quotes := range map[string][]string{
-		"QuoteTexts为空":       nil,
+		"QuoteTexts为空":  nil,
 		"QuoteTexts单元素": {"第二条"},
 	} {
 		ctx := AskContext{

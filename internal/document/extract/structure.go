@@ -217,8 +217,8 @@ func overlayMarks(text string, secs []docSection, docPages int) ([]HeadingMark, 
 		}
 		stack = append(stack, node{h.level, h.title})
 		path := make([]string, 0, len(stack))
-		for _, nd := range stack {
-			path = append(path, nd.title)
+		for _, node := range stack {
+			path = append(path, node.title)
 		}
 		marks = append(marks, HeadingMark{Offset: h.offset, Level: h.level, Title: h.title, Path: path})
 	}

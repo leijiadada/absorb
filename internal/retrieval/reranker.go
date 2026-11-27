@@ -43,9 +43,9 @@ const defaultRerankLexSeed = 25
 const rerankMissingScore = -1e9
 
 var (
-	sharedRerankMu     sync.RWMutex
-	sharedReranker     Reranker
-	sharedRerankTopN   = defaultRerankTopN
+	sharedRerankMu      sync.RWMutex
+	sharedReranker      Reranker
+	sharedRerankTopN    = defaultRerankTopN
 	sharedRerankLexSeed = defaultRerankLexSeed
 )
 

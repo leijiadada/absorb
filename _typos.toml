@@ -10,3 +10,8 @@ extend-exclude = [
     "extension/sidepanel/vendor",                # 第三方 min.js
     "go.sum",                                    # 模块校验和
 ]
+
+[default.extend-words]
+# unparseable 与 unparsable 均为正确拼写，upgrade.go 日志文案与 upgrade_test.go 测试名使用前者
+"Unparseable" = "Unparseable"
+"unparseable" = "unparseable"
