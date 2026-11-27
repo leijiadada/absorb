@@ -27,18 +27,10 @@ import (
 const outlineTimeout = 60 * time.Second
 
 // pdftohtmlBin 解析 pdftohtml 可执行文件路径：与 pdftotextBin 同策略
-// （显式路径优先，其次 PATH）。可用性与超时独立——缺任一引擎都静默回退。
+// （环境变量 ABSORB_PDFTOHTML → 捆绑运行时 runtime/poppler → PATH）。
+// 可用性与超时独立——缺任一引擎都静默回退。
 func pdftohtmlBin() string {
-	if p := strings.TrimSpace(os.Getenv("ABSORB_PDFTOHTML")); p != "" {
-		if _, err := os.Stat(p); err == nil {
-			return p
-		}
-		return ""
-	}
-	if path, err := exec.LookPath("pdftohtml"); err == nil {
-		return path
-	}
-	return ""
+	return popplerToolBin(bundledBases(), "ABSORB_PDFTOHTML", "pdftohtml")
 }
 
 // OutlineItem 一条书签：标题完整文本、层级（1 起）、1-based 物理页码、面包屑链。
@@ -61,11 +53,12 @@ type pdf2xmlDoc struct {
 // 若拆成 Items/Children 两个 slice 会丢失顺序，导致所有子节错挂到最后一个 item。
 // Nodes 捕获本层交错子节点（item 与 outline 按原顺序），walkOutline 按序处理。
 type xmlOutlineNode struct {
-	XMLName  xml.Name
-	Page     int              `xml:"page,attr"`
-	Title    string           `xml:",chardata"`
-	Nodes    []xmlOutlineNode `xml:",any"`
+	XMLName xml.Name
+	Page    int              `xml:"page,attr"`
+	Title   string           `xml:",chardata"`
+	Nodes   []xmlOutlineNode `xml:",any"`
 }
+
 func (n xmlOutlineNode) isItem() bool    { return n.XMLName.Local == "item" }
 func (n xmlOutlineNode) isOutline() bool { return n.XMLName.Local == "outline" }
 
@@ -96,7 +89,13 @@ func PopplerOutlines(ctx context.Context, data []byte) ([]OutlineItem, error) {
 	defer cancel()
 	// -stdout 输出到 stdout；stderr 的告警不进 XML。-hidden 保留隐藏文本节点
 	// （书签标题不依赖正文 text 节点，但保留以防个别 PDF 把书签文字标为 hidden）。
-	out, err := exec.CommandContext(runCtx, bin, "-xml", "-hidden", "-stdout", tmpPath).Output()
+	cmd := exec.CommandContext(runCtx, bin, "-xml", "-hidden", "-stdout", tmpPath)
+	hideConsole(cmd)
+	// 捆绑布局下注入 POPPLER_DATADIR（与 PopplerText 同款，CID/unicode 映射）
+	if dataDir := popplerDataDir(bin); dataDir != "" {
+		cmd.Env = append(os.Environ(), "POPPLER_DATADIR="+dataDir)
+	}
+	out, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("outlines: pdftohtml 执行失败: %w", err)
 	}
@@ -322,7 +321,7 @@ func matchOutlineInPage(title string, rs []rune, start, end int) (int, int, floa
 	bestS, bestE, bestSim := 0, 0, 0.0
 	for i := range lines {
 		for k := 1; k <= outlineMaxWrapLines && i+k <= len(lines); k++ {
-			seg := string(rs[lines[i].s : lines[i+k-1].e])
+			seg := string(rs[lines[i].s:lines[i+k-1].e])
 			if sim := charMultisetSim(title, seg); sim > bestSim {
 				bestSim, bestS, bestE = sim, lines[i].s, lines[i+k-1].e
 			}

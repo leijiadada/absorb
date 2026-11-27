@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -101,6 +102,55 @@ func (p *PDFExtractor) Extract(ctx context.Context, url string) (*Result, error)
 		content = best
 		currentBad = false
 	}
+	return p.finishPDF(ctx, url, content, data, doc.ContentType, doc.FinalURL, doc.Truncated, currentBad, switched)
+}
+
+// ExtractLocal 本地文件提取（file:// URL，仅 .pdf，由 document 层前置校验）：
+// 读盘 → poppler 提取 → 与远程路径同一加工管线。主路 httpfetch 引擎只吃远程
+// URL（且入口被 SSRF 校验挡在 file:// 之外），本地分支为 poppler 单引擎——
+// pdftotext 缺失时按可修复错误返回明确引导文案。
+func (p *PDFExtractor) ExtractLocal(ctx context.Context, rawURL string) (*Result, error) {
+	path, err := LocalFilePath(rawURL)
+	if err != nil {
+		return nil, &Error{Status: StatusInvalidURL, Message: err.Error()}
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, &Error{Status: StatusNetworkError, Message: localReadMessage(err)}
+	}
+	bin := pdftotextBin()
+	if bin == "" {
+		return nil, &Error{Status: StatusNetworkError, Message: "本地 PDF 提取依赖 pdftotext（poppler），当前环境不可用。请安装 poppler 并加入 PATH，或用环境变量 ABSORB_PDFTOTEXT 指定 pdftotext 路径"}
+	}
+	content, err := PopplerText(ctx, bin, data)
+	if err != nil || strings.TrimSpace(content) == "" {
+		return nil, &Error{Status: StatusNoText, Message: "未提取到文本内容（可能是扫描件或图片型 PDF）"}
+	}
+	// 乱码守卫与远程主路同语义：字体缺 ToUnicode 映射的提取产物只会污染索引。
+	if garbledRatio(content) > 0.05 {
+		return nil, &Error{Status: StatusNoText, Message: "文本无法解码（PDF 字体缺少 Unicode 映射，可能是扫描件或特殊编码）"}
+	}
+	return p.finishPDF(ctx, rawURL, content, data, "application/pdf", rawURL, false, false, true)
+}
+
+// localReadMessage 读盘失败映射：按错误类别给可操作文案，系统错误原文随附
+// 供排查（os.ReadFile 在 Windows 上对独占锁定/ACL 拒绝都返回底层 syscall 错误）。
+func localReadMessage(err error) string {
+	switch {
+	case os.IsNotExist(err):
+		return "本地文件不存在或已移动（浏览器标签页可能已过期）: " + err.Error()
+	case os.IsPermission(err):
+		return "无读取权限（文件或目录受系统保护）: " + err.Error()
+	default:
+		return "本地文件读取失败: " + err.Error()
+	}
+}
+
+// finishPDF PDF 正文加工段（远程双跑与本地 poppler 共用）：页眉/页脚过滤 →
+// docling 章节结构叠加 → hybrid 书签修正 → 目录页剥离 → Result 组装。入参为
+// 择优（或本地 poppler）确定后的最终文本；data 非 nil 时结构叠加可用（poppler
+// 路径与本地路径都有原始字节）。currentBad 保留主路乱码判定的拒绝语义。
+func (p *PDFExtractor) finishPDF(ctx context.Context, url string, content string, data []byte, contentType, finalURL string, truncated, currentBad, switched bool) (*Result, error) {
 	// 页眉/页脚过滤：剔除分页文本中逐页重复的页首/页尾行。必须在 docling
 	// 结构叠加之前，HeadingMark 偏移以过滤后文本为基准；\f 数量与位置不变。
 	// 主路连续文本（无 \f）跳过。
@@ -147,9 +197,9 @@ func (p *PDFExtractor) Extract(ctx context.Context, url string) (*Result, error)
 	// 语言》中文版整本 "最 早 参 与"——不分词不可用、原文呈现不可读）
 	return &Result{
 		Content:     content,
-		ContentType: doc.ContentType,
-		FinalURL:    doc.FinalURL,
-		Truncated:   doc.Truncated,
+		ContentType: contentType,
+		FinalURL:    finalURL,
+		Truncated:   truncated,
 		Marks:       marks,
 		Diagnostics: diagnostics,
 	}, nil

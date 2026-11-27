@@ -20,6 +20,7 @@ import (
 	"absorb-agent/internal/document"
 	docextract "absorb-agent/internal/document/extract"
 	"absorb-agent/internal/extsync"
+	"absorb-agent/internal/kind"
 	"absorb-agent/internal/knowledge"
 	"absorb-agent/internal/log"
 	"absorb-agent/internal/nativehost"
@@ -126,7 +127,7 @@ func runCLI() {
 	// 未配置 APIKey = 禁用（纯词法）。失败降级词法，不阻断启动。
 	setupEmbedding(cfg, func() string { return cfg.Proxy.URL })
 
-	r, sessionSvc, strategy, _ := startCore(cfg, cfgPath, func() string { return cfg.Proxy.URL })
+	r, sessionSvc, strategy, _, dm := startCore(cfg, cfgPath, func() string { return cfg.Proxy.URL })
 	defer sessionSvc.Close()
 	defer r.Close()
 
@@ -135,7 +136,7 @@ func runCLI() {
 	// 知识持久化端点（M1）：与问答共用同一 SQLite 实例与归属维度
 	ksvc := knowledge.NewService(sessionSvc.Storage())
 	knowledge.NewHTTP(ksvc, chat.AppName, chat.UserID).
-		SetDraft(chat.KnowledgeDraftFn(sessionSvc, func() string { return cfg.Proxy.URL })).Register(mux)
+		SetDraft(knowledge.NewDraftFn(dm)).Register(mux)
 	// 扩展端会话镜像同步端点（恢复通道，与知识端点同归属维度）
 	extsync.NewHTTP(sessionSvc.Storage(), chat.AppName, chat.UserID).Register(mux)
 	// 文档准备端点（PDF 解读 PR2）：与问答同款代理/上限配置（CLI 调试形态静态读取）
@@ -242,7 +243,7 @@ func runDesktop() {
 
 	// 配置运行时句柄：设置页保存后经句柄更新，请求侧实时读取（热切换）
 	cfgH := conf.NewHandle(cfg)
-	r, sessionSvc, strategy, memGate := startCore(cfg, cfgPath, func() string { return cfgH.Get().Proxy.URL })
+	r, sessionSvc, strategy, memGate, dm := startCore(cfg, cfgPath, func() string { return cfgH.Get().Proxy.URL })
 	defer sessionSvc.Close()
 	defer r.Close()
 
@@ -253,7 +254,7 @@ func runDesktop() {
 	// 知识持久化端点（M1）：与问答共用同一 SQLite 实例与归属维度，经 Extra 整组注册进桥
 	ksvc := knowledge.NewService(sessionSvc.Storage())
 	kapi := knowledge.NewHTTP(ksvc, chat.AppName, chat.UserID).
-		SetDraft(chat.KnowledgeDraftFn(sessionSvc, func() string { return cfgH.Get().Proxy.URL }))
+		SetDraft(knowledge.NewDraftFn(dm))
 	// 文档准备端点（PDF 解读 PR2）：代理与内容上限经闭包实时读取（热生效，同 fetch_page）
 	docAPI := newDocumentAPI(sessionSvc, func() string { return cfgH.Get().Proxy.URL },
 		func() int64 { return int64(cfgH.Get().Fetch.MaxContentMB) * 1024 * 1024 })
@@ -298,18 +299,27 @@ func runDesktop() {
 	}
 
 	err := wails.Run(&options.App{
-		Title:             "Absorb 阅读助手",
-		Width:             960,
-		Height:            680,
-		MinWidth:          800,
-		MinHeight:         560,
-		Frameless:         true, // 无边框：品牌蓝顶栏兼做标题栏（拖拽/双击最大化/窗口控制按钮在前端），对齐 Docker Desktop
-		AssetServer:       &assetserver.Options{Assets: frontendAssets},
-		BackgroundColour:  &options.RGBA{R: 247, G: 248, B: 250, A: 255},
-		OnStartup:         app.startup,
-		HideWindowOnClose: true, // 关窗 = 隐藏到托盘，服务继续跑
-		OnShutdown:        app.shutdown,
-		Bind:              []any{app},
+		Title:            kind.MainWindowTitle,
+		Width:            960,
+		Height:           680,
+		MinWidth:         800,
+		MinHeight:        560,
+		Frameless:        true, // 无边框：品牌蓝顶栏兼做标题栏（拖拽/双击最大化/窗口控制按钮在前端），对齐 Docker Desktop
+		AssetServer:      &assetserver.Options{Assets: frontendAssets},
+		BackgroundColour: &options.RGBA{R: 247, G: 248, B: 250, A: 255},
+		OnStartup:        app.startup,
+		// 关窗（前端 X / Alt+F4）= 隐藏到托盘：OnBeforeClose 拦截关闭请求转 HideToTray，
+		// 托盘「退出」经 QuitApp 置位放行标志后从这里放行真实退出。两条路径统一走
+		// app.HideToTray（而非直接调 desktop），保证 window:hidden 事件都广播到前端。
+		OnBeforeClose: func(ctx context.Context) bool {
+			if app.quitting.Load() {
+				return false // 托盘「退出」放行
+			}
+			app.HideToTray()
+			return true // 拦截本次关闭，窗口隐藏到托盘
+		},
+		OnShutdown: app.shutdown,
+		Bind:       []any{app},
 		SingleInstanceLock: &options.SingleInstanceLock{
 			UniqueId:               "absorb-agent-desktop-8f4a2c",
 			OnSecondInstanceLaunch: app.onSecondInstance,
@@ -340,8 +350,9 @@ func telemetryOpts(cfg conf.Config) []obs.Option {
 
 // startCore 初始化日志之外的公共核心：SQLite 会话库、提示词策略、Runner（CLI/桌面共用）。
 // proxyFn 返回当前代理地址，设置保存后经其即时生效（桌面端闭包捕获配置句柄）。
-// 返回记忆运行时开关（与画像注入/蒸馏共用），桌面端设置页热切换记忆时翻转它。
-func startCore(cfg conf.Config, cfgPath string, proxyFn func() string) (runner.Runner, *store.SessionService, chat.PromptStrategy, *chat.MemoryGate) {
+// 返回记忆运行时开关（与画像注入/蒸馏共用），桌面端设置页热切换记忆时翻转它；
+// 另返回动态模型实例——问答与知识草稿共用，跟随"默认模型"切换即时生效。
+func startCore(cfg conf.Config, cfgPath string, proxyFn func() string) (runner.Runner, *store.SessionService, chat.PromptStrategy, *chat.MemoryGate, *chat.DynamicModel) {
 	dbPath, err := filepath.Abs(cfg.Store.SQLite.Path)
 	if err != nil {
 		log.Fatalf("resolve db path failed: %v", err)
@@ -404,11 +415,13 @@ func startCore(cfg conf.Config, cfgPath string, proxyFn func() string) (runner.R
 		log.Infof("Skills root: %s", cfg.Skills.Root)
 	}
 
-	r, err := chat.NewRunner(cfg, proxyFn, strategy, sessionSvc, gate)
+	// 动态模型：问答、摘要、画像蒸馏与知识草稿共用同一实例（跟随默认模型切换）
+	dm := chat.NewDynamicModel(sessionSvc, proxyFn)
+	r, err := chat.NewRunner(cfg, proxyFn, dm, strategy, sessionSvc, gate)
 	if err != nil {
 		log.Fatalf("create runner failed: %v", err)
 	}
-	return r, sessionSvc, strategy, gate
+	return r, sessionSvc, strategy, gate, dm
 }
 
 // logDefaultModel 记录当前默认模型；未配置时告警（问答将返回引导错误）。

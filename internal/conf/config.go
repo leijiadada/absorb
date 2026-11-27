@@ -81,7 +81,7 @@ type TelemetryConfig struct {
 type WorkingSetConfig struct {
 	Enabled     *bool `yaml:"enabled"`       // 指针三态：未设置=启用，显式 false 关闭
 	L1MaxRounds int   `yaml:"l1_max_rounds"` // 全局最近完整问答轮数上限，0=默认 2
-	L1MaxTokens int   `yaml:"l1_max_tokens"` // L1 注入估算 token 预算，超限本轮可读报错（不裁剪），0=默认 16000
+	L1MaxTokens int   `yaml:"l1_max_tokens"` // L1 注入估算 token 预算，超限降级：从最旧轮剔除直到入限，0=默认 16000
 }
 
 // On 返回开关有效值（未设置 = 启用）。

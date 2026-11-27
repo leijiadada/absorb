@@ -2,6 +2,7 @@
 // callAgent SSE 流解析（token/reasoning/session/done/断流/错误事件）与 payload 构造。
 // net.js 为 ESM，静态导入即可；其依赖 i18n.js 在无 chrome 环境回退 zh-CN → 断言用中文文案。
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { bridgeRuntimeStub } from './fixtures/chrome-stub'
 import { fetchWithRetry, classifyNetError, callAgent, getBridgePort } from '../../../extension/sidepanel/js/net.js'
 
 function abortError() {
@@ -127,9 +128,7 @@ describe('getBridgePort — 桥端口发现', () => {
 // ---------- callAgent ----------
 
 function stubChromePort(port: number) {
-  vi.stubGlobal('chrome', {
-    runtime: { sendMessage: vi.fn(async () => ({ port })) },
-  })
+  vi.stubGlobal('chrome', bridgeRuntimeStub(port))
 }
 
 // SSE 响应桩：chunks 逐段经 body.getReader() 产出
@@ -265,33 +264,37 @@ describe('callAgent — SSE 流解析', () => {
 })
 
 describe('callAgent — payload 构造', () => {
-  it('单条引用：[[1]] 占位替换为材料摘要锚点，context 取第一条', async () => {
+  it('单条引用：[[1]] 占位替换为材料摘要锚点，context 携带单元素 quoteTexts', async () => {
     stubChromePort(8901)
     const fetchMock = vi.fn(() => Promise.resolve(sseResponse(['data: {"done":true}\n\n'])))
     vi.stubGlobal('fetch', fetchMock)
 
-    await callAgent('这句话什么意思？[[1]]', [{ seq: 1, text: '一二三四五六七八九十一二三四五六七八九十（超长文本）', url: 'http://a' }], 's1', vi.fn(), vi.fn())
+    await callAgent('这句话什么意思？[[1]]', [{ seq: 1, text: '一二三四五六七八九十一二三四五六七八九十（超长文本）', url: 'http://a', contentStatus: 'full' }], 's1', vi.fn(), vi.fn())
     const body = JSON.parse(fetchMock.mock.calls[0][1].body)
     expect(body.question).not.toContain('[[1]]')
     expect(body.question).toContain('…') // 摘要截断符
+    expect(body.question).toBe('这句话什么意思？一二三四五六七八九十一二…') // 锚点=前12字摘要（单引用语义）
     expect(body.sessionId).toBe('s1')
     expect(body.context.text).toBe('一二三四五六七八九十一二三四五六七八九十（超长文本）')
+    expect(body.context.contentStatus).toBe('full')
+    expect(body.context.quoteTexts).toEqual(['一二三四五六七八九十一二三四五六七八九十（超长文本）'])
   })
 
-  it('多条引用：保留【引用n】编号并把全文拼进问题前', async () => {
+  it('多条引用：question 无材料拼接，材料以 quoteTexts 数组随 context 上送', async () => {
     stubChromePort(8901)
     const fetchMock = vi.fn(() => Promise.resolve(sseResponse(['data: {"done":true}\n\n'])))
     vi.stubGlobal('fetch', fetchMock)
 
     await callAgent('对比 [[1]] 和 [[2]]', [
-      { seq: 1, text: '第一条', url: 'http://a' },
-      { seq: 2, text: '第二条', url: 'http://a' },
+      { seq: 1, text: '第一条', url: 'http://a', pageMd: '页面A', contentStatus: 'full' },
+      { seq: 2, text: '第二条', url: 'http://a', contentStatus: 'full' },
     ], '', vi.fn(), vi.fn())
     const body = JSON.parse(fetchMock.mock.calls[0][1].body)
-    expect(body.question).toContain('【引用1】\n第一条')
-    expect(body.question).toContain('【引用2】\n第二条')
-    expect(body.question).toContain('对比 【引用1】 和 【引用2】')
-    expect(body.context.text).toBe('第一条') // context 只取第一条
+    expect(body.question).toBe('对比 【引用1】 和 【引用2】') // 锚点保留：无材料拼接段
+    expect(body.question).not.toContain('第一条')
+    expect(body.context.quoteTexts).toEqual(['第一条', '第二条']) // 序号与 [[n]] 编号一致
+    expect(body.context.text).toBe('第一条') // context 主源仍取第一条
+    expect(body.context.contentStatus).toBe('full') // contentStatus 随第一条上送（quote-queue 入队透传）
   })
 
   it('无划词但采集到当前页 → 构造纯页面 context 并附 page', async () => {
@@ -299,10 +302,10 @@ describe('callAgent — payload 构造', () => {
     const fetchMock = vi.fn(() => Promise.resolve(sseResponse(['data: {"done":true}\n\n'])))
     vi.stubGlobal('fetch', fetchMock)
 
-    const page = { url: 'http://p', title: 'T', pageMd: '页面正文' }
+    const page = { url: 'http://p', title: 'T', pageMd: '页面正文', contentStatus: 'full' }
     await callAgent('总结这一页', [], '', vi.fn(), vi.fn(), undefined, undefined, page)
     const body = JSON.parse(fetchMock.mock.calls[0][1].body)
-    expect(body.context).toEqual({ text: '', paragraph: '', pageContext: '', url: 'http://p', pageMd: '页面正文' })
+    expect(body.context).toEqual({ text: '', paragraph: '', pageContext: '', url: 'http://p', pageMd: '页面正文', contentStatus: 'full' })
     expect(body.page).toEqual(page)
   })
 })

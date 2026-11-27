@@ -17,6 +17,12 @@ memory:
     enabled: true
     file_path: "./data/profile.md"
 
+# 多 Scope 工作集上下文（第一阶段仅 L1）：每轮请求前注入最近完整问答轮次
+working_set:
+  enabled: true        # 总开关：关闭则回退单 scope 行为
+  l1_max_rounds: 4     # 注入的最近完整问答轮数上限（user + 最终回答，轮内工具调用折叠为一行标记）
+  l1_max_tokens: 30000 # L1 注入估算 token 预算，须 ≥ 轮数 × 单轮峰值（整页正文轮约 6K），超限从最旧轮剔除
+
 proxy:
   url: ""             # 全局 HTTP 代理（如 http://127.0.0.1:7897），空=跟随系统代理/环境变量
 

@@ -32,23 +32,35 @@ const router = useRouter()
 const { view, dismissed, applying, apply, dismiss, initUpdate } = useUpdate()
 
 // ---------- 无边框窗口控制（Frameless，顶栏兼做标题栏） ----------
-// window.runtime 由 Wails 注入；测试/浏览器环境缺省时静默跳过。
-// 关闭 = 隐藏到托盘（与 main.go HideWindowOnClose 语义一致）。
-function winAction(name: 'WindowMinimise' | 'WindowToggleMaximise' | 'WindowHide') {
+// window.runtime / window.go 由 Wails 注入；测试/浏览器环境缺省时静默跳过。
+// 关闭 = 隐藏到托盘：运行时 JS API 无 WindowClose，走绑定的 Go 方法 HideToTray。
+// 真实退出走托盘「退出」菜单。
+function winAction(name: 'WindowMinimise' | 'WindowToggleMaximise') {
   const rt = (window as any).runtime
   rt?.[name]?.()
 }
 const winMinimise = () => winAction('WindowMinimise')
 const winToggleMaximise = () => winAction('WindowToggleMaximise')
-const winHide = () => winAction('WindowHide')
+const winClose = () => (window as any).go?.main?.App?.HideToTray?.()
 
 // 最大化状态跟随 Wails 窗口事件切换图标；事件缺失时图标静止但不影响切换功能
 const maximised = ref(false)
+
+// hover 门禁：关窗隐藏时指针停在关闭按钮上，托盘恢复显示后 Chromium 按指针
+// 过期位置重算 :hover，关闭按钮先红一下再恢复。window:hidden 事件关门禁，
+// 首次真实 mousemove 放行（样式侧门禁见 style.css 的 [data-mouse-active]）
+const mouseActive = ref(false)
+function markMouseActive() {
+  mouseActive.value = true
+}
 onMounted(() => {
   const rt = (window as any).runtime
   rt?.EventsOn?.('window:maximised', () => (maximised.value = true))
   rt?.EventsOn?.('window:unmaximised', () => (maximised.value = false))
+  rt?.EventsOn?.('window:hidden', () => (mouseActive.value = false))
+  window.addEventListener('mousemove', markMouseActive, { passive: true })
 })
+onBeforeUnmount(() => window.removeEventListener('mousemove', markMouseActive))
 </script>
 
 <template>
@@ -57,6 +69,7 @@ onMounted(() => {
     <header
       class="flex h-12 shrink-0 items-center justify-between bg-primary pl-5"
       style="--wails-draggable: drag"
+      :data-mouse-active="mouseActive ? 'true' : 'false'"
       @dblclick="winToggleMaximise"
     >
       <div class="flex items-center gap-2">
@@ -76,7 +89,7 @@ onMounted(() => {
           <Copy v-if="maximised" :size="13" />
           <Square v-else :size="13" />
         </button>
-        <button class="win-btn close" title="关闭" @mousedown.prevent @click="winHide">
+        <button class="win-btn close" title="关闭" @mousedown.prevent @click="winClose">
           <X :size="15" />
         </button>
       </div>

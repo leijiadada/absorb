@@ -142,6 +142,13 @@ const zh = {
     errorGeneric: '读取失败，请稍后重试。',
     errorTimeout: '读取超时，请检查网络后重试。',
   },
+  // 本地文件访问引导卡（B4）：扩展拿不到本地文件地址且未授权时显示
+  fileaccess: {
+    title: '需要开启本地文件访问',
+    desc: '读取本地 PDF 需要授权扩展访问文件网址。当前无法获取本地文件地址。',
+    btn: '去设置',
+    hint: '打开「允许访问文件网址」开关后回到此面板，会自动继续。',
+  },
   // 网页建议 chips（doc-suggestions §4.4）：普通网页空态区，pageMd 标题组句
   webchips: {
     title: '你可能想了解',
@@ -349,6 +356,14 @@ const en = {
     reread: 'Read again',
     errorGeneric: 'Read failed. Please try again later.',
     errorTimeout: 'Read timed out. Check your network and retry.',
+  },
+  // Local file access guide card (B4): shown when the extension cannot obtain
+  // the local file address and access is not granted yet
+  fileaccess: {
+    title: 'Local file access required',
+    desc: 'Reading local PDFs requires granting the extension access to file URLs. The local file address is currently unavailable.',
+    btn: 'Open settings',
+    hint: 'Turn on "Allow access to file URLs", then come back to this panel to continue automatically.',
   },
   // Web suggestion chips (doc-suggestions §4.4): empty-state on plain pages,
   // questions composed from pageMd headings

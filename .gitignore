@@ -25,6 +25,8 @@ build/local-embedding/
 docs/pdf/
 # 游离构建产物
 *.exe
+# 捆绑运行时随包分发的 exe（mingit/poppler）是分发内容而非构建产物，白名单放行
+!runtime/**/*.exe
 
 # 扩展 E2E（Playwright）：依赖与生成物不入库
 e2e/node_modules/

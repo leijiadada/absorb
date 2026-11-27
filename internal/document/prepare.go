@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	neturl "net/url"
 	"strings"
 	"time"
 
@@ -97,6 +98,13 @@ func (s *Service) Prepare(ctx context.Context, rawURL, title string) (*PrepareRe
 		base.Status, base.Message = extract.StatusInvalidURL, "URL 不能为空"
 		return &base, nil
 	}
+	// file:// 本地文档分流：本地文件不走公网 SSRF 校验（validateFileURL 是
+	// 另一类信任边界，见 localfile.go），提取走 poppler 单引擎（ExtractLocal）。
+	// 注意 ssrf.go 的 Host=="" 拒绝先于 scheme 判断，分流必须在 ValidatePublicURL
+	// 之前。
+	if u, perr := neturl.Parse(url); perr == nil && u.Scheme == "file" {
+		return s.prepareLocalFile(ctx, url, title, start, base)
+	}
 	if err := ValidatePublicURL(url); err != nil {
 		base.Status, base.Message = extract.StatusInvalidURL, err.Error()
 		return &base, nil
@@ -115,6 +123,48 @@ func (s *Service) Prepare(ctx context.Context, rawURL, title string) (*PrepareRe
 		return &base, nil
 	}
 
+	return s.persist(ctx, res, url, title, start, base)
+}
+
+// localExtractor 本地文件提取接缝：extract.Extractor 的可选扩展能力，仅
+// PDFExtractor 实现（ExtractLocal）。其他格式提取器接入时本地语义自行跟进。
+type localExtractor interface {
+	ExtractLocal(ctx context.Context, rawURL string) (*extract.Result, error)
+}
+
+// prepareLocalFile 本地文档准备：validateFileURL → ExtractLocal → 与远程
+// 路径同一落库段（persist）。失败形态与远程一致——校验/提取失败返回带状态
+// 的结果不落库，扩展端渲染文案并可重试。
+func (s *Service) prepareLocalFile(ctx context.Context, url, title string, start time.Time, base PrepareResult) (*PrepareResult, error) {
+	if err := validateFileURL(url); err != nil {
+		base.Status, base.Message = extract.StatusInvalidURL, err.Error()
+		log.Warnf("[Absorb] local document rejected | url=%q status=%s dur=%s msg=%q",
+			url, base.Status, time.Since(start).Round(time.Millisecond), base.Message)
+		return &base, nil
+	}
+	lex, ok := s.extractor.(localExtractor)
+	if !ok {
+		base.Status, base.Message = extract.StatusInvalidURL, "当前提取器不支持本地文件"
+		return &base, nil
+	}
+	res, err := lex.ExtractLocal(ctx, url)
+	if err != nil {
+		var ee *extract.Error
+		if errors.As(err, &ee) {
+			base.Status, base.Message = ee.Status, ee.Message
+		} else {
+			base.Status, base.Message = extract.StatusNetworkError, err.Error()
+		}
+		log.Warnf("[Absorb] local document prepare failed | url=%q status=%s dur=%s msg=%q",
+			url, base.Status, time.Since(start).Round(time.Millisecond), base.Message)
+		return &base, nil
+	}
+	return s.persist(ctx, res, url, title, start, base)
+}
+
+// persist 提取产物落库段（远程与本地路径共用）：空文本守卫 → 正文库 +
+// documents 锚点 + 索引 → 组装 ready 结果（含动态建议提问）。
+func (s *Service) persist(ctx context.Context, res *extract.Result, url, title string, start time.Time, base PrepareResult) (*PrepareResult, error) {
 	text := res.Content
 	if strings.TrimSpace(text) == "" {
 		base.Status, base.Message = extract.StatusNoText, "未提取到文本内容（可能是扫描件或图片型 PDF）"

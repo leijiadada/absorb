@@ -19,9 +19,12 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 	"unicode"
 )
@@ -29,19 +32,66 @@ import (
 // popplerTimeout 单次 pdftotext 提取超时（347 页实测 ~3s，取 20 倍裕量）。
 const popplerTimeout = 60 * time.Second
 
+// bundledPopplerRel 捆绑 poppler（runtime/poppler，随包分发）相对可执行
+// 文件/工作目录的位置，与 config 的 mingit/python 探测模式一致。
+var bundledPopplerRel = filepath.Join("runtime", "poppler")
+
 // pdftotextBin 解析 pdftotext 可执行文件路径：环境变量 ABSORB_PDFTOTEXT
-// （显式路径，桌面端打包场景）优先，其次 PATH 查找。不可用返回空串。
+// （显式路径，人工覆盖场景）优先；其次捆绑运行时（exe 目录与工作目录旁的
+// runtime/poppler，覆盖安装版 {app}\runtime、便携模式 exe 旁、开发态仓库根
+// 三种形态）；最后 PATH 查找（系统安装的 poppler）。不可用返回空串。
+// PdftotextAvailable pdftotext 是否可用（环境变量/捆绑运行时/PATH 任一命中）。
+// 供上层在本地 PDF 入口做前置提示，避免走到提取层才失败。
+func PdftotextAvailable() bool { return pdftotextBin() != "" }
+
 func pdftotextBin() string {
-	if p := strings.TrimSpace(os.Getenv("ABSORB_PDFTOTEXT")); p != "" {
+	return pdftotextBinIn(bundledBases())
+}
+
+// pdftotextBinIn 查找逻辑本体（bases 注入便于单测）：环境变量 → 捆绑运行时
+// → PATH。
+func pdftotextBinIn(bases []string) string {
+	return popplerToolBin(bases, "ABSORB_PDFTOTEXT", "pdftotext")
+}
+
+// popplerToolBin poppler 工具通用查找：环境变量（显式路径，人工覆盖场景）
+// → 捆绑运行时（exe 目录与工作目录旁 runtime/poppler/<tool>.exe）→ PATH。
+// 环境变量已设但路径无效时直接返回空（显式配置错误不静默降级到 PATH）。
+func popplerToolBin(bases []string, envKey, tool string) string {
+	if p := strings.TrimSpace(os.Getenv(envKey)); p != "" {
 		if _, err := os.Stat(p); err == nil {
 			return p
 		}
 		return ""
 	}
-	if path, err := exec.LookPath("pdftotext"); err == nil {
+	name := tool
+	if runtime.GOOS == "windows" {
+		name += ".exe"
+	}
+	for _, base := range bases {
+		p := filepath.Join(base, bundledPopplerRel, name)
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+	if path, err := exec.LookPath(tool); err == nil {
 		return path
 	}
 	return ""
+}
+
+// bundledBases 捆绑运行时候选 base：可执行文件目录（安装/便携形态）与进程
+// 工作目录（开发调试形态）。独立小实现而非复用 config 包——extract 是底层
+// 组件，反向依赖会引入无关装配链。
+func bundledBases() []string {
+	bases := []string{}
+	if exe, err := os.Executable(); err == nil {
+		bases = append(bases, filepath.Dir(exe))
+	}
+	if wd, err := os.Getwd(); err == nil {
+		bases = append(bases, wd)
+	}
+	return bases
 }
 
 // PopplerText 用 pdftotext -enc UTF-8 提取 PDF 字节文本，出参已过
@@ -73,7 +123,16 @@ func PopplerText(ctx context.Context, bin string, data []byte) (string, error) {
 	runCtx, cancel := context.WithTimeout(ctx, popplerTimeout)
 	defer cancel()
 	// 输出文件为 "-" = 写 stdout；stderr 的进度/告警不进入文本
-	out, err := exec.CommandContext(runCtx, bin, "-enc", "UTF-8", tmpPath, "-").Output()
+	cmd := exec.CommandContext(runCtx, bin, "-enc", "UTF-8", tmpPath, "-")
+	hideConsole(cmd)
+	// 捆绑 poppler 自带 share/poppler 数据（CID/unicode 映射，缺内嵌 ToUnicode
+	// 的中文 PDF 依赖它）：重定位后 pdftotext 找不到编译期 datadir，显式注入
+	// POPPLER_DATADIR 指向捆绑数据目录；系统安装的 poppler 目录旁无 share，
+	// 返回空串不注入（沿用系统默认查找）。
+	if dataDir := popplerDataDir(bin); dataDir != "" {
+		cmd.Env = append(os.Environ(), "POPPLER_DATADIR="+dataDir)
+	}
+	out, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("poppler: pdftotext 执行失败: %w", err)
 	}
@@ -81,6 +140,30 @@ func PopplerText(ctx context.Context, bin string, data []byte) (string, error) {
 		return "", errors.New("poppler: pdftotext 输出为空")
 	}
 	return CollapsePDFSpacing(string(out)), nil
+}
+
+// hideConsole 从无控制台的 GUI 进程拉起 poppler 时不弹出黑窗口。
+// pdftotext / pdftohtml 都是 WINDOWS_CUI。桌面端没有可继承的控制台，
+// Windows 会为子进程新建一个控制台窗口。
+// HideWindow 只在创建之后把窗口设成 SW_HIDE，宿主仍会闪一下。
+// 仅 CREATE_NO_WINDOW 时，本机默认终端（「由 Windows 决定」）仍会接管这次
+// 控制台分配并弹出黑窗口。DETACHED_PROCESS 不建立控制台连接；
+// stdout/stderr 已由 exec 接到管道，文本输出不变。
+func hideConsole(cmd *exec.Cmd) {
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		HideWindow:    true,
+		CreationFlags: 0x08000000 | 0x00000008, // CREATE_NO_WINDOW | DETACHED_PROCESS
+	}
+}
+
+// popplerDataDir 捆绑 share/poppler 数据目录探测：pdftotext.exe 旁的
+// share/poppler 存在（runtime/poppler 捆绑布局）则返回该目录，否则空串。
+func popplerDataDir(bin string) string {
+	cand := filepath.Join(filepath.Dir(bin), "share", "poppler")
+	if fi, err := os.Stat(cand); err == nil && fi.IsDir() {
+		return cand
+	}
+	return ""
 }
 
 // cjkSpacePairRe 中文逐字空格特征（"最 早 参 与"式 CID 字体伪空格，

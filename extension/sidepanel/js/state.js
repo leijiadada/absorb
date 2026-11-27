@@ -159,6 +159,20 @@ export function consumePendingQuotes() {
     if (DEBUG) console.log('[Absorb] consumePendingQuotes: fresh =', fresh);
     if (!fresh) return null;
     const s = currentSession() || newSession();
+    // 同 URL pageMd 批内回填：入队层只给未消费窗口内同页首条带整页文本，其余置空
+    // （quote-queue.js 去重）。消费时按 url 从本批先到者或会话已有引用回填，保证每条
+    // 引用——尤其 chip 顺序第一条（net.js 组 context 的主源）——提交时都带得上 pageMd。
+    // 已有会话引用的同页新到整页文本不覆盖（首采为准），只作回填来源。
+    const knownPageMd = new Map();
+    for (const q of (s.quotes || [])) {
+      if (q.url && q.pageMd && !knownPageMd.has(q.url)) knownPageMd.set(q.url, q.pageMd);
+    }
+    for (const q of fresh) {
+      if (q.url && q.pageMd && !knownPageMd.has(q.url)) knownPageMd.set(q.url, q.pageMd);
+    }
+    for (const q of fresh) {
+      if (q.url && !q.pageMd && knownPageMd.has(q.url)) q.pageMd = knownPageMd.get(q.url);
+    }
     s.quotes = [...(s.quotes || []), ...fresh];
     await saveState();
     return fresh;

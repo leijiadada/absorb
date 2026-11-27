@@ -6,9 +6,11 @@
 |---|---|---|
 | `mingit/` | 裁剪版 Git for Windows（POSIX shell + coreutils），供 `workspace_exec` 的 `sh` 使用 | ~17.8MB |
 | `python/` | 嵌入式 Python 3.12（stdlib-only，无 pip），供技能脚本的 `python3` 使用 | ~21.4MB |
+| `poppler/` | poppler-windows 构建（pdftotext + 依赖 DLL + share/poppler 数据），供本地 PDF 提取 | ~34.7MB |
 
 两个目录均为零安装、纯便携。agent 启动时自动探测（见 `config/skillconf.go`），命中后前置注入进程 PATH：
 系统已有可用的 sh/bash/python 则优先用系统；缺失（或 `bash` 是 WSL 启动器桩、`python3` 是 Microsoft Store 桩）时用捆绑版兜底。
+poppler 的探测不同：不进 PATH，由 `extract.pdftotextBin()` 按「ABSORB_PDFTOTEXT 环境变量 → exe 旁 runtime/poppler → PATH」顺序解析（见 `internal/document/extract/poppler.go`）。
 
 ---
 
@@ -96,3 +98,44 @@ MinGit 随 Git for Windows 分发，遵循 **GPL-2.0** 许可证；闭源商业�
 
 Python 3.x 遵循 **PSF License Agreement**（PSF 2.0 兼容），允许再分发，需附带许可证文本
 （zip 内 `LICENSE.txt` 已随包保留）。
+
+---
+
+# runtime/poppler — 捆绑 PDF 文本提取引擎（poppler-windows）
+
+## 用途
+
+本地 file:// PDF 的提取引擎（本地文件不走 httpfetch 主路，poppler 是唯一引擎，
+见 `internal/document/extract/localfile.go` / `ExtractLocal`）；远程 PDF 的双跑
+择优第二引擎也复用同一查找逻辑。`share/poppler/` 是 CID/unicode 映射数据
+（缺内嵌 ToUnicode 的中文 PDF 依赖它），`PopplerText` 调用时自动以
+`POPPLER_DATADIR` 注入捆绑数据目录。
+
+## 来源与版本
+
+- 上游：oschwartz10612/poppler-windows 官方构建（conda-forge 打包的 Windows 版 poppler）
+- 下载地址：https://github.com/oschwartz10612/poppler-windows/releases/tag/v24.08.0-0
+- 文件：`Release-24.08.0-0.zip`（x64）
+- 版本：24.08.0（pdftotext -v 输出确认）
+
+## 目录结构约定
+
+`pdftotext.exe` 必须与本目录直连的 `share/poppler/` 同在（`PopplerText` 按
+「bin 旁 share/poppler」探测注入 datadir），依赖 DLL 与 pdftotext.exe 同目录
+（Windows 加载器从 exe 自身目录解析依赖），整目录搬运、不可只取单个 exe。
+
+## 更新约定
+
+1. 下载新版 `Release-<ver>-0.zip`
+2. 删除本目录，解压 zip 后把 `poppler-<ver>/Library/bin/` 全量与
+   `poppler-<ver>/share/poppler/` 复制为 `runtime/poppler/{*.exe,*.dll,share/poppler/}`
+3. 验证 `pdftotext.exe -v` 可执行、对 docs/pdf 样书提取非空
+4. 更新本文档版本号与下载地址
+5. 跑 `go test ./internal/document/ -run TestPrepareLocalFileReady`（pdftotext 可用时不跳过）确认链路
+
+## 许可证
+
+poppler 遵循 **GPL-2.0-or-later**（及部分组件 AGPL）；闭源商业分发需附带许可证
+文本（`share/poppler/COPYING*` 已随包保留）并按要求提供对应源码
+（源码见 https://poppler.freedesktop.org/ 与构建仓库
+https://github.com/oschwartz10612/poppler-windows ）。

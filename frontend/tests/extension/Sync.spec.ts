@@ -2,29 +2,19 @@
 // 索引拉取（TTL/失败降级）、remoteOnlyStubs 归并去重、远端懒加载注入与缓存驱逐。
 // sync.js → state.js（chrome.storage）/ net.js（chrome.runtime）依赖均经 vi.stubGlobal 注入。
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { bridgeRuntimeStub, storageStub } from './fixtures/chrome-stub'
 import { state } from '../../../extension/sidepanel/js/state.js'
 import {
   uploadMirror, refreshRemoteIndex, getRemoteIndex, remoteOnlyStubs, loadRemoteSession
 } from '../../../extension/sidepanel/js/sync.js'
 
 function stubChrome(port: number | null) {
-  const store: Record<string, unknown> = {}
-  const setSpy = vi.fn(async (obj: Record<string, unknown>) => { Object.assign(store, obj) })
+  const { set, local } = storageStub()
   vi.stubGlobal('chrome', {
-    runtime: { sendMessage: vi.fn(async () => ({ port: port ?? 0 })) },
-    storage: {
-      local: {
-        get: vi.fn(async (keys: string | string[]) => {
-          const list = Array.isArray(keys) ? keys : [keys]
-          const out: Record<string, unknown> = {}
-          for (const k of list) if (k in store) out[k] = store[k]
-          return out
-        }),
-        set: setSpy,
-      },
-    },
+    runtime: bridgeRuntimeStub(port ?? 0).runtime,
+    storage: { local },
   })
-  return { store, setSpy }
+  return { setSpy: set }
 }
 
 function localSession(over: Record<string, unknown> = {}) {

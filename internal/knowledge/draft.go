@@ -4,17 +4,22 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 	"unicode/utf8"
 
+	"trpc.group/trpc-go/trpc-agent-go/model"
+
 	"absorb-agent/internal/log"
+	"absorb-agent/internal/store"
+	"absorb-agent/internal/telemetry/tokentracker"
 )
 
 // M2 吸收闭环：保存面板预填草稿（AI 建议标题 + AI 提炼）。
-// LLM 调用以 DraftFunc 注入（chat 包提供真实现，见 chat.KnowledgeDraftFn），
-// 本包不感知模型细节；draftFn 为 nil 时端点仍注册，直接走降级路径——
-// 前端只有一条逻辑（ok=false 兜底），无需探测能力。
+// LLM 调用以 DraftFunc 注入（NewDraftFn 构造，经 ModelResolver 接入问答侧动态
+// 模型，本包不感知模型客户端细节）；draftFn 为 nil 时端点仍注册，直接走降级
+// 路径——前端只有一条逻辑（ok=false 兜底），无需探测能力。
 
 // DraftPrompt 草稿生成的输入材料。三字段均可空，由处理器裁剪后传给 DraftFunc。
 type DraftPrompt struct {
@@ -111,4 +116,114 @@ func clampRunes(s string, n int) string {
 	}
 	r := []rune(s)
 	return string(r[:n])
+}
+
+// ---------- 草稿生成的 LLM 实现 ----------
+
+// ModelResolver 草稿生成的模型解析契约：每次调用实时解析当前默认模型（与问答
+// 侧 DynamicModel 同源），切换默认模型即时生效；解析失败（如尚未配置模型）原样
+// 返回，由 HTTP 层统一降级。
+type ModelResolver interface {
+	Current(ctx context.Context) (model.Model, *store.ModelConfig, error)
+}
+
+// draftGenConfig 草稿生成参数：低温保忠实，限长控成本，关思考控延迟。
+// 独立于问答侧 per-model 聊天参数（DynamicModel.Current 返回底层客户端，
+// 不经其 GenerateContent 包装，聊天参数覆盖自然不生效）。
+func draftGenConfig(req *model.Request) {
+	disabled := false
+	temp := 0.2
+	maxTokens := 256
+	req.GenerationConfig = model.GenerationConfig{
+		Stream:          false,
+		Temperature:     &temp,
+		MaxTokens:       &maxTokens,
+		ThinkingEnabled: &disabled,
+	}
+}
+
+// draftUserPrompt 组装用户消息：问题/回答/划词摘录三段材料（可缺省）。
+func draftUserPrompt(in DraftPrompt) string {
+	var b strings.Builder
+	b.WriteString("【问题】\n" + in.Question + "\n\n【AI 回答】\n" + in.Answer)
+	if strings.TrimSpace(in.Quote) != "" {
+		b.WriteString("\n\n【原文摘录】\n" + in.Quote)
+	}
+	return b.String()
+}
+
+// parseDraftOutput 解析模型输出为草稿：剥代码围栏后取首尾大括号间 JSON，
+// 逐字段校验类型；解析失败返回 error（调用方降级），Title 空同样视为降级信号。
+func parseDraftOutput(out string) (DraftResult, error) {
+	s := strings.TrimSpace(out)
+	if i := strings.Index(s, "{"); i >= 0 {
+		if j := strings.LastIndex(s, "}"); j > i {
+			s = s[i : j+1]
+		}
+	}
+	s = strings.TrimSpace(strings.TrimPrefix(strings.TrimPrefix(s, "```json"), "```"))
+	var res DraftResult
+	if err := json.Unmarshal([]byte(s), &res); err != nil {
+		return DraftResult{}, fmt.Errorf("draft output not json: %w", err)
+	}
+	return res, nil
+}
+
+// NewDraftFn 构造草稿生成的 DraftFunc（main.go 装配）。每次调用实时解析当前
+// 默认模型，一次非流式调用产出 {title, summary}；不经过 runner/session——
+// 不写会话存储、不受记忆门影响。
+func NewDraftFn(resolver ModelResolver) DraftFunc {
+	return func(ctx context.Context, in DraftPrompt) (DraftResult, error) {
+		m, mc, err := resolver.Current(ctx)
+		if err != nil {
+			return DraftResult{}, err
+		}
+		req := &model.Request{
+			Messages: []model.Message{
+				{Role: model.RoleSystem, Content: DraftSystemPrompt},
+				{Role: model.RoleUser, Content: draftUserPrompt(in)},
+			},
+		}
+		draftGenConfig(req)
+		respCh, err := m.GenerateContent(ctx, req)
+		if err != nil {
+			return DraftResult{}, err
+		}
+		var sb strings.Builder
+		var usage *model.Usage // 最终响应携带的用量（非流式调用，通常在末条响应上）
+		for resp := range respCh {
+			if resp == nil {
+				continue
+			}
+			if resp.Usage != nil {
+				usage = resp.Usage
+			}
+			for _, ch := range resp.Choices {
+				sb.WriteString(ch.Message.Content)
+			}
+		}
+		// 上报草稿 token 用量（kind=draft）：端点未回 Usage（total=0）时跳过上报并
+		// 留验证日志；统计是旁路，失败不影响草稿主链路。
+		if usage == nil || usage.TotalTokens == 0 {
+			log.Debugf("[Absorb] knowledge draft usage missing (total=0), skip token report")
+		} else {
+			tokentracker.Track(tokentracker.KindDraft, mc.ModelID, tokentracker.Usage{
+				PromptTokens:     usage.PromptTokens,
+				CompletionTokens: usage.CompletionTokens,
+				ReasoningTokens:  usage.CompletionTokensDetails.ReasoningTokens,
+				TotalTokens:      usage.TotalTokens,
+				CachedTokens:     usage.PromptTokensDetails.CachedTokens,
+			})
+		}
+		out := sb.String()
+		if strings.TrimSpace(out) == "" {
+			return DraftResult{}, fmt.Errorf("draft output empty")
+		}
+		res, err := parseDraftOutput(out)
+		if err != nil {
+			log.Warnf("[Absorb] knowledge draft parse failed: %v (raw: %.200s)", err, out)
+			return DraftResult{}, err
+		}
+		return res, nil
+	}
 }

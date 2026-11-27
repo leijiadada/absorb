@@ -71,12 +71,12 @@ func newSessionSummarizer(m model.Model) summary.SessionSummarizer {
 // 解析失败传空串；统计是旁路，任何失败都不影响摘要链路。框架 Report 只回
 // prompt/cached 口径（无 completion/total），total 由 tracker 按 prompt 兜底。
 func summaryReportHook(m model.Model) summary.ReportHook {
-	dm, _ := m.(*dynamicModel)
+	dm, _ := m.(*DynamicModel)
 	return func(ctx context.Context, r summary.Report) {
 		logSummaryReport(ctx, r)
 		modelName := ""
 		if dm != nil {
-			if _, mc, err := dm.current(ctx); err == nil && mc != nil {
+			if _, mc, err := dm.Current(ctx); err == nil && mc != nil {
 				modelName = mc.ModelID
 			}
 		}

@@ -2,7 +2,7 @@ package chat
 
 // buildWorkingSetL1（工作集 L1 组装）表驱动测试：
 // 分支去重（跨 scope 保留 / 同 scope 与无标轮次丢弃 / 空 filterKey 全丢弃）、
-// 工具轮折叠标记、预算超限报错、估算非零。
+// 工具轮折叠标记、超预算降级（从最旧轮剔除）、估算非零。
 
 import (
 	"strings"
@@ -38,10 +38,7 @@ func TestBuildWorkingSetL1(t *testing.T) {
 			wsRound("B问", "B答", "https://b.com", 0),
 			wsRound("A2问", "A2答", "https://a.com", 0),
 		}
-		msgs, stats, err := buildWorkingSetL1(rounds, "https://b.com", 16000, false)
-		if err != nil {
-			t.Fatalf("buildWorkingSetL1: %v", err)
-		}
+		msgs, stats := buildWorkingSetL1(rounds, "https://b.com", 16000, false)
 		if stats.Selected != 3 || stats.Kept != 2 || stats.DroppedDup != 1 {
 			t.Errorf("stats = %+v, want selected=3 kept=2 dropped=1", stats)
 		}
@@ -63,9 +60,9 @@ func TestBuildWorkingSetL1(t *testing.T) {
 
 	t.Run("空filterKey全丢弃", func(t *testing.T) {
 		rounds := []storage.RecentRound{wsRound("问", "答", "https://a.com", 0)}
-		msgs, stats, err := buildWorkingSetL1(rounds, "", 16000, false)
-		if err != nil || msgs != nil {
-			t.Fatalf("空 filterKey 应全丢弃: msgs=%v err=%v", msgs, err)
+		msgs, stats := buildWorkingSetL1(rounds, "", 16000, false)
+		if msgs != nil {
+			t.Fatalf("空 filterKey 应全丢弃: msgs=%v", msgs)
 		}
 		if stats.Kept != 0 || stats.DroppedDup != 1 {
 			t.Errorf("stats = %+v", stats)
@@ -75,9 +72,9 @@ func TestBuildWorkingSetL1(t *testing.T) {
 	t.Run("无标轮次在非空filterKey下同样丢弃", func(t *testing.T) {
 		// 无标（FilterKey=""）事件会被 SDK 纳入任意 scope 请求（Prefix 过滤），注入即双花
 		rounds := []storage.RecentRound{wsRound("旧问", "旧答", "", 0)}
-		msgs, stats, err := buildWorkingSetL1(rounds, "https://b.com", 16000, false)
-		if err != nil || msgs != nil {
-			t.Fatalf("无标轮次应丢弃: msgs=%v err=%v", msgs, err)
+		msgs, stats := buildWorkingSetL1(rounds, "https://b.com", 16000, false)
+		if msgs != nil {
+			t.Fatalf("无标轮次应丢弃: msgs=%v", msgs)
 		}
 		if stats.DroppedDup != 1 {
 			t.Errorf("stats = %+v", stats)
@@ -93,10 +90,7 @@ func TestBuildWorkingSetL1(t *testing.T) {
 		fkB := store.ScopeID("https://b.com")
 
 		// 文章请求：general 轮 Filter=false → L1 保留注入（跨文章连续性）；文章轮去重
-		msgs, stats, err := buildWorkingSetL1(rounds, fkB, 16000, false)
-		if err != nil {
-			t.Fatalf("buildWorkingSetL1: %v", err)
-		}
+		msgs, stats := buildWorkingSetL1(rounds, fkB, 16000, false)
 		if stats.Kept != 1 || stats.DroppedDup != 1 {
 			t.Errorf("文章请求 stats = %+v, want kept=1 dropped=1", stats)
 		}
@@ -105,10 +99,7 @@ func TestBuildWorkingSetL1(t *testing.T) {
 		}
 
 		// general 请求：general 轮 Filter=true 去重（SDK 已原样重放）；文章轮经 L1 注入
-		msgs, stats, err = buildWorkingSetL1(rounds, kind.ScopeGeneral, 16000, false)
-		if err != nil {
-			t.Fatalf("buildWorkingSetL1: %v", err)
-		}
+		msgs, stats = buildWorkingSetL1(rounds, kind.ScopeGeneral, 16000, false)
 		if stats.Kept != 1 || stats.DroppedDup != 1 {
 			t.Errorf("general 请求 stats = %+v, want kept=1 dropped=1", stats)
 		}
@@ -119,10 +110,7 @@ func TestBuildWorkingSetL1(t *testing.T) {
 
 	t.Run("工具轮折叠标记", func(t *testing.T) {
 		rounds := []storage.RecentRound{wsRound("问", "最终答", "https://a.com", 3)}
-		msgs, _, err := buildWorkingSetL1(rounds, "https://b.com", 16000, false)
-		if err != nil {
-			t.Fatalf("buildWorkingSetL1: %v", err)
-		}
+		msgs, _ := buildWorkingSetL1(rounds, "https://b.com", 16000, false)
 		want := "（该轮含 3 次工具调用，详情可回溯）\n\n最终答"
 		if msgs[1].Content != want {
 			t.Errorf("assistant 内容 = %q, want %q", msgs[1].Content, want)
@@ -135,23 +123,51 @@ func TestBuildWorkingSetL1(t *testing.T) {
 		}
 	})
 
-	t.Run("超预算可读报错", func(t *testing.T) {
+	t.Run("超预算降级剔除最旧轮", func(t *testing.T) {
+		rounds := []storage.RecentRound{
+			wsRound("旧问", "旧答", "https://a.com", 0),
+			wsRound("中问", "中答", "https://a.com", 0),
+			wsRound("新问", "新答", "https://a.com", 0),
+		}
+		// 每轮估算成本 = 2 rune × 2 条消息 = 4 tokens（(2*2+2)/3=2 每条）。
+		// 预算 5 只够 1 轮：剔除最旧 2 轮，保留最近 1 轮
+		msgs, stats := buildWorkingSetL1(rounds, "https://b.com", 5, false)
+		if stats.TrimmedOld != 2 {
+			t.Fatalf("TrimmedOld = %d, want 2（剔除最旧 2 轮）", stats.TrimmedOld)
+		}
+		if stats.Kept != 3 || stats.Selected != 3 {
+			t.Errorf("stats = %+v（降级不影响 kept 口径）", stats)
+		}
+		if len(msgs) != 2 || msgs[0].Content != "新问" || msgs[1].Content != "新答" {
+			t.Errorf("应仅保留最近一轮: %+v", msgs)
+		}
+		if stats.EstTokens != 4 {
+			t.Errorf("EstTokens = %d, want 4（实际注入量）", stats.EstTokens)
+		}
+	})
+
+	t.Run("单轮即超预算全部剔除", func(t *testing.T) {
+		rounds := []storage.RecentRound{wsRound("问", "答", "https://a.com", 0)}
+		msgs, stats := buildWorkingSetL1(rounds, "https://b.com", 1, false)
+		if len(msgs) != 0 {
+			t.Errorf("单轮即超预算应剔除为空: %+v", msgs)
+		}
+		if stats.TrimmedOld != 1 || stats.Messages != 0 || stats.EstTokens != 0 {
+			t.Errorf("stats = %+v, want trimmed=1 msgs=0 est=0", stats)
+		}
+	})
+
+	t.Run("预算内不降级", func(t *testing.T) {
 		rounds := []storage.RecentRound{
 			wsRound("问一", "答一", "https://a.com", 0),
 			wsRound("问二", "答二", "https://a.com", 0),
 		}
-		msgs, stats, err := buildWorkingSetL1(rounds, "https://b.com", 1, false)
-		if err == nil {
-			t.Fatalf("超预算应报错")
+		msgs, stats := buildWorkingSetL1(rounds, "https://b.com", 16000, false)
+		if stats.TrimmedOld != 0 {
+			t.Errorf("预算内不应剔除: %+v", stats)
 		}
-		if msgs != nil {
-			t.Errorf("报错时不应返回消息")
-		}
-		if stats.Kept != 2 || stats.EstTokens <= 1 {
-			t.Errorf("stats = %+v（应保留 2 轮且估算>1）", stats)
-		}
-		if !strings.Contains(err.Error(), "预算") {
-			t.Errorf("报错应可读（含预算说明）: %v", err)
+		if len(msgs) != 4 || msgs[0].Content != "问一" || msgs[3].Content != "答二" {
+			t.Errorf("预算内注入序列不变: %+v", msgs)
 		}
 	})
 
@@ -174,10 +190,7 @@ func TestBuildWorkingSetL1(t *testing.T) {
 
 		// keepImages=false（非视觉默认模型，读取失败保守关闭同此）：过滤 image part，
 		// 不注入图片存在性标记
-		msgs, stats, err := buildWorkingSetL1(rounds, "https://b.com", 16000, false)
-		if err != nil {
-			t.Fatalf("buildWorkingSetL1: %v", err)
-		}
+		msgs, stats := buildWorkingSetL1(rounds, "https://b.com", 16000, false)
 		if len(msgs) != 2 {
 			t.Fatalf("msgs = %d, want 2", len(msgs))
 		}
@@ -194,10 +207,7 @@ func TestBuildWorkingSetL1(t *testing.T) {
 
 		// keepImages=true（视觉默认模型）：保留 part + 文本前缀图片存在性标记
 		// （标记随文本自然流进 L2/L3 摘要，与 Trae 压缩后「图片仅剩文字提及」同构）
-		msgs, _, err = buildWorkingSetL1(rounds, "https://b.com", 16000, true)
-		if err != nil {
-			t.Fatalf("buildWorkingSetL1: %v", err)
-		}
+		msgs, _ = buildWorkingSetL1(rounds, "https://b.com", 16000, true)
 		if len(msgs[0].ContentParts) != 1 || msgs[0].ContentParts[0].Type != model.ContentType("image") {
 			t.Fatalf("视觉模型应保留 image part: %+v", msgs[0].ContentParts)
 		}

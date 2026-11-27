@@ -24,8 +24,9 @@ type l1Stats struct {
 	Selected   int // 存储返回的完整轮次数
 	Kept       int // 去重后保留并注入的轮次数
 	DroppedDup int // 去重丢弃的轮次数（与当前 scope 请求历史重复）
+	TrimmedOld int // 超预算降级剔除的最旧轮数（保留最近轮次直到入限）
 	Messages   int // 注入消息条数（每轮 2 条：user + assistant）
-	EstTokens  int // 注入内容估算 token（启发式）
+	EstTokens  int // 注入内容估算 token（启发式，降级后为实际注入量）
 }
 
 // estimateTokens 估算 token 数（启发式：CJK 偏保守按 2/3 rune 折算）。
@@ -43,15 +44,18 @@ func estimateTokens(s string) int {
 //     文章请求的注入）。filterKey 为空时 SDK 本就重放全会话，全部丢弃（防御分支，
 //     当前调用方恒传非空标）。
 //
-//   - 超预算：估算 token 超过 maxTokens 时返回可读错误，不做裁剪。
+//   - 超预算：从最旧轮开始剔除直到入限（保留最近轮次，确定性结果：同数据同裁法），
+//     不再报错终止——旧"报错不裁剪"在窗口被巨轮占满时会死锁（报错轮不成完整轮次，
+//     窗口无法滑动，后续提问持续失败）；单轮即超预算时全部剔除（L1 空注入）。
+//     模型窗口的最终防线由 openai 层 token tailoring 兜底，两层互不替代。
 //
 // keepImages 控制注入消息是否保留 image part（库内形态=落库缩略图，见
 // store/sqlite/thumbnail.go）：按默认模型视觉能力门控（调用点传 mc.ImageSupport），
 // 非视觉模型不注入。兜底链：openai 层 WithTextOnlyMessageContent 本就会对非视觉
 // 模型剥离 image part，本参数属防御层（不依赖框架行为 + 省去无谓负载）。
 //
-// rounds 为空或全部去重丢弃时返回 (nil, stats, nil)。
-func buildWorkingSetL1(rounds []storage.RecentRound, filterKey string, maxTokens int, keepImages bool) ([]model.Message, l1Stats, error) {
+// rounds 为空或全部去重丢弃时返回 (nil, stats)。
+func buildWorkingSetL1(rounds []storage.RecentRound, filterKey string, maxTokens int, keepImages bool) ([]model.Message, l1Stats) {
 	stats := l1Stats{Selected: len(rounds)}
 	kept := make([]storage.RecentRound, 0, len(rounds))
 	for _, rd := range rounds {
@@ -63,21 +67,42 @@ func buildWorkingSetL1(rounds []storage.RecentRound, filterKey string, maxTokens
 	}
 	stats.Kept = len(kept)
 	if len(kept) == 0 {
-		return nil, stats, nil
+		return nil, stats
 	}
 
-	msgs := make([]model.Message, 0, len(kept)*2)
-	for _, rd := range kept {
-		um := l1UserMessage(&rd.UserEvent, keepImages)
-		am := l1AssistantMessage(&rd.FinalEvent, rd.ToolCount)
-		msgs = append(msgs, um, am)
-		stats.EstTokens += estimateTokens(um.Content) + estimateTokens(am.Content)
+	// 逐轮组装并估算成本（升序），超预算时按轮剔除
+	perRound := make([]struct {
+		msgs   []model.Message
+		tokens int
+	}, 0, len(kept))
+	total := 0
+	for i := range kept {
+		um := l1UserMessage(&kept[i].UserEvent, keepImages)
+		am := l1AssistantMessage(&kept[i].FinalEvent, kept[i].ToolCount)
+		tk := estimateTokens(um.Content) + estimateTokens(am.Content)
+		perRound = append(perRound, struct {
+			msgs   []model.Message
+			tokens int
+		}{[]model.Message{um, am}, tk})
+		total += tk
+	}
+
+	// 超预算降级：从最旧轮开始剔除直到入限（升序输入，最旧在前）
+	if maxTokens > 0 && total > maxTokens {
+		for stats.TrimmedOld < len(perRound) && total > maxTokens {
+			total -= perRound[stats.TrimmedOld].tokens
+			stats.TrimmedOld++
+		}
+		perRound = perRound[stats.TrimmedOld:]
+	}
+
+	msgs := make([]model.Message, 0, len(perRound)*2)
+	for _, rd := range perRound {
+		msgs = append(msgs, rd.msgs...)
 	}
 	stats.Messages = len(msgs)
-	if maxTokens > 0 && stats.EstTokens > maxTokens {
-		return nil, stats, fmt.Errorf("最近对话（L1）估算约 %d tokens，超出预算 %d；请开启新会话或稍后重试", stats.EstTokens, maxTokens)
-	}
-	return msgs, stats, nil
+	stats.EstTokens = total
+	return msgs, stats
 }
 
 // l1UserMessage 由用户事件还原原生 user 消息。

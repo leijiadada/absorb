@@ -68,6 +68,10 @@ type docSection struct {
 func doclingSections(data []byte) ([]docSection, int) {
 	doc, err := docling.ParsePDFWithOptions(data, docling.PDFOptions{
 		DisableEmbeddedImageExtraction: true, // 结构匹配不需要图片像素，省时省内存
+		// docling 的 poppler 降级会 LookPath("pdftotext") 再裸启动，不带
+		// CREATE_NO_WINDOW。桌面端没有控制台时，这会弹出黑窗口。
+		// 正文提取走本包的 pdftotext（hideConsole），不依赖这条降级。
+		DisablePopplerFallback: true,
 	})
 	if err != nil || doc == nil {
 		return nil, 0

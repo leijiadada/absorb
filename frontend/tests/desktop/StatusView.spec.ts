@@ -18,6 +18,9 @@ beforeEach(() => {
 })
 
 describe('扩展卡四态', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
   it('已连接：绿点 + 使用提示', () => {
     const w = mountStatus(makeStatus({ extConnected: true, extState: 'connected' }))
     expect(w.text()).toContain('已连接')
@@ -25,12 +28,16 @@ describe('扩展卡四态', () => {
     w.unmount()
   })
 
-  it('断开（浏览器在运行）：重新安装按钮打开引导弹窗', async () => {
+  it('断开（浏览器在运行）：重新安装按钮打开商店，手动链接打开弹窗', async () => {
+    const openURL = vi.fn()
+    ;(window as any).runtime = { BrowserOpenURL: openURL }
     const w = mountStatus(makeStatus({ extState: 'disconnected' }))
-    const target = w.findAll('button').find((b) => b.text().includes('重新安装扩展'))
-    await target!.trigger('click')
+    await w.findAll('button').find((b) => b.text().includes('重新安装扩展'))!.trigger('click')
+    expect(openURL).toHaveBeenCalledWith(expect.stringContaining('microsoftedge.microsoft.com/addons'))
+    await w.findAll('button').find((b) => b.text().includes('手动安装'))!.trigger('click')
     await settle()
     expect(w.text()).toContain('手动安装扩展')
+    ;(window as any).runtime = undefined
     w.unmount()
   })
 
@@ -42,11 +49,12 @@ describe('扩展卡四态', () => {
     w.unmount()
   })
 
-  it('从未连接：安装按钮打开引导弹窗（下载/打开浏览器分离）', async () => {
+  it('从未连接：10s 检查窗口内显示检查中，手动链接打开引导弹窗（下载/打开浏览器分离）', async () => {
     const w = mountStatus(makeStatus({ extConnected: false, extLastSeen: 0, extState: 'never' }))
-    expect(w.text()).toContain('未连接')
-    expect(w.text()).toContain('如果未安装浏览器扩展，划词阅读功能无法使用')
-    await w.find('.btn-primary').trigger('click')
+    // 检查窗口内：检查中占位，不出安装按钮
+    expect(w.text()).toContain('检查中')
+    expect(w.text()).not.toContain('安装扩展')
+    await w.findAll('button').find((b) => b.text().includes('手动安装'))!.trigger('click')
     await settle()
     expect(w.text()).toContain('手动安装扩展')
     expect(w.text()).toContain('下载扩展')
@@ -56,9 +64,37 @@ describe('扩展卡四态', () => {
     w.unmount()
   })
 
+  it('从未连接：10s 超时后展示安装按钮，点击打开商店', async () => {
+    vi.useFakeTimers()
+    const openURL = vi.fn()
+    ;(window as any).runtime = { BrowserOpenURL: openURL }
+    const w = mountStatus(makeStatus({ extConnected: false, extLastSeen: 0, extState: 'never' }))
+    await vi.advanceTimersByTimeAsync(10_000)
+    await nextTick()
+    expect(w.text()).toContain('未连接')
+    await w.find('.btn-primary').trigger('click')
+    expect(openURL).toHaveBeenCalledWith(expect.stringContaining('microsoftedge.microsoft.com/addons'))
+    ;(window as any).runtime = undefined
+    w.unmount()
+  })
+
+  it('检查窗口内连上扩展：立即切换已连接，不等超时', async () => {
+    const st = ref(makeStatus({ extConnected: false, extLastSeen: 0, extState: 'never' }))
+    mockBackend()
+    const w = mount(StatusView, {
+      global: { plugins: [testRouter()], provide: { status: st } },
+    })
+    expect(w.text()).toContain('检查中')
+    st.value = makeStatus({ extConnected: true, extState: 'connected' })
+    await nextTick()
+    expect(w.text()).toContain('已连接')
+    expect(w.text()).not.toContain('检查中')
+    w.unmount()
+  })
+
   it('弹窗内下载：成功静默（无提示、无路径），失败才报错', async () => {
     const w = mountStatus(makeStatus({ extState: 'never' }))
-    await w.find('.btn-primary').trigger('click')
+    await w.findAll('button').find((b) => b.text().includes('手动安装'))!.trigger('click')
     await w.findAll('button').find((b) => b.text().includes('点击下载'))!.trigger('click')
     await settle()
     expect(w.text()).not.toContain('已下载')

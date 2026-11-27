@@ -15,7 +15,7 @@
   --red-soft: #fdecec;
 
   /* ---- Semantic：用途别名 ---- */
-  --bg: var(--gray-50);
+  --bg: rgb(252, 252, 252); /* 页面底色：微灰于纯白，与白卡片（--surface）靠边框分层 */
   --surface: var(--white);
   --border: var(--gray-100);
   --border-strong: var(--gray-300);
@@ -336,12 +336,19 @@ button {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
   min-height: 0;
   overflow-y: auto;
+  /* 抵消 .main 的 14px 水平 padding：滚动区撑满视口让滚动条贴面板右缘，
+     内容缩进由自身左右 padding 补偿（文字位置与之前一致） */
+  margin-left: -14px;
+  margin-right: -14px;
+  padding-left: 14px;
+  padding-right: 14px;
   /* 顶部留白 = header 高度：静止时首条内容恰好位于 header 下缘；滚动后内容穿过遮罩淡出 */
   padding-top: var(--header-h);
-  padding-bottom: 16px;
+  /* 底部呼吸带（ChatGPT 同款）：内容滚到底时与输入框之间留出余白，作"内容结束"信号 */
+  padding-bottom: 115px;
 }
 
 .empty-tip {
@@ -487,6 +494,10 @@ button {
   border-radius: 0;
   max-width: 100%;
   padding: 4px 2px;
+  /* 正文排版对齐主流 AI 侧板（16px/1.75 中密度档）：一屏有效字数 ~400，
+     与用户气泡的 13px 形成层级区分 */
+  font-size: 16px;
+  line-height: 1.75;
 }
 
 .bubble {
@@ -500,7 +511,7 @@ button {
 
 /* Markdown 渲染样式 */
 .msg.assistant .bubble p {
-  margin: 0.4em 0;
+  margin: 16px 0;
 }
 
 .msg.assistant .bubble p:first-child {
@@ -534,7 +545,7 @@ button {
 }
 
 .msg.assistant .bubble pre {
-  margin: 0.6em 0;
+  margin: 16px 0;
   padding: 10px 12px;
   background: rgba(127, 127, 127, 0.07);
   border-radius: var(--radius-sm);
@@ -629,59 +640,60 @@ button {
 
 .msg.assistant .bubble ul,
 .msg.assistant .bubble ol {
-  margin: 0.4em 0;
+  margin: 12px 0 16px;
   padding-left: 1.6em;
 }
 
 .msg.assistant .bubble li {
-  margin: 0.2em 0;
+  margin: 8px 0;
 }
 
 .msg.assistant .bubble blockquote {
-  margin: 0.5em 0;
-  padding: 2px 0 2px 12px;
+  margin: 16px 0;
+  padding: 4px 0 4px 12px;
   border-left: 3px solid var(--border-strong);
   color: var(--text-2);
 }
 
 .msg.assistant .bubble blockquote p {
-  margin: 0.2em 0;
+  margin: 8px 0;
 }
 
 .msg.assistant .bubble h1,
 .msg.assistant .bubble h2,
 .msg.assistant .bubble h3,
 .msg.assistant .bubble h4 {
-  margin: 0.6em 0 0.3em;
+  margin: 20px 0 8px;
   font-weight: 600;
   line-height: 1.4;
 }
 
+/* 侧板级标题克制：h3 与正文同字号靠字重区分，h1 罕见保底 */
 .msg.assistant .bubble h1 {
-  font-size: 1.2em;
+  font-size: 20px;
 }
 
 .msg.assistant .bubble h2 {
-  font-size: 1.1em;
+  font-size: 18px;
 }
 
 .msg.assistant .bubble h3 {
-  font-size: 1.05em;
+  font-size: 16px;
 }
 
 .msg.assistant .bubble h4 {
-  font-size: 1em;
+  font-size: 15px;
 }
 
 .msg.assistant .bubble hr {
-  margin: 0.8em 0;
+  margin: 16px 0;
   border: none;
   border-top: 1px solid var(--border);
 }
 
 .msg.assistant .bubble table {
   border-collapse: collapse;
-  margin: 0.5em 0;
+  margin: 16px 0;
   font-size: 0.92em;
   width: 100%;
 }
@@ -949,6 +961,15 @@ button {
   background: var(--surface);
   border-top: 1px solid var(--border);
   padding: 10px 10px;
+}
+
+/* 输入区上方公共区块（dock）：灰底内容域（透明透出 body --bg），仅承载子元素
+   排布；间距由子元素自身 margin 承担，全部隐藏时零占位 */
+.dock {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 14px;
 }
 
 #questionInput {
@@ -2111,13 +2132,72 @@ button {
   box-shadow: 0 0 0 2px var(--ring);
 }
 
-/* ---------- 文档工具栏（PDF 解读 PR4：输入框上方单行条 + 展开面板） ---------- */
+/* ---------- 文档工具栏（PDF 解读 PR4：dock 区块内的白底卡片 + 展开面板） ---------- */
 .docbar {
   margin-bottom: var(--sp-2);
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
+}
+
+/* ---------- 本地文件访问引导卡（B4：dock 内白底卡片，复用 docbar 视觉） ---------- */
+/* 布局：类型图标 | 标题/说明纵向块（右侧弹性）| 去设置按钮；底部一行指引文案 */
+.file-access {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 10px 8px;
+}
+
+.file-access .db-fileicon {
+  width: 24px;
+  height: 24px;
+  margin-top: 1px;
+}
+
+.fa-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.fa-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.fa-desc {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-2);
+}
+
+.fa-btn {
+  align-self: flex-start;
+  margin-top: 5px;
+  padding: 4px 12px;
+  font-size: 12px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+  transition: transform .12s var(--ease), opacity .12s var(--ease);
+}
+
+.fa-btn:hover { opacity: .9; }
+.fa-btn:active { transform: scale(.97); }
+.fa-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--ring); }
+
+.fa-hint {
+  padding: 6px 10px 2px 42px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--muted);
 }
 
 /* × 隐藏态：迷你圆标（仅文档图标，位于 composer 操作行），点击恢复完整工具栏 */
@@ -2348,8 +2428,8 @@ button {
 .db-suggest-item .arr { color: var(--muted); flex-shrink: 0; }
 .db-suggest-item:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--ring); border-radius: var(--radius-sm); }
 
-/* ---------- 网页建议问题块（doc-suggestions §4.4）：内容区尾部，视觉归属内容框 ---------- */
-/* 挂在 main 尾部（composer 之外）：背景透出内容区灰底（--bg），与内容框相融；
+/* ---------- 网页建议问题块（doc-suggestions §4.4）：视觉归属内容框 ---------- */
+/* 挂在 dock 公共区块（composer 之外）：背景透出内容区灰底（--bg），与内容框相融；
    与输入区的边界由 composer 白底 + 上缘分隔线产生，问题块自身不画框 */
 .web-chips {
   width: 100%;

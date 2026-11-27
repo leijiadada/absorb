@@ -16,6 +16,7 @@ import {
 } from './render.js';
 import { renderAttachments, setImageGate } from './image.js';
 import { isPdfUrl, readyDocumentId } from './doccard.js';
+import { notifyAsked } from './webchips.js';
 
 // 当前流式的 AbortController(模块级,stopStreaming 与 streamAssistantReply 共享)
 // null 表示无流式在跑;主动停止时 abort,后端框架 ctx 取消自动停止生成
@@ -57,14 +58,23 @@ export function consumeAndRenderChips() {
 // 提交时实时 query（非面板打开时缓存），保证"问的是正在看的页"；
 // 无 tabs 权限，url/title 仅在 activeTab 授权期内可见（图标/右键菜单调用且未跨源导航），
 // 授权失效时 tab.url 为 undefined → 返回 null，宁缺勿错；
-// 只发 http(s)——chrome://、file:// 抓不到，静默跳过；PDF 标签页走文档卡
-// documentId 通道（见下方 PDF 分支）；
+// 只发 http(s) 与 file:// 的 PDF——chrome:// 与 file:// 普通页抓不到，静默跳过；
+// PDF 标签页（远程与本地）走文档卡 documentId 通道（见下方 PDF 分支）；
 // 页面采集与划词共用 grab.js 链路（无划词走 grabPageOnly 形态），失败静默降级为仅 url/title
 // （后端回退 fetch_page 现状行为）。
 async function getActivePage() {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab || !tab.url || !/^https?:\/\//i.test(tab.url)) return null;
+    if (!tab || !tab.url) return null;
+    // file://：仅 PDF 走文档卡通道（正文由服务端读盘提取），普通本地文件不处理
+    if (/^file:\/\//i.test(tab.url)) {
+      if (!isPdfUrl(tab.url)) return null;
+      return {
+        url: tab.url, title: tab.title || '', pageMd: '',
+        documentId: await readyDocumentId(tab.url)
+      };
+    }
+    if (!/^https?:\/\//i.test(tab.url)) return null;
     // PDF 标签页：内置查看器非普通 DOM 文档，grab.js 注入不可行；正文经文档卡
     // /api/page/prepare 提取落库，已就绪时透传 documentId，后端注入已提取正文
     // （未读取/失败时不带 documentId，维持原降级行为）
@@ -110,6 +120,7 @@ export async function submitQuestion() {
     console.log('[Absorb] submitQuestion: 内容为空，跳过');
     return;
   }
+  notifyAsked(); // 提问已成立：隐藏当前页建议 chips，换页后按新页重新出现
   // 仅附图片、未输入文字时，补一条默认指令，避免把空问题发给模型
   const DEFAULT_IMAGE_PROMPT = '请解读图片内容';
   const questionText = (!bodyText && refs.length === 0 && images.length > 0) ? DEFAULT_IMAGE_PROMPT : text;

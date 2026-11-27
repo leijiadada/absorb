@@ -53,6 +53,15 @@ function fmtTokens(n: number): string {
 // 今日缓存命中率百分比（0-1 → 整数百分数）
 const cacheHitPct = computed(() => Math.round((tokenStats.value?.cacheHitRate ?? 0) * 100))
 
+// 扩展连接检查窗口：桌面端刚启动时心跳可能尚未到达（never ≠ 未安装），先展示
+// "检查中…"；10s 后仍无心跳才按未安装展示安装引导。窗口期内状态切走立即退出。
+const CHECK_MS = 10_000
+const checkDone = ref(false)
+onMounted(() => {
+  window.setTimeout(() => (checkDone.value = true), CHECK_MS)
+})
+const extChecking = computed(() => status?.value?.extState === 'never' && !checkDone.value)
+
 // 手动安装引导弹窗（信息条 + 下载 / 前往安装 两步）
 const exporting = ref(false)
 const showGuide = ref(false)
@@ -81,6 +90,18 @@ async function download() {
 // edge:// 等特权页禁止命令行直达，浏览器只能裸启动；
 // 地址由前端复制到剪贴板，引导用户粘贴访问（Chrome 用户改用 chrome://extensions）
 const EXT_PAGE_URL = 'edge://extensions'
+
+// Edge 商店已上架，常规安装直达商店页（https 可由系统默认浏览器直接打开）；
+// 商店不可达或 Chrome 用户走手动弹窗。
+const EXT_STORE_URL =
+  'https://microsoftedge.microsoft.com/addons/detail/absorb-%E9%98%85%E8%AF%BB%E5%8A%A9%E6%89%8B/nfnkckljlhlcoppcpoiomcfhdgpmdfld'
+
+// 外链用系统浏览器打开（Wails 运行时注入，测试环境回退 window.open）
+function openStore() {
+  const rt = (window as any).runtime
+  if (rt?.BrowserOpenURL) rt.BrowserOpenURL(EXT_STORE_URL)
+  else window.open(EXT_STORE_URL, '_blank')
+}
 
 const copied = ref(false)
 
@@ -111,7 +132,7 @@ async function gotoExtensions() {
 
     <div class="grid grid-cols-2 gap-4">
       <!-- 浏览器扩展（四态） -->
-      <div class="card">
+      <div class="card flex flex-col">
         <div class="mb-3 text-sm font-medium">浏览器扩展</div>
 
         <template v-if="status?.extState === 'connected'">
@@ -128,7 +149,13 @@ async function gotoExtensions() {
             <span class="text-[15px]">扩展已断开</span>
           </div>
           <div class="mt-1 text-xs text-muted">浏览器开着，但收不到扩展消息，扩展可能已被卸载。</div>
-          <button class="btn btn-ghost mt-2" @click="openGuide">重新安装扩展</button>
+          <div class="mt-auto flex flex-wrap items-center gap-3 pt-3">
+            <button class="btn btn-ghost whitespace-nowrap" @click="openStore">
+              重新安装扩展
+              <ExternalLink :size="14" />
+            </button>
+            <button class="text-xs text-muted hover:text-txt hover:underline" @click="openGuide">无法访问商店？尝试手动安装</button>
+          </div>
         </template>
 
         <template v-else-if="status?.extState === 'browser-closed'">
@@ -139,18 +166,34 @@ async function gotoExtensions() {
           <div class="mt-1 text-xs text-muted">打开浏览器后，扩展会自动连接到这里。</div>
         </template>
 
+        <template v-else-if="extChecking">
+          <div class="flex items-center gap-2">
+            <span class="status-dot inline-block h-2.5 w-2.5 animate-pulse rounded-full border border-muted" />
+            <span class="text-[15px] text-txt2">检查中…</span>
+          </div>
+          <div class="mt-auto flex flex-wrap items-center gap-3 pt-3">
+            <button class="btn btn-ghost whitespace-nowrap" disabled>检查中…</button>
+            <button class="text-xs text-muted hover:text-txt hover:underline" @click="openGuide">无法访问商店？尝试手动安装</button>
+          </div>
+        </template>
+
         <template v-else>
           <div class="flex items-center gap-2">
             <span class="status-dot inline-block h-2.5 w-2.5 rounded-full border border-muted" />
             <span class="text-[15px] text-txt2">未连接</span>
           </div>
-          <div class="mt-1 text-xs text-muted">如果未安装浏览器扩展，划词阅读功能无法使用。</div>
-          <button class="btn btn-primary mt-2" @click="openGuide">安装扩展</button>
+          <div class="mt-auto flex flex-wrap items-center gap-3 pt-3">
+            <button class="btn btn-primary whitespace-nowrap" @click="openStore">
+              安装扩展
+              <ExternalLink :size="14" />
+            </button>
+            <button class="text-xs text-muted hover:text-txt hover:underline" @click="openGuide">无法访问商店？尝试手动安装</button>
+          </div>
         </template>
       </div>
 
       <!-- 模型服务 -->
-      <div class="card">
+      <div class="card flex flex-col">
         <div class="mb-3 text-sm font-medium">模型服务</div>
         <template v-if="status?.modelName && status?.keyConfigured">
           <div class="flex items-center gap-2">
@@ -158,7 +201,9 @@ async function gotoExtensions() {
             <span class="text-[15px]">已就绪</span>
           </div>
           <div class="mt-1 text-xs text-muted">当前模型：{{ status?.modelName }}</div>
-          <router-link to="/models" class="mt-2 inline-flex items-center gap-1 text-sm text-primary hover:underline">去管理模型 <ArrowRight :size="14" /></router-link>
+          <div class="mt-auto pt-3">
+            <router-link to="/models" class="inline-flex items-center gap-1 text-sm text-primary hover:underline">去管理模型 <ArrowRight :size="14" /></router-link>
+          </div>
         </template>
         <template v-else-if="status?.modelName">
           <div class="flex items-center gap-2">
@@ -166,7 +211,9 @@ async function gotoExtensions() {
             <span class="text-[15px]">密钥未配置</span>
           </div>
           <div class="mt-1 text-xs text-muted">模型「{{ status?.modelName }}」还缺少 API 密钥。</div>
-          <router-link to="/models" class="mt-2 inline-flex items-center gap-1 text-sm text-primary hover:underline">去编辑 <ArrowRight :size="14" /></router-link>
+          <div class="mt-auto pt-3">
+            <router-link to="/models" class="inline-flex items-center gap-1 text-sm text-primary hover:underline">去编辑 <ArrowRight :size="14" /></router-link>
+          </div>
         </template>
         <template v-else>
           <div class="flex items-center gap-2">
@@ -174,7 +221,9 @@ async function gotoExtensions() {
             <span class="text-[15px]">还没有可用模型</span>
           </div>
           <div class="mt-1 text-xs text-muted">添加并选中一个模型后即可开始回答问题。</div>
-          <router-link to="/models" class="mt-2 inline-flex items-center gap-1 text-sm text-primary hover:underline">去添加 <ArrowRight :size="14" /></router-link>
+          <div class="mt-auto pt-3">
+            <router-link to="/models" class="inline-flex items-center gap-1 text-sm text-primary hover:underline">去添加 <ArrowRight :size="14" /></router-link>
+          </div>
         </template>
       </div>
     </div>
@@ -209,7 +258,7 @@ async function gotoExtensions() {
           </div>
 
         <div class="mb-4 rounded-lg border border-brd bg-primary/5 px-3 py-2.5 text-sm">
-          为顺利添加扩展，请先打开浏览器扩展页并启用「开发者模式」。
+          商店无法访问或使用 Chrome 浏览器时，可按以下步骤手动安装。安装前请先在浏览器扩展页启用「开发者模式」。
         </div>
 
         <div class="space-y-3">

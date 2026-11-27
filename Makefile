@@ -29,7 +29,7 @@ ISCC ?= $(shell powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/
 EXE_PATH  := $(BIN_DIR)/$(APP).exe
 
 .DEFAULT_GOAL := build
-.PHONY: build build-cli build-eval build-web pack-assets sync-version ensure-iscc installer release test test-go test-web test-visual test-extension-e2e vet lint govuln eval fmt run run-cli clean
+.PHONY: build build-cli build-eval build-web pack-assets sync-version ensure-iscc installer genicon release test test-go test-web test-visual test-extension-e2e vet lint govuln eval fmt run run-cli clean
 
 NM_STAMP := frontend/node_modules/.absorb-install-stamp
 $(NM_STAMP): frontend/package.json frontend/package-lock.json
@@ -94,6 +94,9 @@ build-eval: ## 构建评测工具到 build/bin（开发期工具，不进安装�
 
 fmt: ## 格式化 Go 源码（gofmt -s -w）
 	$(GOFMT) -s -w .
+
+genicon: ## 从 build/appicon.png 重新生成 build/windows/icon.ico（换图标后使用）
+	$(GO) run ./cmd/genicon -src build/appicon.png -out build/windows/icon.ico
 
 release: pack-assets vet test installer ## 发布流水线：静态分析 + 全量测试 + 安装程序
 

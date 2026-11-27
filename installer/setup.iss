@@ -24,9 +24,6 @@ Compression=lzma2
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=admin
-; 升级期间用 Windows Restart Manager 关闭占用待更新文件的进程，并阻止其在安装期间重启。
-; 注意：Restart Manager 管不到"浏览器扩展在宿主进程死亡后重新拉起同一 exe"这种跨进程重生，
-; 那类占用由 [Code] 的 WaitAppGone 重试兜底（见文件末尾说明）。
 CloseApplications=yes
 CloseApplicationsFilter=absorb-agent-desktop.exe
 UninstallDisplayName={#MyAppName}
@@ -40,19 +37,19 @@ Name: "chinese"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
 
 [Files]
 Source: "..\build\bin\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+; 捆绑 poppler（runtime/poppler：pdftotext + 依赖 DLL + share/poppler 数据），
+; 供本地 file:// PDF 提取（extract.pdftotextBin 探测 {app}\runtime\poppler）
+Source: "..\runtime\poppler\*"; DestDir: "{app}\runtime\poppler"; Flags: ignoreversion recursesubdirs
 
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Check: DesktopIconChecked
 
-; 自启动不放在 [Registry] 节：PrivilegesRequired=admin 时 [Registry] 的 HKCU
-; 指向执行提权的账户（官方文档），用别的管理员账户提权安装会把自启动写进
-; 错误的用户。改为 [Code] 的 SetOriginalUserAutostart 经 ExecAsOriginalUser
-; 用 reg.exe 落到发起安装的原用户 hive（见 ssPostInstall / usUninstall）。
+; 自启动写/删 Run 键走 [Code] 而非 [Registry]：admin 提权时 [Registry] 的 HKCU 指向提权账户，
+; 跨账户安装会写错用户。安装侧用 ExecAsOriginalUser 落到原用户 hive；卸载侧该函数被引擎禁用，
+; 只能以卸载器身份 Exec 删除（跨账户提权卸载时原用户键会残留，属 Windows 权限模型固有限制）。
 
 [Run]
-; Native Messaging 宿主注册（exe 内生成 native-host.json + 写 HKCU 双浏览器注册表）。
-; runasoriginaluser 保证 HKCU 写到发起安装的用户；静默安装同样执行。
 Filename: "{app}\{#MyAppExeName}"; Parameters: "--register-native-host"; Flags: runasoriginaluser runhidden skipifdoesntexist
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
 
@@ -67,10 +64,11 @@ var
   GOptPage: TWizardPage;
   InstallSucceeded: Boolean;
   UnregisteredHost: Boolean;
+  InUninstaller: Boolean;
 
-// InitializeWizard 在"选择安装位置"后追加原生控件的附加选项页。
-// 引擎自绘的任务列表(TNewCheckListBox)在 150% DPI 下复选框左边框被裁切，
-// 故弃用 [Tasks]，改用原生 TCheckBox 渲染；控件高度须 ScaleY，否则高 DPI 下文字上下被裁。
+// 在"选择安装位置"后追加原生控件附加选项页。
+// 引擎自绘的 TNewCheckListBox 在 150% DPI 下复选框左边框被裁切，改用原生 TCheckBox；
+// 控件 Height/Width 须显式 ScaleX/ScaleY，否则高 DPI 下文字被裁。
 procedure InitializeWizard();
 var
   Info: TLabel;
@@ -112,16 +110,15 @@ begin
   Result := CbAutoStart.Checked;
 end;
 
-// 进入附加选项页把默认焦点交给"下一步"按钮：避免焦点虚线框贴住复选框文字。
+// 进入附加选项页把焦点交给"下一步"按钮，避免焦点虚线框贴住复选框文字。
 procedure CurPageChanged(CurPageID: Integer);
 begin
   if CurPageID = GOptPage.ID then
     WizardForm.ActiveControl := WizardForm.NextButton;
 end;
 
-// SetOriginalUserAutostart 以"发起安装/卸载的原用户"身份写/删 HKCU Run 键。
-// 替代原 [Registry] 节：提权运行时 [Registry] 的 HKCU 指向提升账户（见上节注释）。
-// reg.exe 走标准 argv 解析，/d 里的 \" 还原为字面引号，落库值即带引号的完整路径。
+// 写/删 HKCU Run 键。Enable=True 安装时调用，Enable=False 卸载时调用。
+// reg.exe argv 解析 /d 内的 \" 为字面引号，落库值即带引号的完整路径。
 procedure SetOriginalUserAutostart(Enable: Boolean);
 var
   rc: Integer;
@@ -134,14 +131,14 @@ begin
     if rc <> 0 then
       Log('写入自启动注册表失败，reg.exe 退出码 ' + IntToStr(rc));
   end else begin
-    // 值不存在或已被用户手动清除时 reg delete 返回非 0，属预期，忽略。
-    ExecAsOriginalUser(ExpandConstant('{sys}\reg.exe'),
+    // 值不存在或已被用户手动清除时 reg delete 返回非 0，忽略。
+    Exec(ExpandConstant('{sys}\reg.exe'),
       '/delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v ' + AppRegValue + ' /f',
       '', SW_HIDE, ewWaitUntilTerminated, rc);
   end;
 end;
 
-// KillApp 结束桌面进程（/T 连带 WebView2 子进程树），避免文件占用残留。
+// 结束桌面进程（/T 连带子进程树）。
 procedure KillApp;
 var
   rc: Integer;
@@ -149,8 +146,7 @@ begin
   Exec(ExpandConstant('{sys}\taskkill.exe'), '/F /T /IM ' + AppExe, '', SW_HIDE, ewWaitUntilTerminated, rc);
 end;
 
-// AppStillRunning 探测是否仍有桌面端进程在跑。
-// 用 tasklist | find 的退出码判定（find 命中返回 0），无需解析临时文件。
+// 探测桌面进程是否仍在运行（tasklist | find 命中返回 0）。
 function AppStillRunning: Boolean;
 var
   rc: Integer;
@@ -161,15 +157,8 @@ begin
   Result := (rc = 0);
 end;
 
-// WaitAppGone 反复结束进程并等待其真正退出，返回 True 表示已无残留进程。
-//
-// 为什么需要重试：浏览器扩展与桌面端经 Native Messaging 通信，宿主进程死亡会导致
-// 管道断裂、扩展立即重新拉起**同一个 exe**（宿主与 UI 是同一文件），单次 taskkill
-// 根本无法释放文件锁——真机升级时表现为"尝试替换现有文件时出错：DeleteFile 失败，
-// 错误代码 5（拒绝访问）"。这里用"杀 → 等 → 探"循环把占用让出来。
-//
-// attempts 为轮数、每轮间隔 1s；耗尽仍占用则返回 False，由调用方中止安装
-// （明确失败远好过弹"重试/忽略"对话框后留下半升级状态）。
+// 反复结束进程并等待退出。浏览器扩展在宿主被杀后会重新拉起同一个 exe，
+// 单次 taskkill 无法释放文件锁；此处"杀 → 等 → 探"循环耗尽仍占用则返回 False。
 function WaitAppGone(attempts: Integer): Boolean;
 var
   i: Integer;
@@ -185,26 +174,27 @@ begin
   Result := not AppStillRunning;
 end;
 
-// UnregisterNativeHostForUpgrade 升级前注销 Native Messaging 注册（Chrome/Edge 双注册表 + manifest）。
-//
-// 这是根因修复：宿主进程被杀后，扩展会按 5s 定时器重新 connectNative 拉起**同一个 exe**
-// （extension/background/native-connection.js 的 _onDisconnect），把待替换的文件重新锁住，
-// 表现为"DeleteFile 失败；错误代码 5（拒绝访问）"。而扩展对 "No such native application"
-// 这一错误**不调度重连**——注销后重连必然失败，宿主不会被拉起，文件锁得以真正释放。
-// 安装收尾由 [Run] 的 --register-native-host 重新注册。
+// 升级/卸载前注销 Native Messaging 注册（Chrome/Edge 双注册表 + manifest）。
+// 扩展对"No such native application"不调度重连，注销后宿主不会被重新拉起，
+// 文件锁得以真正释放。安装收尾由 [Run] 的 --register-native-host 重新注册。
+// InUninstaller 为 True 时 ExecAsOriginalUser 被引擎禁用，改用 Exec。
 procedure UnregisterNativeHostForUpgrade;
 var
   rc: Integer;
 begin
+  if InUninstaller then
+  begin
+    if not Exec(ExpandConstant('{app}\{#MyAppExeName}'), '--unregister-native-host',
+        ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, rc) then
+      Log('卸载前注销 Native Messaging 宿主失败（忽略，由 WaitAppGone 兜底）');
+    exit;
+  end;
   if not ExecAsOriginalUser(ExpandConstant('{app}\{#MyAppExeName}'), '--unregister-native-host',
       ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, rc) then
     Log('升级前注销 Native Messaging 宿主失败（忽略，由 WaitAppGone 兜底）');
 end;
 
-// ShowUninstallOptions 卸载选项窗体：勾选决定卸载后是否清理用户数据。
-// 返回 True = 开始卸载，False = 取消。
-// 与安装页同一教训：控件 Height/Width 必须显式 ScaleX/ScaleY，否则高 DPI 下
-// 文字上下被裁；横向尺寸用 ScaleX。
+// 卸载选项窗体：勾选决定是否清理用户数据。返回 True = 开始卸载，False = 取消。
 function ShowUninstallOptions(): Boolean;
 var
   Form: TForm;
@@ -234,7 +224,7 @@ begin
     Cb.Left := ScaleX(16);
     Cb.Top := ScaleY(44);
     Cb.Width := ScaleX(368);
-    Cb.Height := ScaleY(20); // 单行文字
+    Cb.Height := ScaleY(20);
     Cb.Checked := False;
     Cb.Caption := '同时删除用户数据（会话记录、模型配置、日志）';
 
@@ -266,22 +256,20 @@ begin
   end;
 end;
 
-// 覆盖安装前先结束旧进程（尽早让出占用）；真正的保证在 CurStepChanged(ssInstall)。
+// 覆盖安装前先结束旧进程，尽早让出占用。
 function InitializeSetup(): Boolean;
 begin
   KillApp;
   Result := True;
 end;
 
-// 复制文件前必须真正释放 exe：先注销宿主注册（让扩展重连失败、不再拉起宿主），
-// 再反复结束进程直至无残留。拿不到文件锁就明确中止——远好过弹"重试/忽略"对话框
-// 后留下半升级状态。
+// 复制文件前注销宿主注册（让扩展重连失败、不再拉起宿主），再反复结束进程直至无残留。
+// 拿不到文件锁则明确中止，避免留下半升级状态。
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssInstall then
   begin
     UnregisterNativeHostForUpgrade;
-    // 已注销标记：无论后续成败（含 WaitAppGone 失败中止），退出时都需恢复注册
     UnregisteredHost := True;
     if not WaitAppGone(20) then
       RaiseException('无法结束正在运行的 Absorb 阅读助手，安装已中止。' + #13#10 +
@@ -290,18 +278,14 @@ begin
   if CurStep = ssPostInstall then
   begin
     InstallSucceeded := True;
-    // 勾选了"开机自动启动"则写原用户 Run 键（替代原 [Registry] 节的 uninsdeletevalue 方案）
     if AutoStartChecked then
       SetOriginalUserAutostart(True);
   end;
 end;
 
-// 安装未成功完成时恢复宿主注册：卸载/中止发生在 ssInstall 之后的话，
-// 扩展此时应仍能连上桌面端，不能因为一次失败的升级而失去 Native Messaging。
-//
-// 仅在真正注销过注册后才恢复——用户在目录页等早期阶段取消时，{app} 常量
-// 尚未初始化，ExpandConstant 会抛内部错误（"expand the app constant before
-// it was initialized"）；且此阶段从未动过注册表，本就无需恢复。
+// 安装未成功完成时恢复宿主注册，避免因一次失败升级丢失 Native Messaging 能力。
+// UnregisteredHost 为 False 说明从未动过注册表（用户在早期阶段取消），无需恢复；
+// 且此时 {app} 尚未初始化，ExpandConstant 会抛内部错误。
 procedure DeinitializeSetup();
 var
   rc: Integer;
@@ -313,8 +297,10 @@ begin
 end;
 
 // 卸载开始前询问数据清理选项；点"取消"中止卸载。静默卸载跳过（保留数据）。
+// InUninstaller 标志在此置位，后续卸载步骤据此分流 ExecAsOriginalUser 的替代实现。
 function InitializeUninstall(): Boolean;
 begin
+  InUninstaller := True;
   Result := True;
   if not UninstallSilent then
     Result := ShowUninstallOptions();
@@ -324,20 +310,16 @@ procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if CurUninstallStep = usUninstall then
   begin
-    // 卸载也必须先注销 Native Messaging（与升级路径同一竞态）：宿主被杀后
-    // 扩展按 5s 定时器重连拉起同一 exe，反复锁住待删文件——曾致卸载器卡死
-    // 数小时（unins000/_unins.tmp 残留）。注销后重连必然失败，复活链断掉。
     UnregisterNativeHostForUpgrade;
     WaitAppGone(20);
-    // 清理自启动 Run 键（原 [Registry] 节 uninsdeletevalue 的等价替代，删不到属预期）
     SetOriginalUserAutostart(False);
   end;
   if CurUninstallStep = usPostUninstall then
   begin
     if DelUserData then
     begin
+      // 数据根 = %APPDATA%\absorb-agent；便携模式数据在安装目录内，随目录删除一并清除。
       DelTree(ExpandConstant('{userappdata}\{#MyAppNameEn}'), True, True, True);
-      DelTree(ExpandConstant('{userappdata}\') + AppExe, True, True, True);
     end;
   end;
 end;

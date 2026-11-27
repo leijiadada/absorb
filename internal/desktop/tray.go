@@ -2,41 +2,36 @@ package desktop
 
 import (
 	"bytes"
-	"context"
 	"encoding/binary"
 	"image"
 	"image/draw"
 	"image/png"
 	"math"
 
-	xdraw "golang.org/x/image/draw"
-
+	"absorb-agent/internal/kind"
 	"github.com/energye/systray"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	xdraw "golang.org/x/image/draw"
 )
 
 // RunTray 阻塞运行托盘（app.startup 里 go 起子协程）。
 // Wails v2 无内置托盘，用 systray 提供最小菜单：显示主窗口 / 退出。
-// ctx 为 Wails 运行时上下文，用于窗口显示与退出事件；进程级"关窗=隐藏"
-// 由 options.HideWindowOnClose 承担，runtime.Quit 不受其影响可正常退出。
-func RunTray(ctx context.Context, appIconPNG []byte) {
-	systray.Run(func() { onTrayReady(ctx, appIconPNG) }, nil)
+// showMain / quitApp 由调用方注入：恢复主窗口走 ShowMainWindow（同步清理
+// TOOLWINDOW 样式使任务栏按钮回归），退出经 QuitApp 置位放行标志后真正退出。
+func RunTray(appIconPNG []byte, showMain func(), quitApp func()) {
+	systray.Run(func() { onTrayReady(appIconPNG, showMain, quitApp) }, nil)
 }
 
-func onTrayReady(ctx context.Context, appIconPNG []byte) {
+func onTrayReady(appIconPNG []byte, showMain func(), quitApp func()) {
 	systray.SetIcon(trayIconBytes(appIconPNG))
-	systray.SetTooltip("Absorb 阅读助手")
-	showMain := func() {
-		runtime.WindowUnminimise(ctx)
-		runtime.WindowShow(ctx)
-	}
+	systray.SetTooltip(kind.MainWindowTitle)
 	// 左键单击直接打开主窗口；未设 OnRClick，右键保持默认弹出菜单
 	systray.SetOnClick(func(systray.IMenu) { showMain() })
 	// energye 的菜单项用 Click 回调（无 getlantern 的 ClickedCh channel）
 	systray.AddMenuItem("显示主窗口", "打开管理界面").Click(showMain)
+	// 先停 systray 循环（移除托盘图标）再走 QuitApp（置位放行标志 + 标准退出）
 	systray.AddMenuItem("退出", "停止服务并退出").Click(func() {
 		systray.Quit()
-		runtime.Quit(ctx)
+		quitApp()
 	})
 }
 

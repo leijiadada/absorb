@@ -127,8 +127,10 @@ body {
   transition: background 0.12s var(--ease-out), color 0.12s var(--ease-out);
 }
 @media (hover: hover) and (pointer: fine) {
-  .win-btn:hover { background: rgba(255, 255, 255, 0.16); color: #fff; }
-  .win-btn.close:hover { background: var(--color-danger); color: #fff; }
+  /* data-mouse-active 门禁：窗口从托盘恢复时 Chromium 按指针过期位置重算 hover
+     （X 按钮红一下再恢复），门禁关到第一次真实鼠标移动才放行 hover 样式 */
+  [data-mouse-active="true"] .win-btn:hover { background: rgba(255, 255, 255, 0.16); color: #fff; }
+  [data-mouse-active="true"] .win-btn.close:hover { background: var(--color-danger); color: #fff; }
 }
 
 .btn {

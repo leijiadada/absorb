@@ -41,10 +41,6 @@
         </div>
       </div>
     </section>
-    <!-- 网页建议问题块（doc-suggestions §4.4）：普通网页问题块——视觉归属内容区（灰底 --bg），
-         脱离 composer 白底域；位置仍在提问框上方（main 尾部固定不随滚动），
-         与输入区的边界由 composer 白底 + 上缘分隔线产生 -->
-    <div class="web-chips" id="webChips" hidden></div>
   </main>
 
   <!-- 重连条：连接失败时显示，固定于对话区与输入区之间（不随消息滚动） -->
@@ -53,11 +49,25 @@
     <button id="reconnectBtn" class="ghost-btn" data-i18n="buttons.reconnect">重连</button>
   </div>
 
+  <!-- 输入区上方公共区块（dock）：收纳输入框上方的上下文卡片（建议问题块 / 文档卡），
+       灰底内容域，与输入区的边界由 composer 白底 + 上缘分隔线产生；子元素各自携带
+       间距，全部隐藏时区块零占位。后续新增卡片组件在此加一个子元素即可 -->
+  <div class="dock" id="dock">
+    <!-- 网页建议问题块（doc-suggestions §4.4）：普通网页问题块，视觉归属内容区
+         （灰底 --bg）；WEB_CHIPS_ENABLED 下线期间保持隐藏 -->
+    <div class="web-chips" id="webChips" hidden></div>
+    <!-- 本地文件访问引导卡（B4）：活动标签页拿不到可识别地址（查看器扩展页 /
+         地址不可见）且未授权"允许访问文件网址"时显示，一键直达扩展详情页，
+         授权后轮询自动收起；证据驱动触发见 doccard.js refresh() -->
+    <section class="docbar file-access" id="fileAccessCard" hidden></section>
+    <!-- 文档工具栏（PDF 解读 PR4）：活动标签页为 PDF 时显示的白底卡片，落于 dock
+         灰底上与输入区白底分层；⌄ 展开文档信息/建议问题/操作面板，四态由
+         doccard.js 渲染，× 仅隐藏展示不删记录 -->
+    <section class="docbar" id="docCard" hidden></section>
+  </div>
+
   <!-- 输入区 -->
   <footer class="composer">
-    <!-- 文档工具栏（PDF 解读 PR4）：输入框上方的单行条，活动标签页为 PDF 时显示；
-         ⌄ 展开文档信息/建议问题/操作面板，四态由 doccard.js 渲染，× 仅隐藏展示不删记录 -->
-    <section class="docbar" id="docCard" hidden></section>
     <!-- 图片附件行：区域/元素/视口截图、上传、粘贴的图片以 chip 缩略图展示（不进输入框、不持久化） -->
     <div class="attachments" id="attachments" hidden></div>
     <!-- 可编辑输入框：划词以 chip 标签内嵌，可多段、可删除、光标在标签间移动 -->

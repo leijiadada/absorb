@@ -15,8 +15,10 @@ import { t } from './i18n.js';
 
 // ---------- 文档类型注册表 ----------
 // ext 按 URL 路径后缀识别（查询串/锚点前）。浏览器内置查看器的 tab.url 保留
-// 原始 https 地址，content script 注入不可行（查看器非普通 DOM 文档），因此
+// 原始 https/file 地址，content script 注入不可行（查看器非普通 DOM 文档），因此
 // 识别只看 URL 后缀——服务端按 content-type 兜底分类，误判无副作用。
+// file:// 本地 PDF：协议显式在列（本地路径无 http(s) 形态），prepare 由服务端
+// file 分支读盘提取（本地文件白名单校验见 document/localfile.go）。
 export const DOC_TYPES = {
   pdf: {
     key: 'pdf',
@@ -27,11 +29,14 @@ export const DOC_TYPES = {
   // 由服务端章节树双通道生成（doc-suggestions-design.md），渲染不感知格式。
 };
 
+// 支持文档识别的协议：网页 http(s) + 本地 file（各类型共享，file 仅后缀命中者放行）
+const DOC_SCHEME_RE = /^(https?|file):$/;
+
 // URL → 类型定义（未命中返回 null）。isPdfUrl 保留给 conversation.js 提问链路。
 export function detectDocType(url) {
   try {
     const u = new URL(url);
-    if (!/^https?:$/.test(u.protocol)) return null;
+    if (!DOC_SCHEME_RE.test(u.protocol)) return null;
     for (const k of Object.keys(DOC_TYPES)) {
       if (DOC_TYPES[k].ext.test(u.pathname)) return DOC_TYPES[k];
     }
@@ -295,14 +300,8 @@ function renderPanel(type, name, state) {
     return panel;
   }
 
-  // ---------- 未读取（idle）：说明 + 读取主按钮 ----------
+  // ---------- 未读取（idle）：仅说明文案，读取入口在工具栏行内（db-bar-cta） ----------
   panel.append(el('div', 'db-desc', t('doccard.descIdle')));
-  const actions = el('div', 'db-actions');
-  const read = el('button', 'db-cta', t('doccard.read'));
-  read.type = 'button';
-  read.addEventListener('click', () => startRead());
-  actions.appendChild(read);
-  panel.append(actions);
   return panel;
 }
 
@@ -415,6 +414,85 @@ async function startRead() {
   }
 }
 
+// ---------- 本地文件访问引导卡（B4） ----------
+// 证据驱动触发：活动标签页拿不到可识别地址（tab.url 缺失，或为内置查看器的
+// chrome-extension:// 扩展页）且"允许访问文件网址"未授权 → 显示引导卡——无论
+// 根因是开关还是其他异常，扩展都拿不到真实文件地址，文档卡无从谈起；tab.url
+// 为 file:// PDF 时正常走文档卡（该形态不受开关影响，见核实测）。
+// Chrome 无 API 可程序化授予该开关，"去设置"一键直达扩展详情页，面板内轮询
+// 开关状态，授权后自动收卡并重跑识别。
+let _faTimer = null; // 授权轮询计时器（引导卡显示期间每秒探测）
+
+function isAllowedFileScheme() {
+  return new Promise((resolve) => {
+    try {
+      chrome.extension.isAllowedFileSchemeAccess((ok) => resolve(!!ok));
+    } catch {
+      resolve(true); // API 不可用的环境按已授权处理，不弹引导
+    }
+  });
+}
+
+// 页面地址不可识别：扩展页（内置 PDF 查看器自报形态）或地址缺失。
+function isUnidentifiableUrl(url) {
+  return !url || /^chrome-extension:\/\//i.test(url);
+}
+
+function fileAccessCardEl() {
+  return document.getElementById('fileAccessCard');
+}
+
+function hideFileAccess() {
+  stopFileAccessPoll();
+  const card = fileAccessCardEl();
+  if (card) {
+    card.hidden = true;
+    card.textContent = '';
+  }
+}
+
+// 渲染引导卡（dock 内复用 docbar 白底卡片视觉）：图标 + 标题/说明 + 去设置
+function showFileAccess() {
+  const card = fileAccessCardEl();
+  if (!card) return;
+  if (!card.hidden && card.childElementCount) {
+    startFileAccessPoll(); // 已在展示，仅确保轮询在跑
+    return;
+  }
+  card.textContent = '';
+  card.hidden = false;
+  card.append(fileIcon(DOC_TYPES.pdf));
+  const body = el('div', 'fa-body');
+  body.append(el('div', 'fa-title', t('fileaccess.title')));
+  body.append(el('div', 'fa-desc', t('fileaccess.desc')));
+  const btn = el('button', 'fa-btn', t('fileaccess.btn'));
+  btn.type = 'button';
+  btn.addEventListener('click', () => {
+    chrome.tabs.create({ url: `chrome://extensions/?id=${chrome.runtime.id}` });
+  });
+  body.append(btn);
+  card.append(body);
+  card.append(el('div', 'fa-hint', t('fileaccess.hint')));
+  startFileAccessPoll();
+}
+
+function startFileAccessPoll() {
+  if (_faTimer) return;
+  _faTimer = setInterval(async () => {
+    if (await isAllowedFileScheme()) {
+      hideFileAccess();
+      refresh(); // 授权后重新识别：file:// 地址现在应可见，文档卡接管
+    }
+  }, 1000);
+}
+
+function stopFileAccessPoll() {
+  if (_faTimer) {
+    clearInterval(_faTimer);
+    _faTimer = null;
+  }
+}
+
 // ---------- 标签页跟踪 ----------
 async function refresh() {
   if (!_container) return;
@@ -422,6 +500,7 @@ async function refresh() {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const type = tab && tab.url ? detectDocType(tab.url) : null;
     if (tab && tab.url && type) {
+      hideFileAccess(); // 可识别文档页：引导卡让位文档卡
       // 读取完成回填过服务端标题（res.title），但展示名优先用标签页实时标题
       const prevUrl = _current && _current.url;
       _current = { url: tab.url, title: tab.title || '' };
@@ -437,6 +516,16 @@ async function refresh() {
       _container.hidden = true;
       _container.textContent = '';
       clearMini();
+      // 引导卡判定：地址不可识别 + 开关未授权 → 引导；其余（普通网页/chrome://
+      // 页/已授权异常态）保持隐藏不弹
+      // 导航过渡态（loading / pendingUrl 在途）不作为引导证据：新开 tab 的 url
+      // 短暂为空是正常加载窗口，此时弹卡会闪现误报，等导航完成后再判定
+      const navigating = tab && (tab.status === 'loading' || tab.pendingUrl);
+      if (!navigating && isUnidentifiableUrl(tab && tab.url) && !(await isAllowedFileScheme())) {
+        showFileAccess();
+      } else {
+        hideFileAccess();
+      }
       return;
     }
   } catch {

@@ -82,7 +82,9 @@ func newCheckEnv(configPath string, initLog bool) (*checkEnv, error) {
 		os.RemoveAll(tmpDir)
 		return nil, err
 	}
-	r, err := chat.NewRunner(cfg, func() string { return cfg.Proxy.URL }, strategy, sessSvc, gate)
+	proxyFn := func() string { return cfg.Proxy.URL }
+	dm := chat.NewDynamicModel(sessSvc, proxyFn)
+	r, err := chat.NewRunner(cfg, proxyFn, dm, strategy, sessSvc, gate)
 	if err != nil {
 		sessSvc.Close()
 		os.RemoveAll(tmpDir)

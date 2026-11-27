@@ -98,7 +98,7 @@ func TestWorkingSetL1Injection(t *testing.T) {
 		}
 	})
 
-	t.Run("超预算SSE报错且不调模型", func(t *testing.T) {
+	t.Run("超预算降级剔除最旧轮并继续请求", func(t *testing.T) {
 		wsFn := func() conf.WorkingSetConfig {
 			return conf.WorkingSetConfig{L1MaxTokens: 10}
 		}
@@ -110,16 +110,48 @@ func TestWorkingSetL1Injection(t *testing.T) {
 		}
 		long := strings.Repeat("这是一段很长的历史回答内容，用于撑爆极小的注入预算。", 20)
 		wsSeedRound(t, svc, sess, "A的问题", long, "https://a.com")
+		// 短轮（不同 scope）：剔除长轮后预算可容，应经 L1 注入
+		wsSeedRound(t, svc, sess, "C的问题", "C的回答CCC", "https://c.com")
 
 		out := wsAsk(t, h, "s-l1-budget", "https://b.com", "懂了")
-		if !strings.Contains(out, `"type":"error"`) {
-			t.Fatalf("超预算应下发 SSE type:error，实际: %s", out)
+		if strings.Contains(out, `"type":"error"`) {
+			t.Fatalf("超预算应降级继续而非报错，SSE: %s", out)
 		}
-		if !strings.Contains(out, "预算") {
-			t.Errorf("报错应可读（含预算说明）: %s", out)
+		reqBody := cap2.get()
+		if len(reqBody) == 0 {
+			t.Fatalf("降级后应继续调用模型，但假端点未收到请求")
 		}
-		if reqBody := cap2.get(); len(reqBody) != 0 {
-			t.Errorf("超预算本轮不应调用模型，但假端点收到请求体: %.120s", reqBody)
+		if strings.Contains(reqBody, "这是一段很长的历史回答内容") {
+			t.Errorf("超预算的长轮应被剔除，但出现在请求体中")
+		}
+		if n := strings.Count(reqBody, "C的回答CCC"); n != 1 {
+			t.Errorf("剔除长轮后短轮应经 L1 注入恰好 1 次，实际 %d", n)
+		}
+	})
+
+	t.Run("单轮即超预算剔除为空仍继续请求", func(t *testing.T) {
+		wsFn := func() conf.WorkingSetConfig {
+			return conf.WorkingSetConfig{L1MaxTokens: 10}
+		}
+		h, cap2, svc := setup(t, "openai", true, false, defaultOKStream, withWSFn(wsFn))
+		key := session.Key{AppName: AppName, UserID: "absorb-user", SessionID: "s-l1-budget2"}
+		sess, err := svc.CreateSession(context.Background(), key, nil)
+		if err != nil {
+			t.Fatalf("CreateSession: %v", err)
+		}
+		long := strings.Repeat("这是一段很长的历史回答内容，用于撑爆极小的注入预算。", 20)
+		wsSeedRound(t, svc, sess, "A的问题", long, "https://a.com")
+
+		out := wsAsk(t, h, "s-l1-budget2", "https://b.com", "懂了")
+		if strings.Contains(out, `"type":"error"`) {
+			t.Fatalf("单轮即超预算应剔除为空后继续，而非报错，SSE: %s", out)
+		}
+		reqBody := cap2.get()
+		if len(reqBody) == 0 {
+			t.Fatalf("剔除为空仍应继续调用模型，但假端点未收到请求")
+		}
+		if strings.Contains(reqBody, "这是一段很长的历史回答内容") {
+			t.Errorf("单轮即超预算应剔除为空，但内容出现在请求体中")
 		}
 	})
 

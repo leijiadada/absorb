@@ -234,7 +234,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	r, err := chat.NewRunner(cfg, func() string { return cfg.Proxy.URL }, strategy, sessSvc, gate)
+	proxyFn := func() string { return cfg.Proxy.URL }
+	dm := chat.NewDynamicModel(sessSvc, proxyFn)
+	r, err := chat.NewRunner(cfg, proxyFn, dm, strategy, sessSvc, gate)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "创建 runner 失败: %v\n", err)
 		os.Exit(1)

@@ -135,7 +135,8 @@ func setup(t *testing.T, provider string, imageSupport, failWith1210 bool, okStr
 	if err != nil {
 		t.Fatalf("NewPromptStrategy: %v", err)
 	}
-	r, err := NewRunner(cfg, func() string { return "" }, ps, svc, NewMemoryGate(false))
+	dm := NewDynamicModel(svc, func() string { return "" })
+	r, err := NewRunner(cfg, func() string { return "" }, dm, ps, svc, NewMemoryGate(false))
 	if err != nil {
 		t.Fatalf("NewRunner: %v", err)
 	}
