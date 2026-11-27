@@ -191,7 +191,8 @@ func servePDFs(files []string) map[string]string {
 		})
 		urlFor[p] = "http://" + ln.Addr().String() + slug
 	}
-	go http.Serve(ln, mux)
+	// 评测工具的 listener 随进程退出关闭，Serve 的错误无需处理
+	go func() { _ = http.Serve(ln, mux) }()
 	return urlFor
 }
 
