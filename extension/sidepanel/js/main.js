@@ -297,6 +297,9 @@ async function init() {
   // placeCaretAtEnd 而非 focus()：focus 在 selection 未设定时会把 caret 放到内容开头，
   // 视觉落在最左侧 chip 前方；显式把光标定位到内容末尾（草稿文字之后）
   placeCaretAtEnd(els.questionInput);
+  // init 完成标记：E2E 以此为屏障等 init 落地（init 里的 renderComposerChips/restoreDraft
+  // 会清空输入框，早于标记的 fill 会被清掉）。只写 dataset，无运行时行为
+  document.body.dataset.panelReady = '1';
 }
 
 // init 完成屏障：onChanged 与 init 共享同一 promise。

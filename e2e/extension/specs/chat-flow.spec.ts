@@ -19,6 +19,9 @@ async function openSidepanel(context: BrowserContext, serviceWorker: Worker) {
   const page = await context.newPage();
   await page.goto(`chrome-extension://${new URL(serviceWorker.url()).host}/sidepanel/sidepanel.html`);
   await expect(page.locator('#questionInput')).toBeVisible();
+  // init 是异步的（storage 读经 SW）：慢 CI 上 init 的 renderComposerChips 可能在 fill
+  // 之后才跑并清空已输入文本（#askBtn 卡 disabled 挂满超时的根因），以就绪标记为屏障
+  await expect(page.locator('body')).toHaveAttribute('data-panel-ready', '1', { timeout: 15_000 });
   return page;
 }
 
