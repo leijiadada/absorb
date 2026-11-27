@@ -8,7 +8,7 @@
   "frontend:dev:serverUrl": "auto",
   "info": {
     "productName": "Absorb 阅读助手",
-    "productVersion": "0.1.0",
+    "productVersion": "0.2.0",
     "comments": "Agent 服务宿主 + 管理后台"
   }
 }

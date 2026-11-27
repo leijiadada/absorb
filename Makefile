@@ -98,7 +98,7 @@ fmt: ## 格式化 Go 源码（gofmt -s -w）
 genicon: ## 从 build/appicon.png 重新生成 build/windows/icon.ico（换图标后使用）
 	$(GO) run ./cmd/genicon -src build/appicon.png -out build/windows/icon.ico
 
-release: pack-assets vet test installer ## 发布流水线：静态分析 + 全量测试 + 安装程序
+release: sync-version pack-assets vet test installer ## 发布流水线：版本同步 + 静态分析 + 全量测试 + 安装程序
 
 run: build ## 构建并启动桌面端
 	@$(PS) "Stop-Process -Name $(APP) -Force -ErrorAction SilentlyContinue; Start-Sleep 1; Start-Process -FilePath '$(EXE_PATH)'; Start-Sleep 6"
